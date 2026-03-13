@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swipe Cataloguer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <h1>Swipe Cataloguer</h1>
+      <div class="header-actions">
+        <button id="btn-load-images" class="btn-secondary">Load Images</button>
+        <button id="btn-view-catalogue" class="btn-secondary">
+          Catalogue <span id="catalogue-count" class="badge">0</span>
+        </button>
+        <button id="btn-export" class="btn-secondary">Export JSON</button>
+      </div>
+      <input type="file" id="file-input" multiple accept="image/*" hidden />
+    </header>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span class="legend-item left">← Reject</span>
+      <span class="legend-item up">↑ Favorite</span>
+      <span class="legend-item down">↓ Skip</span>
+      <span class="legend-item right">→ Keep</span>
+    </div>
+
+    <!-- Card Stack -->
+    <main id="card-area">
+      <div id="card-stack"></div>
+
+      <!-- Empty state -->
+      <div id="empty-state" class="hidden">
+        <div class="empty-icon">✓</div>
+        <p>All images catalogued!</p>
+        <button id="btn-reset" class="btn-primary">Start Over</button>
+      </div>
+
+      <!-- No images loaded -->
+      <div id="no-images-state">
+        <div class="empty-icon">🖼️</div>
+        <p>Load images to start cataloguing</p>
+        <button id="btn-load-first" class="btn-primary">Load Images</button>
+        <p class="hint">or drag &amp; drop images here</p>
+      </div>
+    </main>
+
+    <!-- Action Buttons -->
+    <div id="action-buttons">
+      <button class="action-btn reject" data-action="reject" title="Reject (←)">✕</button>
+      <button class="action-btn skip" data-action="skip" title="Skip (↓)">↓</button>
+      <button class="action-btn favorite" data-action="favorite" title="Favorite (↑)">★</button>
+      <button class="action-btn keep" data-action="keep" title="Keep (→)">✓</button>
+    </div>
+
+    <!-- Catalogue Modal -->
+    <div id="catalogue-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Catalogue</h2>
+          <button id="btn-close-modal" class="btn-icon">✕</button>
+        </div>
+        <div class="modal-filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="keep">Keep</button>
+          <button class="filter-btn" data-filter="favorite">Favorite</button>
+          <button class="filter-btn" data-filter="reject">Reject</button>
+          <button class="filter-btn" data-filter="skip">Skip</button>
+        </div>
+        <div id="catalogue-grid"></div>
+        <p id="catalogue-empty" class="catalogue-empty hidden">No items in this category yet.</p>
+      </div>
+    </div>
+    <div id="modal-overlay" class="hidden"></div>
+
+    <!-- Progress bar -->
+    <div id="progress-bar-container" class="hidden">
+      <div id="progress-bar"></div>
+      <span id="progress-text"></span>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
