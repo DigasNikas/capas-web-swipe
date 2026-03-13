@@ -321,12 +321,12 @@ header h1 {
 .action-btn:hover  { transform: scale(1.1); }
 .action-btn:active { transform: scale(0.95); }
 
-.action-btn.reject   { border-color: var(--reject);   color: #fff; background: var(--reject); }
+.action-btn.reject   { border-color: var(--reject);   color: var(--reject); }
 .action-btn.skip     { border-color: var(--skip);     color: var(--skip); }
 .action-btn.favorite { border-color: var(--favorite); color: var(--favorite); }
 .action-btn.keep     { border-color: var(--keep);     color: var(--keep); }
 
-.action-btn.reject:hover   { background: #dc2626; }
+.action-btn.reject:hover   { background: rgba(239,68,68,.15); }
 .action-btn.skip:hover     { background: rgba(99,102,241,.15); }
 .action-btn.favorite:hover { background: rgba(245,158,11,.15); }
 .action-btn.keep:hover     { background: rgba(34,197,94,.15); }
