@@ -31,10 +31,10 @@ const SWIPE_THRESHOLD = 80;  // px needed to commit a swipe
 const ROTATION_FACTOR = 0.08; // degrees per px of horizontal drag
 
 const ACTIONS = {
-  right: { name: 'keep',     icon: '✓',  label: 'KEEP' },
-  left:  { name: 'reject',   icon: '✕',  label: 'REJECT' },
-  up:    { name: 'favorite', icon: '★',  label: 'FAVORITE' },
-  down:  { name: 'skip',     icon: '↓',  label: 'SKIP' },
+  right: { name: 'keep',     icon: '🦁',  label: 'SPORTING' },
+  left:  { name: 'reject',   icon: '🦅',  label: 'BENFICA' },
+  up:    { name: 'favorite', icon: '?',   label: 'UNSURE' },
+  down:  { name: 'skip',     icon: '🐉',  label: 'PORTO' },
 };
 
 // ── Image Loading ──────────────────────────────────────────────────────────
