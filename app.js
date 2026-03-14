@@ -33,7 +33,7 @@ const ROTATION_FACTOR = 0.08; // degrees per px of horizontal drag
 const ACTIONS = {
   right: { name: 'keep',     icon: '🦁',  label: 'SPORTING' },
   left:  { name: 'reject',   icon: '🦅',  label: 'BENFICA' },
-  up:    { name: 'favorite', icon: '?',   label: 'UNSURE' },
+  up:    { name: 'favorite', icon: '?',   label: 'OUTROS' },
   down:  { name: 'skip',     icon: '🐉',  label: 'PORTO' },
 };
 
