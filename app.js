@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────
- * Swipe Cataloguer — app.js
+ * Avaliador de Capas — app.js
  * Auto-loads images from images/manifest.json. Each image is shown once;
  * catalogue decisions are persisted in localStorage.
  * ───────────────────────────────────────────────────────────────────────── */
