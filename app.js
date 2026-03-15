@@ -90,7 +90,7 @@ async function init() {
 
 // ── Stack Rendering ────────────────────────────────────────────────────────
 function renderStack() {
-  const topIds = state.queue.slice(0, 3);
+  const topIds = state.queue.slice(0, 1);
   const existingIds = new Set(Array.from(cardStack.children).map(el => el.dataset.id));
 
   Array.from(cardStack.children).forEach(el => {
