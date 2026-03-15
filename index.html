@@ -12,13 +12,11 @@
     <header>
       <h1>Swipe Cataloguer</h1>
       <div class="header-actions">
-        <button id="btn-load-images" class="btn-secondary">Load Images</button>
         <button id="btn-view-catalogue" class="btn-secondary">
           Catalogue <span id="catalogue-count" class="badge">0</span>
         </button>
         <button id="btn-export" class="btn-secondary">Export JSON</button>
       </div>
-      <input type="file" id="file-input" multiple accept="image/*" hidden />
     </header>
 
     <!-- Legend -->
@@ -33,19 +31,17 @@
     <main id="card-area">
       <div id="card-stack"></div>
 
-      <!-- Empty state -->
+      <!-- All done -->
       <div id="empty-state" class="hidden">
         <div class="empty-icon">✓</div>
         <p>All images catalogued!</p>
         <button id="btn-reset" class="btn-primary">Start Over</button>
       </div>
 
-      <!-- No images loaded -->
-      <div id="no-images-state">
-        <div class="empty-icon">🖼️</div>
-        <p>Load images to start cataloguing</p>
-        <button id="btn-load-first" class="btn-primary">Load Images</button>
-        <p class="hint">or drag &amp; drop images here</p>
+      <!-- Loading -->
+      <div id="loading-state" class="hidden">
+        <div class="empty-icon">⏳</div>
+        <p>Loading images…</p>
       </div>
     </main>
 

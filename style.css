@@ -279,22 +279,6 @@ header h1 {
   display: none;
 }
 
-/* ─── Drag & Drop ────────────────────────────────────────────────────────── */
-#card-area.drag-over::after {
-  content: 'Drop images here';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(79,70,229,.25);
-  border: 3px dashed #4f46e5;
-  border-radius: var(--radius);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #a5b4fc;
-  z-index: 100;
-}
 
 /* ─── Action Buttons ─────────────────────────────────────────────────────── */
 #action-buttons {
