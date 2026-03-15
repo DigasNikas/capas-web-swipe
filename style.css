@@ -156,25 +156,15 @@ header h1 {
 }
 .card:active { cursor: grabbing; }
 
-/* Stack effect: cards behind the top one */
-.card:nth-child(2) {
-  transform: scale(0.96) translateY(10px);
-  z-index: 0;
-}
-.card:nth-child(3) {
-  transform: scale(0.92) translateY(20px);
-  z-index: -1;
-}
-.card:nth-child(n+4) { display: none; }
-
-.card.top { z-index: 10; }
+.card:not(.top) { display: none; }
 
 .card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   pointer-events: none;
   display: block;
+  background: #000;
 }
 
 .card-label-bar {
