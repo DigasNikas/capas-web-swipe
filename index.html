@@ -21,10 +21,10 @@
 
     <!-- Legend -->
     <div class="legend">
-      <span class="legend-item left">← A Bola</span>
-      <span class="legend-item up">↑ O Jogo</span>
-      <span class="legend-item down">↓ Skip</span>
-      <span class="legend-item right">→ Record</span>
+      <span class="legend-item left">← Benfica</span>
+      <span class="legend-item up">↑ Outros</span>
+      <span class="legend-item down">↓ Porto</span>
+      <span class="legend-item right">→ Sporting</span>
     </div>
 
     <!-- Card Stack -->
@@ -47,10 +47,10 @@
 
     <!-- Action Buttons -->
     <div id="action-buttons">
-      <button class="action-btn abola"  data-action="abola"  title="A Bola (←)">🔴</button>
-      <button class="action-btn ojogo"  data-action="ojogo"  title="O Jogo (↑)">🟡</button>
-      <button class="action-btn skip"   data-action="skip"   title="Skip (↓)">✕</button>
-      <button class="action-btn record" data-action="record" title="Record (→)">🟢</button>
+      <button class="action-btn reject" data-action="reject" title="Benfica (←)">🦅</button>
+      <button class="action-btn favorite" data-action="favorite" title="Outros (↑)">?</button>
+      <button class="action-btn skip" data-action="skip" title="Porto (↓)">🐉</button>
+      <button class="action-btn keep" data-action="keep" title="Sporting (→)">🦁</button>
     </div>
 
     <!-- Catalogue Modal -->
@@ -61,14 +61,14 @@
           <button id="btn-close-modal" class="btn-icon">✕</button>
         </div>
         <div class="modal-filters">
-          <button class="filter-btn active" data-filter="all">Todos</button>
-          <button class="filter-btn" data-filter="abola">A Bola</button>
-          <button class="filter-btn" data-filter="ojogo">O Jogo</button>
-          <button class="filter-btn" data-filter="record">Record</button>
-          <button class="filter-btn" data-filter="skip">Skip</button>
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="keep">Sporting</button>
+          <button class="filter-btn" data-filter="favorite">Outros</button>
+          <button class="filter-btn" data-filter="reject">Benfica</button>
+          <button class="filter-btn" data-filter="skip">Porto</button>
         </div>
         <div id="catalogue-grid"></div>
-        <p id="catalogue-empty" class="catalogue-empty hidden">Nenhuma imagem nesta categoria.</p>
+        <p id="catalogue-empty" class="catalogue-empty hidden">No items in this category yet.</p>
       </div>
     </div>
     <div id="modal-overlay" class="hidden"></div>
