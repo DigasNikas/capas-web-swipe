@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-scrape.py — Download newspaper front pages from sapo.pt for the past N days.
+scrape_record.py — Download Record front pages from sapo.pt for the past N days.
 
 Usage:
-  python3 scrape.py 7          # last 7 days
-  python3 scrape.py 7 --debug  # also save raw HTML to debug/<date>.html
+  python3 scrape_record.py 7          # last 7 days
+  python3 scrape_record.py 7 --debug  # also save raw HTML to debug/<date>.html
 """
 
 import os
@@ -26,13 +26,8 @@ HEADERS = {
     "Referer": "https://sapo.pt/",
 }
 
-# slug → (url_pattern, filename_prefix)
-# Add A Bola and O Jogo here once you have their URL slugs:
-#   "abola":  "https://sapo.pt/noticias/jornais/desporto/a-bola-XXXX/{date}",
-#   "ojogo":  "https://sapo.pt/noticias/jornais/desporto/o-jogo-XXXX/{date}",
-NEWSPAPERS = {
-    "record": "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}",
-}
+SLUG        = "record"
+URL_PATTERN = "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}"
 
 
 def fetch(url):
@@ -100,49 +95,47 @@ def main():
 
     saved = []
 
-    for slug, url_pattern in NEWSPAPERS.items():
-        print(f"\n── {slug} ──")
-        for date in dates:
-            date_str  = date.strftime("%Y%m%d")          # URL format: 20260425
-            date_label = date.isoformat()                # filename: 2026-04-25
-            url       = url_pattern.format(date=date_str)
-            filename  = f"{slug}_{date_label}.jpg"
+    for date in dates:
+        date_str   = date.strftime("%Y%m%d")     # URL format: 20260425
+        date_label = date.isoformat()            # filename:   2026-04-25
+        url        = URL_PATTERN.format(date=date_str)
+        filename   = f"{SLUG}_{date_label}.jpg"
+        dest_path  = os.path.join(DEST, filename)
+
+        if os.path.exists(dest_path):
+            print(f"  {filename} already exists, skipping.")
+            saved.append(filename)
+            continue
+
+        print(f"  {date_label} — fetching page …", end=" ", flush=True)
+        try:
+            html = fetch(url)
+        except Exception as e:
+            print(f"FAILED ({e})")
+            continue
+
+        if DEBUG:
+            with open(os.path.join("debug", f"{SLUG}_{date_str}.html"), "w") as f:
+                f.write(html)
+
+        img_url = extract_cover_image(html)
+        if not img_url:
+            print("no image found")
+            if not DEBUG:
+                print(f"    → re-run with --debug and inspect debug/{SLUG}_{date_str}.html")
+            continue
+
+        ext = ext_from_url(img_url)
+        if ext != ".jpg":
+            filename  = f"{SLUG}_{date_label}{ext}"
             dest_path = os.path.join(DEST, filename)
 
-            if os.path.exists(dest_path):
-                print(f"  {filename} already exists, skipping.")
-                saved.append(filename)
-                continue
-
-            print(f"  {date_label} — fetching page …", end=" ", flush=True)
-            try:
-                html = fetch(url)
-            except Exception as e:
-                print(f"FAILED ({e})")
-                continue
-
-            if DEBUG:
-                with open(os.path.join("debug", f"{slug}_{date_str}.html"), "w") as f:
-                    f.write(html)
-
-            img_url = extract_cover_image(html)
-            if not img_url:
-                print("no image found")
-                if not DEBUG:
-                    print(f"    → re-run with --debug and inspect debug/{slug}_{date_str}.html")
-                continue
-
-            ext = ext_from_url(img_url)
-            if ext != ".jpg":
-                filename = f"{slug}_{date_label}{ext}"
-                dest_path = os.path.join(DEST, filename)
-
-            try:
-                download(img_url, dest_path)
-                saved.append(filename)
-                print(f"saved {filename}")
-            except Exception as e:
-                print(f"download failed ({e})")
+        try:
+            download(img_url, dest_path)
+            saved.append(filename)
+            print(f"saved {filename}")
+        except Exception as e:
+            print(f"download failed ({e})")
 
     if saved:
         update_manifest(saved)
