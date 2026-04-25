@@ -33,10 +33,10 @@ const SWIPE_THRESHOLD = 80;
 const ROTATION_FACTOR = 0.08;
 
 const ACTIONS = {
-  left:  { name: 'abola',  icon: '🔴', label: 'A BOLA'  },
-  up:    { name: 'ojogo',  icon: '🟡', label: 'O JOGO'  },
-  right: { name: 'record', icon: '🟢', label: 'RECORD'  },
-  down:  { name: 'skip',   icon: '✕',  label: 'SKIP'    },
+  right: { name: 'keep',     icon: '🦁', label: 'SPORTING' },
+  left:  { name: 'reject',   icon: '🦅', label: 'BENFICA'  },
+  up:    { name: 'favorite', icon: '?',  label: 'OUTROS'   },
+  down:  { name: 'skip',     icon: '🐉', label: 'PORTO'    },
 };
 
 // ── Persistence ────────────────────────────────────────────────────────────
