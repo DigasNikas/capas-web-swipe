@@ -37,12 +37,12 @@ def fetch(url):
 
 
 def extract_cover_image(html):
-    # 1. Try og:image (most reliable — explicitly the page's primary image)
-    m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](https?://[^"\']+)["\']', html)
+    # Find the article-newspaper block, then grab the first img inside it
+    m = re.search(r'class=["\'][^"\']*article-newspaper[^"\']*["\'].*?<img[^>]+src=["\'](https?://[^"\']+)["\']', html, re.DOTALL)
     if m:
         return m.group(1)
-    # reversed attribute order
-    m = re.search(r'<meta[^>]+content=["\'](https?://[^"\']+)["\'][^>]+property=["\']og:image["\']', html)
+    # Also try data-src (lazy-loaded images)
+    m = re.search(r'class=["\'][^"\']*article-newspaper[^"\']*["\'].*?<img[^>]+data-src=["\'](https?://[^"\']+)["\']', html, re.DOTALL)
     if m:
         return m.group(1)
     return None
