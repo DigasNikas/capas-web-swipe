@@ -98,13 +98,15 @@ def main():
     for date in dates:
         date_str   = date.strftime("%Y%m%d")     # URL format: 20260426
         date_label = date.isoformat()            # filename:   2026-04-26
+        date_dir   = os.path.join(DEST, date.strftime("%Y"), date.strftime("%m"), date.strftime("%d"))
         url        = URL_PATTERN.format(date=date_str)
         filename   = f"{SLUG}_{date_label}.jpg"
-        dest_path  = os.path.join(DEST, filename)
+        rel_path   = f"{date.strftime('%Y/%m/%d')}/{filename}"
+        dest_path  = os.path.join(date_dir, filename)
 
         if os.path.exists(dest_path):
-            print(f"  {filename} already exists, skipping.")
-            saved.append(filename)
+            print(f"  {rel_path} already exists, skipping.")
+            saved.append(rel_path)
             continue
 
         print(f"  {date_label} — fetching page …", end=" ", flush=True)
@@ -128,12 +130,14 @@ def main():
         ext = ext_from_url(img_url)
         if ext != ".jpg":
             filename  = f"{SLUG}_{date_label}{ext}"
-            dest_path = os.path.join(DEST, filename)
+            rel_path  = f"{date.strftime('%Y/%m/%d')}/{filename}"
+            dest_path = os.path.join(date_dir, filename)
 
+        os.makedirs(date_dir, exist_ok=True)
         try:
             download(img_url, dest_path)
-            saved.append(filename)
-            print(f"saved {filename}")
+            saved.append(rel_path)
+            print(f"saved {rel_path}")
         except Exception as e:
             print(f"download failed ({e})")
 
