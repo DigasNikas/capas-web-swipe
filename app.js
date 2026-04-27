@@ -1,11 +1,11 @@
 /* ─────────────────────────────────────────────────────────────────────────
  * Avaliador de Capas — app.js
- * Auto-loads images from images/manifest.json. Each image is shown once;
- * catalogue decisions are persisted in localStorage.
+ * Loads covers from the Cloudflare Worker API (D1 + R2).
+ * Swipe decisions are persisted in localStorage.
  * ───────────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'swipe-catalogue';
-const MANIFEST    = 'images/manifest.json';
+const API_URL     = 'https://capas-scraper.<your-subdomain>.workers.dev'; // TODO: set after deploy
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -57,19 +57,19 @@ async function init() {
   const saved = loadFromStorage();
   const savedIds = new Set(saved.map(e => e.id));
 
-  let filenames;
+  let covers;
   try {
-    const res = await fetch(MANIFEST);
-    filenames = await res.json();
+    const res = await fetch(`${API_URL}/covers`);
+    covers = await res.json();
   } catch (err) {
     loadingState.querySelector('p').textContent = 'Failed to load images.';
     return;
   }
 
-  state.images = filenames.map(name => ({
-    id:  name,
-    name,
-    src: `images/${name}`,
+  state.images = covers.map(c => ({
+    id:   String(c.id),
+    name: `${c.newspaper} ${c.date}`,
+    src:  c.url,
   }));
 
   // Restore saved catalogue entries (with up-to-date src path)
