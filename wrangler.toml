@@ -1,4 +1,4 @@
-name            = "newspaper-scraper"
+name            = "capas-scraper"
 main            = "workers/index.js"
 compatibility_date = "2024-01-01"
 
@@ -7,9 +7,9 @@ crons = ["0 7 * * *"]   # 07:00 UTC daily (08:00 Lisbon time)
 
 [[r2_buckets]]
 binding     = "COVERS_BUCKET"
-bucket_name = "newspaper-covers"   # change to your actual bucket name
+bucket_name = "capas-storage"
 
 [[d1_databases]]
 binding       = "DB"
-database_name = "newspaper-db"
-database_id   = ""   # fill in after: wrangler d1 create newspaper-db
+database_name = "capas-db"
+database_id   = ""   # fill in after: wrangler d1 create capas-db
