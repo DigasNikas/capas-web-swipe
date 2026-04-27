@@ -146,6 +146,13 @@ header h1 {
   border: 1px solid var(--border);
   padding: 2px 10px;
   border-radius: 20px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+#date-progress.hint {
+  color: var(--text-muted);
+  border-color: transparent;
+  font-style: italic;
 }
 
 /* ─── Card Area ─────────────────────────────────────────────────────────── */
@@ -185,6 +192,14 @@ header h1 {
   transition: box-shadow var(--transition);
 }
 .card:active { cursor: grabbing; }
+
+#card-stack.presentation-mode .card {
+  cursor: pointer;
+}
+#card-stack.presentation-mode .card:hover {
+  box-shadow: 0 8px 40px rgba(255,255,255,.08);
+  border-color: var(--text-muted);
+}
 
 .card img {
   width: 100%;
