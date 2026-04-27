@@ -159,15 +159,21 @@ header h1 {
 }
 
 #card-stack {
-  position: relative;
-  width: var(--card-w);
-  height: var(--card-h);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  height: min(300px, 52vh);
+  padding: 0 12px;
+  width: 100%;
 }
 
 /* ─── Cards ─────────────────────────────────────────────────────────────── */
 .card {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  height: 100%;
+  aspect-ratio: 2/3;
+  flex-shrink: 0;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--surface);
@@ -179,17 +185,6 @@ header h1 {
   transition: box-shadow var(--transition);
 }
 .card:active { cursor: grabbing; }
-
-.card.depth-1 {
-  transform: scale(0.95) translateY(12px);
-  z-index: 2;
-  pointer-events: none;
-}
-.card.depth-2 {
-  transform: scale(0.90) translateY(24px);
-  z-index: 1;
-  pointer-events: none;
-}
 
 .card img {
   width: 100%;
