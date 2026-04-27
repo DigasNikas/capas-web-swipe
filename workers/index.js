@@ -6,6 +6,7 @@
  *   DB             — D1 database
  *
  * Env vars required (set via: wrangler secret put <NAME>):
+ *   ADMIN_SECRET   — bearer token for the /scrape endpoint
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *                    e.g. https://pub-xxxx.r2.dev or your custom domain
  */
@@ -97,6 +98,28 @@ async function scrapeNewspaper(newspaper, date, env) {
   console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);
 }
 
+// ── CORS headers for public endpoints ──────────────────────────────────────
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS },
+  });
+}
+
+// ── GET /covers — public ────────────────────────────────────────────────────
+async function handleCovers(env) {
+  const { results } = await env.DB
+    .prepare("SELECT id, newspaper, date, url FROM covers ORDER BY date DESC, newspaper ASC")
+    .all();
+  return json(results);
+}
+
 // ── Entry point ─────────────────────────────────────────────────────────────
 export default {
   // Cron trigger — runs daily at 07:00 UTC
@@ -107,16 +130,26 @@ export default {
     }
   },
 
-  // HTTP trigger — for manual runs: GET /?days=7
-  // Requires header:  Authorization: Bearer <ADMIN_SECRET>
   async fetch(request, env, ctx) {
-    const auth = request.headers.get("Authorization") ?? "";
-    if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-      return new Response("Unauthorized", { status: 401 });
+    const { method, url: rawUrl } = request;
+    const url = new URL(rawUrl);
+
+    if (method === "OPTIONS") return new Response(null, { headers: CORS });
+
+    // Public: GET /covers
+    if (method === "GET" && url.pathname === "/covers") {
+      return handleCovers(env);
     }
 
-    const url  = new URL(request.url);
-    const days = Math.min(parseInt(url.searchParams.get("days") ?? "1"), 30);
+    // Protected: manual scrape trigger — GET /scrape?days=7
+    // Requires header: Authorization: Bearer <ADMIN_SECRET>
+    if (method === "GET" && url.pathname === "/scrape") {
+      const auth = request.headers.get("Authorization") ?? "";
+      if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const days = Math.min(parseInt(url.searchParams.get("days") ?? "1"), 30);
 
     const results = [];
     for (let i = 0; i < days; i++) {
@@ -127,7 +160,10 @@ export default {
       }
     }
 
-    ctx.waitUntil(Promise.all(results));
-    return new Response(`Scraping ${days} day(s) for ${NEWSPAPERS.length} newspapers.`, { status: 202 });
+      ctx.waitUntil(Promise.all(results));
+      return new Response(`Scraping ${days} day(s) for ${NEWSPAPERS.length} newspapers.`, { status: 202 });
+    }
+
+    return new Response("Not found", { status: 404 });
   },
 };
