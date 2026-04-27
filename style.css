@@ -173,6 +173,32 @@ header h1 {
   height: min(300px, 52vh);
   padding: 0 12px;
   width: 100%;
+  transition: opacity 0.2s;
+}
+
+#card-stack.dimmed { opacity: 0.25; pointer-events: none; }
+
+/* ─── Active card overlay ────────────────────────────────────────────────── */
+#active-card-area {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+#active-card-area .card {
+  width: var(--card-w);
+  height: var(--card-h);
+  flex-shrink: 0;
+  aspect-ratio: unset;
+  animation: card-enter 0.25s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+
+@keyframes card-enter {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: none; opacity: 1; }
 }
 
 /* ─── Cards ─────────────────────────────────────────────────────────────── */
