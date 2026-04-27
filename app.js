@@ -34,10 +34,18 @@ const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
+const swipeBg           = document.getElementById('swipe-bg');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
 const ROTATION_FACTOR = 0.08;
+
+const FEEDBACK_COLORS = {
+  left:  [239, 68,  68],
+  right: [34,  197, 94],
+  up:    [245, 158, 11],
+  down:  [99,  102, 241],
+};
 
 const ACTIONS = {
   right: { name: 'keep',     icon: '🦁', label: 'SPORTING' },
@@ -279,17 +287,35 @@ function getDirection(dx, dy) {
   return dy < 0 ? 'up' : 'down';
 }
 
+function setSwipeFeedback(direction, progress) {
+  const [r, g, b] = FEEDBACK_COLORS[direction];
+  const opacity = Math.min(progress * 0.55, 0.55);
+  swipeBg.style.backgroundColor = `rgb(${r},${g},${b})`;
+  swipeBg.style.opacity = opacity;
+}
+
+function clearSwipeFeedback() {
+  swipeBg.style.opacity = 0;
+}
+
 function updateOverlays(card, dx, dy) {
   const direction = getDirection(dx, dy);
   const distance  = Math.max(Math.abs(dx), Math.abs(dy));
-  const opacity   = Math.min((distance / SWIPE_THRESHOLD) * 0.9, 0.9);
+  const progress  = distance / SWIPE_THRESHOLD;
+  const opacity   = Math.min(progress * 0.9, 0.9);
   card.querySelectorAll('.swipe-overlay').forEach(o => {
     o.style.opacity = o.dataset.dir === direction ? opacity : 0;
   });
+  if (direction) {
+    setSwipeFeedback(direction, progress);
+  } else {
+    clearSwipeFeedback();
+  }
 }
 
 function clearOverlays(card) {
   card.querySelectorAll('.swipe-overlay').forEach(o => (o.style.opacity = 0));
+  clearSwipeFeedback();
 }
 
 // ── Committing a Swipe ─────────────────────────────────────────────────────
@@ -301,6 +327,7 @@ function commitSwipe(card, direction) {
   });
   card.classList.add(`fly-${direction}`);
   card.addEventListener('animationend', () => {
+    clearSwipeFeedback();
     card.remove();
     recordAction(id, ACTIONS[direction].name);
     state.queue = state.queue.filter(qid => qid !== id);
@@ -337,6 +364,7 @@ function triggerAction(direction) {
   if (!card) return;
   const overlay = card.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
   if (overlay) overlay.style.opacity = 0.9;
+  setSwipeFeedback(direction, 1);
   commitSwipe(card, direction);
 }
 
@@ -438,13 +466,6 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   updateProgress();
   updateCatalogueCount();
 });
-
-document.querySelectorAll('.action-btn').forEach(btn =>
-  btn.addEventListener('click', () => {
-    const dir = actionToDir(btn.dataset.action);
-    if (dir) triggerAction(dir);
-  })
-);
 
 document.addEventListener('keydown', e => {
   if (!catalogueModal.classList.contains('hidden')) return;
