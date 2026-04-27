@@ -35,6 +35,7 @@ const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
 const swipeBg           = document.getElementById('swipe-bg');
+const swipeHints        = document.getElementById('swipe-hints');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
@@ -157,6 +158,7 @@ function renderStack() {
   cardStack.classList.remove('dimmed');
   activeCardArea.classList.add('hidden');
   activeCardArea.innerHTML = '';
+  swipeHints.classList.add('hidden');
 
   if (state.presentationMode) {
     cardStack.addEventListener('click', e => {
@@ -175,6 +177,7 @@ function activateSwipeMode(clickedId) {
   state.queue = [clickedId, ...state.queue.filter(id => id !== clickedId)];
   cardStack.classList.remove('presentation-mode');
   cardStack.classList.add('dimmed');
+  swipeHints.classList.remove('hidden');
   showActiveCard();
   updateDateHeader();
 }
