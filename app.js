@@ -33,6 +33,7 @@ const modalOverlay      = document.getElementById('modal-overlay');
 const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
+const activeCardArea    = document.getElementById('active-card-area');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
@@ -144,23 +145,41 @@ function renderStack() {
     }
   });
 
+  cardStack.classList.toggle('presentation-mode', state.presentationMode);
+  cardStack.classList.remove('dimmed');
+  activeCardArea.classList.add('hidden');
+  activeCardArea.innerHTML = '';
+
   if (state.presentationMode) {
-    cardStack.classList.add('presentation-mode');
-    cardStack.addEventListener('click', activateSwipeMode, { once: true });
-  } else {
-    cardStack.classList.remove('presentation-mode');
-    Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
+    cardStack.addEventListener('click', e => {
+      const card = e.target.closest('.card');
+      if (card) activateSwipeMode(card.dataset.id);
+    }, { once: true });
   }
 
   updateDateHeader();
   updateEmptyState();
 }
 
-function activateSwipeMode() {
+function activateSwipeMode(clickedId) {
   state.presentationMode = false;
+  // Put the clicked card first so it shows up first in the active area
+  state.queue = [clickedId, ...state.queue.filter(id => id !== clickedId)];
   cardStack.classList.remove('presentation-mode');
-  Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
+  cardStack.classList.add('dimmed');
+  showActiveCard();
   updateDateHeader();
+}
+
+function showActiveCard() {
+  const id  = state.queue[0];
+  const img = state.images.find(i => i.id === id);
+  if (!img) return;
+  activeCardArea.innerHTML = '';
+  const card = buildCard(img);
+  activeCardArea.appendChild(card);
+  activeCardArea.classList.remove('hidden');
+  attachSwipeListeners(card);
 }
 
 function buildCard(img) {
@@ -282,14 +301,19 @@ function commitSwipe(card, direction) {
     recordAction(id, ACTIONS[direction].name);
     state.queue = state.queue.filter(qid => qid !== id);
 
-    // If this date group is fully done, advance to the next
+    // Remove the swiped card from the presentation row too
+    cardStack.querySelector(`[data-id="${id}"]`)?.remove();
+
     if (state.queue.length === 0) {
       state.groupIndex++;
       advanceToNextPendingGroup();
       state.presentationMode = true;
+      renderStack();
+    } else {
+      showActiveCard();
+      updateDateHeader();
     }
 
-    renderStack();
     updateProgress();
     updateCatalogueCount();
   }, { once: true });
@@ -305,7 +329,7 @@ function recordAction(id, action) {
 
 function triggerAction(direction) {
   if (state.presentationMode) return;
-  const card = cardStack.firstElementChild;
+  const card = activeCardArea.firstElementChild;
   if (!card) return;
   const overlay = card.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
   if (overlay) overlay.style.opacity = 0.9;
@@ -319,6 +343,7 @@ function updateEmptyState() {
   emptyState.classList.toggle('hidden', hasQueue);
   dateHeader.classList.toggle('hidden', !hasQueue);
   progressContainer.classList.toggle('hidden', state.images.length === 0);
+  if (!hasQueue) activeCardArea.classList.add('hidden');
 }
 
 function updateDateHeader() {
