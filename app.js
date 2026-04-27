@@ -1,7 +1,8 @@
 /* ─────────────────────────────────────────────────────────────────────────
  * Avaliador de Capas — app.js
  * Loads covers from the Cloudflare Worker API (D1 + R2).
- * Swipe decisions are persisted in localStorage.
+ * Images are grouped by date; all 3 covers per date must be swiped
+ * before moving to the next date. Decisions are persisted in localStorage.
  * ───────────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'swipe-catalogue';
@@ -9,9 +10,11 @@ const API_URL     = 'https://capas-scraper.digasnikas-digital.workers.dev'; // T
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
-  images: [],    // { id, name, src }  — full image list from manifest
-  queue: [],     // ids not yet catalogued this session
-  catalogue: [], // { id, name, src, action, timestamp }
+  images:     [],  // { id, name, src, newspaper, date }
+  dateGroups: [],  // [{ date, ids[] }] sorted date desc
+  groupIndex: 0,   // which date group is active
+  queue:      [],  // ids in current group not yet swiped
+  catalogue:  [],  // { id, name, src, newspaper, date, action, timestamp }
 };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -26,7 +29,9 @@ const catalogueModal    = document.getElementById('catalogue-modal');
 const catalogueGrid     = document.getElementById('catalogue-grid');
 const catalogueEmpty    = document.getElementById('catalogue-empty');
 const modalOverlay      = document.getElementById('modal-overlay');
-const cardArea          = document.getElementById('card-area');
+const dateHeader        = document.getElementById('date-header');
+const dateLabel         = document.getElementById('date-label');
+const dateProgress      = document.getElementById('date-progress');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
@@ -50,37 +55,58 @@ function saveToStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.catalogue));
 }
 
+// ── Date grouping ──────────────────────────────────────────────────────────
+function groupByDate(images) {
+  const map = new Map();
+  for (const img of images) {
+    if (!map.has(img.date)) map.set(img.date, []);
+    map.get(img.date).push(img.id);
+  }
+  return [...map.keys()]
+    .sort((a, b) => b.localeCompare(a))       // newest first
+    .map(date => ({ date, ids: map.get(date) }));
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-PT', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   loadingState.classList.remove('hidden');
 
-  const saved = loadFromStorage();
+  const saved   = loadFromStorage();
   const savedIds = new Set(saved.map(e => e.id));
 
   let covers;
   try {
     const res = await fetch(`${API_URL}/covers`);
     covers = await res.json();
-  } catch (err) {
+  } catch {
     loadingState.querySelector('p').textContent = 'Failed to load images.';
     return;
   }
 
   state.images = covers.map(c => ({
-    id:   String(c.id),
-    name: `${c.newspaper} ${c.date}`,
-    src:  c.url,
+    id:        String(c.id),
+    name:      c.newspaper,
+    src:       c.url,
+    newspaper: c.newspaper,
+    date:      c.date,
   }));
 
-  // Restore saved catalogue entries (with up-to-date src path)
-  state.catalogue = saved.filter(e => savedIds.has(e.id)).map(e => ({
-    ...state.images.find(i => i.id === e.id),
-    action: e.action,
-    timestamp: e.timestamp,
-  }));
+  state.dateGroups = groupByDate(state.images);
 
-  // Queue = images not yet catalogued
-  state.queue = state.images.map(i => i.id).filter(id => !savedIds.has(id));
+  state.catalogue = saved
+    .filter(e => savedIds.has(e.id))
+    .map(e => ({ ...state.images.find(i => i.id === e.id), action: e.action, timestamp: e.timestamp }))
+    .filter(Boolean);
+
+  // Start at the first group that still has unswiped images
+  state.groupIndex = 0;
+  advanceToNextPendingGroup();
 
   loadingState.classList.add('hidden');
   renderStack();
@@ -88,33 +114,48 @@ async function init() {
   updateCatalogueCount();
 }
 
+// ── Group navigation ───────────────────────────────────────────────────────
+function advanceToNextPendingGroup() {
+  const savedIds = new Set(state.catalogue.map(e => e.id));
+  while (state.groupIndex < state.dateGroups.length) {
+    const pending = state.dateGroups[state.groupIndex].ids.filter(id => !savedIds.has(id));
+    if (pending.length > 0) {
+      state.queue = pending;
+      return;
+    }
+    state.groupIndex++;
+  }
+  state.queue = []; // all done
+}
+
 // ── Stack Rendering ────────────────────────────────────────────────────────
 function renderStack() {
-  const topIds = state.queue.slice(0, 1);
   const existingIds = new Set(Array.from(cardStack.children).map(el => el.dataset.id));
 
+  // Remove cards no longer in queue
   Array.from(cardStack.children).forEach(el => {
-    if (!topIds.includes(el.dataset.id)) el.remove();
+    if (!state.queue.includes(el.dataset.id)) el.remove();
   });
 
-  topIds.filter(id => !existingIds.has(id)).forEach(id => {
-    const img = state.images.find(i => i.id === id);
-    if (img) cardStack.appendChild(buildCard(img));
+  // Add new cards — queue[last] first in DOM (deepest), queue[0] last (top)
+  [...state.queue].reverse().forEach(id => {
+    if (!existingIds.has(id)) {
+      const img = state.images.find(i => i.id === id);
+      if (img) cardStack.insertBefore(buildCard(img), cardStack.firstChild);
+    }
   });
 
-  // Ensure queue[0] is the last child (rendered on top)
-  topIds.slice().reverse().forEach(id => {
-    const el = cardStack.querySelector(`[data-id="${id}"]`);
-    if (el) cardStack.appendChild(el);
+  // Assign depth classes: last DOM child = top (queue[0])
+  Array.from(cardStack.children).forEach((c, i, arr) => {
+    const depth = arr.length - 1 - i;
+    c.className = 'card' + (depth === 0 ? ' top' : ` depth-${Math.min(depth, 2)}`);
+    if (depth > 0) c.style.transform = '';
   });
-
-  Array.from(cardStack.children).forEach((c, i, arr) =>
-    c.classList.toggle('top', i === arr.length - 1)
-  );
 
   const topCard = cardStack.lastElementChild;
   if (topCard) attachSwipeListeners(topCard);
 
+  updateDateHeader();
   updateEmptyState();
 }
 
@@ -130,7 +171,7 @@ function buildCard(img) {
 
   const labelBar = document.createElement('div');
   labelBar.className = 'card-label-bar';
-  labelBar.textContent = img.name;
+  labelBar.textContent = img.newspaper.toUpperCase();
 
   Object.entries(ACTIONS).forEach(([dir, action]) => {
     const overlay = document.createElement('div');
@@ -234,6 +275,13 @@ function commitSwipe(card, direction) {
     card.remove();
     recordAction(id, ACTIONS[direction].name);
     state.queue = state.queue.filter(qid => qid !== id);
+
+    // If this date group is fully done, advance to the next
+    if (state.queue.length === 0) {
+      state.groupIndex++;
+      advanceToNextPendingGroup();
+    }
+
     renderStack();
     updateProgress();
     updateCatalogueCount();
@@ -261,14 +309,25 @@ function updateEmptyState() {
   const hasQueue = state.queue.length > 0;
   cardStack.style.display = hasQueue ? '' : 'none';
   emptyState.classList.toggle('hidden', hasQueue);
+  dateHeader.classList.toggle('hidden', !hasQueue);
   progressContainer.classList.toggle('hidden', state.images.length === 0);
 }
 
+function updateDateHeader() {
+  const group = state.dateGroups[state.groupIndex];
+  if (!group) return;
+  const savedIds    = new Set(state.catalogue.map(e => e.id));
+  const total       = group.ids.length;
+  const done        = group.ids.filter(id => savedIds.has(id)).length;
+  dateLabel.textContent    = formatDate(group.date);
+  dateProgress.textContent = `${done + 1} / ${total}`;
+}
+
 function updateProgress() {
-  const total = state.images.length;
-  const done  = state.catalogue.length;
+  const total = state.dateGroups.length;
+  const done  = state.groupIndex;
   progressBar.style.setProperty('--progress', `${total ? Math.round((done / total) * 100) : 0}%`);
-  progressText.textContent = `${done} / ${total}`;
+  progressText.textContent = `${done} / ${total} days`;
 }
 
 function updateCatalogueCount() {
@@ -317,16 +376,6 @@ function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
 
-// ── Export ─────────────────────────────────────────────────────────────────
-function exportCatalogue() {
-  const data = state.catalogue.map(({ id, name, action, timestamp }) => ({ id, name, action, timestamp }));
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: `catalogue-${Date.now()}.json` });
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 // ── Event Listeners ────────────────────────────────────────────────────────
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
@@ -336,12 +385,11 @@ document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => renderCatalogueGrid(btn.dataset.filter))
 );
 
-document.getElementById('btn-export').addEventListener('click', exportCatalogue);
-
 document.getElementById('btn-reset').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY);
-  state.catalogue = [];
-  state.queue = state.images.map(i => i.id);
+  state.catalogue  = [];
+  state.groupIndex = 0;
+  advanceToNextPendingGroup();
   renderStack();
   updateProgress();
   updateCatalogueCount();
