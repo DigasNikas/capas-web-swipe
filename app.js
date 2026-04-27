@@ -5,7 +5,7 @@
  * ───────────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'swipe-catalogue';
-const API_URL     = 'https://capas-scraper.<your-subdomain>.workers.dev'; // TODO: set after deploy
+const API_URL     = 'https://capas-scraper.digasnikas-digital.workers.dev'; // TODO: set after deploy
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
