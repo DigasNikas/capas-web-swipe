@@ -193,7 +193,7 @@ header h1 {
   height: var(--card-h);
   flex-shrink: 0;
   aspect-ratio: unset;
-  animation: card-enter 0.25s cubic-bezier(.34,1.56,.64,1) forwards;
+  /* animation applied via JS inline style to avoid specificity overriding fly-* */
 }
 
 @keyframes card-enter {

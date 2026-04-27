@@ -177,6 +177,7 @@ function showActiveCard() {
   if (!img) return;
   activeCardArea.innerHTML = '';
   const card = buildCard(img);
+  card.style.animation = 'card-enter 0.25s cubic-bezier(.34,1.56,.64,1)';
   activeCardArea.appendChild(card);
   activeCardArea.classList.remove('hidden');
   attachSwipeListeners(card);
@@ -237,6 +238,7 @@ function attachSwipeListeners(card) {
     if (direction) {
       commitSwipe(card, direction);
     } else {
+      card.style.animation = '';  // clear inline so snap-back CSS class can run
       card.classList.add('snap-back');
       card.style.transform = '';
       clearOverlays(card);
@@ -293,6 +295,7 @@ function clearOverlays(card) {
 // ── Committing a Swipe ─────────────────────────────────────────────────────
 function commitSwipe(card, direction) {
   const id = card.dataset.id;
+  card.style.animation = '';  // clear inline so fly-* CSS class can run
   card.querySelectorAll('.swipe-overlay').forEach(o => {
     o.style.opacity = o.dataset.dir === direction ? 0.9 : 0;
   });
