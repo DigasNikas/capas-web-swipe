@@ -52,7 +52,7 @@ async function scrapeNewspaper(newspaper, date, env) {
 
   // Skip if already in D1
   const existing = await env.DB
-    .prepare("SELECT id FROM covers WHERE newspaper = ? AND date = ?")
+    .prepare("SELECT id FROM capas WHERE jornal = ? AND data = ?")
     .bind(newspaper.slug, dateLabel)
     .first();
 
@@ -90,7 +90,7 @@ async function scrapeNewspaper(newspaper, date, env) {
 
   // Insert into D1
   await env.DB
-    .prepare("INSERT INTO covers (newspaper, date, r2_key, url) VALUES (?, ?, ?, ?)")
+    .prepare("INSERT INTO capas (jornal, data, r2_key, url) VALUES (?, ?, ?, ?)")
     .bind(newspaper.slug, dateLabel, r2Key, publicUrl)
     .run();
 
