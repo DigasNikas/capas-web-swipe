@@ -132,28 +132,18 @@ function advanceToNextPendingGroup() {
 function renderStack() {
   const existingIds = new Set(Array.from(cardStack.children).map(el => el.dataset.id));
 
-  // Remove cards no longer in queue
   Array.from(cardStack.children).forEach(el => {
     if (!state.queue.includes(el.dataset.id)) el.remove();
   });
 
-  // Add new cards — queue[last] first in DOM (deepest), queue[0] last (top)
-  [...state.queue].reverse().forEach(id => {
+  state.queue.forEach(id => {
     if (!existingIds.has(id)) {
       const img = state.images.find(i => i.id === id);
-      if (img) cardStack.insertBefore(buildCard(img), cardStack.firstChild);
+      if (img) cardStack.appendChild(buildCard(img));
     }
   });
 
-  // Assign depth classes: last DOM child = top (queue[0])
-  Array.from(cardStack.children).forEach((c, i, arr) => {
-    const depth = arr.length - 1 - i;
-    c.className = 'card' + (depth === 0 ? ' top' : ` depth-${Math.min(depth, 2)}`);
-    if (depth > 0) c.style.transform = '';
-  });
-
-  const topCard = cardStack.lastElementChild;
-  if (topCard) attachSwipeListeners(topCard);
+  Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
 
   updateDateHeader();
   updateEmptyState();
@@ -188,6 +178,8 @@ function buildCard(img) {
 
 // ── Swipe Gesture Logic ────────────────────────────────────────────────────
 function attachSwipeListeners(card) {
+  if (card.dataset.listenersAttached) return;
+  card.dataset.listenersAttached = '1';
   let startX = 0, startY = 0, isDragging = false;
 
   function onStart(x, y) {
@@ -297,11 +289,11 @@ function recordAction(id, action) {
 }
 
 function triggerAction(direction) {
-  const topCard = cardStack.lastElementChild;
-  if (!topCard) return;
-  const overlay = topCard.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
+  const card = cardStack.firstElementChild;
+  if (!card) return;
+  const overlay = card.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
   if (overlay) overlay.style.opacity = 0.9;
-  commitSwipe(topCard, direction);
+  commitSwipe(card, direction);
 }
 
 // ── UI Updates ─────────────────────────────────────────────────────────────
