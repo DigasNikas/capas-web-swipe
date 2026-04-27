@@ -12,4 +12,12 @@ bucket_name = "capas-storage"
 [[d1_databases]]
 binding       = "DB"
 database_name = "capas-db"
-database_id   = ""   # fill in after: wrangler d1 create capas-db
+database_id   = "a21b563d-6d8d-4355-af98-92045becf861"
+
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
