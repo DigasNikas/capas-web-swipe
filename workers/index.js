@@ -108,7 +108,13 @@ export default {
   },
 
   // HTTP trigger — for manual runs: GET /?days=7
+  // Requires header:  Authorization: Bearer <ADMIN_SECRET>
   async fetch(request, env, ctx) {
+    const auth = request.headers.get("Authorization") ?? "";
+    if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const url  = new URL(request.url);
     const days = Math.min(parseInt(url.searchParams.get("days") ?? "1"), 30);
 
