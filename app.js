@@ -218,6 +218,7 @@ function attachSwipeListeners(card) {
   function onStart(x, y) {
     startX = x; startY = y; isDragging = true;
     card.style.transition = 'none';
+    card.style.animation  = 'none';  // cancel card-enter fill so transform isn't blocked
   }
 
   function onMove(x, y) {
