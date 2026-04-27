@@ -10,11 +10,12 @@ const API_URL     = 'https://capas-scraper.digasnikas-digital.workers.dev'; // T
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
-  images:     [],  // { id, name, src, newspaper, date }
-  dateGroups: [],  // [{ date, ids[] }] sorted date desc
-  groupIndex: 0,   // which date group is active
-  queue:      [],  // ids in current group not yet swiped
-  catalogue:  [],  // { id, name, src, newspaper, date, action, timestamp }
+  images:           [],     // { id, name, src, newspaper, date }
+  dateGroups:       [],     // [{ date, ids[] }] sorted date desc
+  groupIndex:       0,      // which date group is active
+  queue:            [],     // ids in current group not yet swiped
+  catalogue:        [],     // { id, name, src, newspaper, date, action, timestamp }
+  presentationMode: true,   // true = showing cards, waiting for tap to start swiping
 };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -143,10 +144,23 @@ function renderStack() {
     }
   });
 
-  Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
+  if (state.presentationMode) {
+    cardStack.classList.add('presentation-mode');
+    cardStack.addEventListener('click', activateSwipeMode, { once: true });
+  } else {
+    cardStack.classList.remove('presentation-mode');
+    Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
+  }
 
   updateDateHeader();
   updateEmptyState();
+}
+
+function activateSwipeMode() {
+  state.presentationMode = false;
+  cardStack.classList.remove('presentation-mode');
+  Array.from(cardStack.children).forEach(c => attachSwipeListeners(c));
+  updateDateHeader();
 }
 
 function buildCard(img) {
@@ -272,6 +286,7 @@ function commitSwipe(card, direction) {
     if (state.queue.length === 0) {
       state.groupIndex++;
       advanceToNextPendingGroup();
+      state.presentationMode = true;
     }
 
     renderStack();
@@ -289,6 +304,7 @@ function recordAction(id, action) {
 }
 
 function triggerAction(direction) {
+  if (state.presentationMode) return;
   const card = cardStack.firstElementChild;
   if (!card) return;
   const overlay = card.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
@@ -308,11 +324,17 @@ function updateEmptyState() {
 function updateDateHeader() {
   const group = state.dateGroups[state.groupIndex];
   if (!group) return;
-  const savedIds    = new Set(state.catalogue.map(e => e.id));
-  const total       = group.ids.length;
-  const done        = group.ids.filter(id => savedIds.has(id)).length;
-  dateLabel.textContent    = formatDate(group.date);
-  dateProgress.textContent = `${done + 1} / ${total}`;
+  dateLabel.textContent = formatDate(group.date);
+  if (state.presentationMode) {
+    dateProgress.textContent = 'tap to start';
+    dateProgress.classList.add('hint');
+  } else {
+    const savedIds = new Set(state.catalogue.map(e => e.id));
+    const total    = group.ids.length;
+    const done     = group.ids.filter(id => savedIds.has(id)).length;
+    dateProgress.textContent = `${done + 1} / ${total}`;
+    dateProgress.classList.remove('hint');
+  }
 }
 
 function updateProgress() {
@@ -379,8 +401,9 @@ document.querySelectorAll('.filter-btn').forEach(btn =>
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY);
-  state.catalogue  = [];
-  state.groupIndex = 0;
+  state.catalogue       = [];
+  state.groupIndex      = 0;
+  state.presentationMode = true;
   advanceToNextPendingGroup();
   renderStack();
   updateProgress();
