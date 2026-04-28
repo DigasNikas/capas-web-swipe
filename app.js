@@ -36,6 +36,9 @@ const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
 const swipeBg           = document.getElementById('swipe-bg');
 const swipeHints        = document.getElementById('swipe-hints');
+const calSection        = document.getElementById('calendar-section');
+const calMonthLabel     = document.getElementById('cal-month-label');
+const calGrid           = document.getElementById('calendar-grid');
 const swipePill         = document.getElementById('swipe-pill');
 const pillIcon          = document.getElementById('pill-icon');
 const pillLabel         = document.getElementById('pill-label');
@@ -50,6 +53,11 @@ const FEEDBACK_COLORS = {
   up:    [245, 158, 11],
   down:  [99,  102, 241],
 };
+
+let calViewYear  = new Date().getFullYear();
+let calViewMonth = new Date().getMonth();
+
+const CAL_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 const ACTIONS = {
   right: { name: 'keep',     icon: '🦁', label: 'SPORTING' },
@@ -121,6 +129,7 @@ async function init() {
   // Start at the first group that still has unswiped images
   state.groupIndex = 0;
   advanceToNextPendingGroup();
+  syncCalToActiveDate();
 
   loadingState.classList.add('hidden');
   renderStack();
@@ -358,6 +367,7 @@ function commitSwipe(card, direction) {
     if (state.queue.length === 0) {
       state.groupIndex++;
       advanceToNextPendingGroup();
+      syncCalToActiveDate();
       state.presentationMode = true;
       renderStack();
     } else {
@@ -389,6 +399,53 @@ function triggerAction(direction) {
   commitSwipe(card, direction);
 }
 
+// ── Calendar ───────────────────────────────────────────────────────────────
+function syncCalToActiveDate() {
+  const d = state.dateGroups[state.groupIndex]?.date;
+  if (d) { calViewYear = +d.slice(0, 4); calViewMonth = +d.slice(5, 7) - 1; }
+}
+
+function renderCalendar() {
+  const savedIds       = new Set(state.catalogue.map(e => e.id));
+  const completedDates = new Set(
+    state.dateGroups.filter(g => g.ids.every(id => savedIds.has(id))).map(g => g.date)
+  );
+  const activeDate = state.dateGroups[state.groupIndex]?.date;
+  const allDates   = new Set(state.dateGroups.map(g => g.date));
+
+  calMonthLabel.textContent = new Date(calViewYear, calViewMonth, 1)
+    .toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+
+  const offset   = (new Date(calViewYear, calViewMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+
+  calGrid.innerHTML = '';
+
+  CAL_HEADERS.forEach(h => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-header';
+    el.textContent = h;
+    calGrid.appendChild(el);
+  });
+
+  for (let i = 0; i < offset; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day empty';
+    calGrid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    if      (completedDates.has(ds)) el.classList.add('completed');
+    else if (ds === activeDate)      el.classList.add('active');
+    else if (allDates.has(ds))       el.classList.add('pending');
+    el.textContent = d;
+    calGrid.appendChild(el);
+  }
+}
+
 // ── UI Updates ─────────────────────────────────────────────────────────────
 function updateEmptyState() {
   const hasQueue = state.queue.length > 0;
@@ -396,6 +453,7 @@ function updateEmptyState() {
   emptyState.classList.toggle('hidden', hasQueue);
   dateHeader.classList.toggle('hidden', !hasQueue);
   progressContainer.classList.toggle('hidden', state.images.length === 0);
+  calSection.classList.toggle('hidden', state.images.length === 0);
   if (!hasQueue) activeCardArea.classList.add('hidden');
 }
 
@@ -420,6 +478,7 @@ function updateProgress() {
   const done  = state.groupIndex;
   progressBar.style.setProperty('--progress', `${total ? Math.round((done / total) * 100) : 0}%`);
   progressText.textContent = `${done} / ${total} days`;
+  renderCalendar();
 }
 
 function updateCatalogueCount() {
@@ -483,6 +542,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   state.groupIndex      = 0;
   state.presentationMode = true;
   advanceToNextPendingGroup();
+  syncCalToActiveDate();
   renderStack();
   updateProgress();
   updateCatalogueCount();
@@ -492,6 +552,18 @@ document.addEventListener('keydown', e => {
   if (!catalogueModal.classList.contains('hidden')) return;
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   if (map[e.key]) triggerAction(map[e.key]);
+});
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  calViewMonth--;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  renderCalendar();
+});
+
+document.getElementById('cal-next').addEventListener('click', () => {
+  calViewMonth++;
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderCalendar();
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────
