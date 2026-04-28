@@ -100,5 +100,46 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Landing page (shown on first visit) -->
+  <div id="landing-page">
+    <div class="landing-inner">
+
+      <div class="landing-hero">
+        <div class="landing-flag">🇵🇹</div>
+        <h1 class="landing-title">Avaliador de capas<br>desportivas</h1>
+        <p class="landing-desc">Classifica as capas dos maiores jornais desportivos nacionais com um simples deslize.</p>
+      </div>
+
+      <div class="landing-guide">
+        <p class="landing-guide-label">Como avaliar</p>
+        <div class="landing-dirs">
+          <div class="landing-dir" style="--accent: var(--keep)">
+            <span class="ldir-arrow">→</span>
+            <span class="ldir-icon">🦁</span>
+            <span class="ldir-name">Sporting</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--reject)">
+            <span class="ldir-arrow">←</span>
+            <span class="ldir-icon">🦅</span>
+            <span class="ldir-name">Benfica</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--skip)">
+            <span class="ldir-arrow">↓</span>
+            <span class="ldir-icon">🐉</span>
+            <span class="ldir-name">Porto</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--favorite)">
+            <span class="ldir-arrow">↑</span>
+            <span class="ldir-icon">?</span>
+            <span class="ldir-name">Outros</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-landing-start">Começar</button>
+
+    </div>
+  </div>
 </body>
 </html>
