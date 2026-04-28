@@ -34,6 +34,7 @@ const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
+const tapHint           = document.getElementById('tap-hint');
 const swipeBg           = document.getElementById('swipe-bg');
 const swipeHints        = document.getElementById('swipe-hints');
 const calSection        = document.getElementById('calendar-section');
@@ -478,7 +479,10 @@ function updateEmptyState() {
   dateHeader.classList.toggle('hidden', !hasQueue);
   progressContainer.classList.toggle('hidden', state.images.length === 0);
   calSection.classList.toggle('hidden', state.images.length === 0);
-  if (!hasQueue) activeCardArea.classList.add('hidden');
+  if (!hasQueue) {
+    activeCardArea.classList.add('hidden');
+    tapHint.classList.add('hidden');
+  }
 }
 
 function updateDateHeader() {
@@ -486,14 +490,14 @@ function updateDateHeader() {
   if (!group) return;
   dateLabel.textContent = formatDate(group.date);
   if (state.presentationMode) {
-    dateProgress.textContent = 'tap to start';
-    dateProgress.classList.add('hint');
+    dateProgress.textContent = '';
+    tapHint.classList.remove('hidden');
   } else {
     const savedIds = new Set(state.catalogue.map(e => e.id));
     const total    = group.ids.length;
     const done     = group.ids.filter(id => savedIds.has(id)).length;
     dateProgress.textContent = `${done + 1} / ${total}`;
-    dateProgress.classList.remove('hint');
+    tapHint.classList.add('hidden');
   }
 }
 
