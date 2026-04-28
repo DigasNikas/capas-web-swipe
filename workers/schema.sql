@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS swipes (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_email TEXT NOT NULL,
   cover_id   INTEGER NOT NULL REFERENCES covers(id),
-  action     TEXT NOT NULL,           -- 'keep', 'reject', 'favorite', 'skip'
+  decision   TEXT NOT NULL,           -- 'sporting', 'benfica', 'porto', 'others'
   swiped_at  TEXT DEFAULT (datetime('now')),
   UNIQUE (user_email, cover_id)       -- one record per user per cover; re-swipes update it
 );

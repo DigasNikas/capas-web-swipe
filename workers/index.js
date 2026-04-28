@@ -120,17 +120,17 @@ async function handleSwipe(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  const { cover_id, action } = body;
-  if (!cover_id || !action) return json({ error: "Missing cover_id or action" }, 400);
+  const { cover_id, decision } = body;
+  if (!cover_id || !decision) return json({ error: "Missing cover_id or decision" }, 400);
 
   await env.DB
     .prepare(`
-      INSERT INTO swipes (user_email, cover_id, action)
+      INSERT INTO swipes (user_email, cover_id, decision)
       VALUES (?, ?, ?)
       ON CONFLICT (user_email, cover_id)
-      DO UPDATE SET action = excluded.action, swiped_at = datetime('now')
+      DO UPDATE SET decision = excluded.decision, swiped_at = datetime('now')
     `)
-    .bind(userEmail, cover_id, action)
+    .bind(userEmail, cover_id, decision)
     .run();
 
   return json({ ok: true });

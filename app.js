@@ -63,10 +63,10 @@ let calViewMonth = new Date().getMonth();
 const CAL_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 const ACTIONS = {
-  right: { name: 'keep',     icon: '🦁', label: 'SPORTING' },
-  left:  { name: 'reject',   icon: '🦅', label: 'BENFICA'  },
-  up:    { name: 'favorite', icon: '?',  label: 'OUTROS'   },
-  down:  { name: 'skip',     icon: '🐉', label: 'PORTO'    },
+  right: { name: 'keep',     icon: '🦁', label: 'SPORTING', decision: 'sporting' },
+  left:  { name: 'reject',   icon: '🦅', label: 'BENFICA',  decision: 'benfica'  },
+  up:    { name: 'favorite', icon: '?',  label: 'OUTROS',   decision: 'others'   },
+  down:  { name: 'skip',     icon: '🐉', label: 'PORTO',    decision: 'porto'    },
 };
 
 // ── Persistence ────────────────────────────────────────────────────────────
@@ -405,10 +405,11 @@ function recordAction(id, action) {
   state.catalogue = state.catalogue.filter(e => e.id !== id);
   state.catalogue.push({ ...img, action, timestamp: new Date().toISOString() });
   saveToStorage();
+  const decision = Object.values(ACTIONS).find(a => a.name === action)?.decision;
   fetch(`${API_URL}/swipes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cover_id: Number(id), action }),
+    body: JSON.stringify({ cover_id: Number(id), decision }),
   }).catch(() => {});
 }
 
