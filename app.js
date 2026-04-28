@@ -406,6 +406,25 @@ function syncCalToActiveDate() {
   if (d) { calViewYear = +d.slice(0, 4); calViewMonth = +d.slice(5, 7) - 1; }
 }
 
+function goToCalendarDate(dateStr) {
+  const groupIndex = state.dateGroups.findIndex(g => g.date === dateStr);
+  if (groupIndex === -1) return;
+
+  state.groupIndex      = groupIndex;
+  state.queue           = [...state.dateGroups[groupIndex].ids];
+  state.presentationMode = true;
+
+  activeCardArea.classList.add('hidden');
+  activeCardArea.innerHTML = '';
+  swipeHints.classList.add('hidden');
+  clearSwipeFeedback();
+  hidePill();
+
+  renderStack();
+  updateProgress();
+  updateCatalogueCount();
+}
+
 function renderCalendar() {
   const savedIds       = new Set(state.catalogue.map(e => e.id));
   const completedDates = new Set(
@@ -443,6 +462,10 @@ function renderCalendar() {
     else if (ds === activeDate)      el.classList.add('active');
     else if (allDates.has(ds))       el.classList.add('pending');
     el.textContent = d;
+    if (allDates.has(ds)) {
+      el.classList.add('has-data');
+      el.addEventListener('click', () => goToCalendarDate(ds));
+    }
     calGrid.appendChild(el);
   }
 }
