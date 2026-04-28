@@ -626,9 +626,9 @@ function dismissLanding() {
 
 if (localStorage.getItem(ONBOARD_KEY)) {
   landingPage.remove();
+} else {
+  document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 }
-
-document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 
 // ── Start ──────────────────────────────────────────────────────────────────
 init();
