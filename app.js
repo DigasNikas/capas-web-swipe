@@ -42,6 +42,7 @@ const calGrid           = document.getElementById('calendar-grid');
 const swipePill         = document.getElementById('swipe-pill');
 const pillIcon          = document.getElementById('pill-icon');
 const pillLabel         = document.getElementById('pill-label');
+const comecarPill       = document.getElementById('comecar-pill');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
@@ -172,6 +173,7 @@ function renderStack() {
   activeCardArea.classList.add('hidden');
   activeCardArea.innerHTML = '';
   swipeHints.classList.add('hidden');
+  comecarPill.classList.toggle('hidden', !state.presentationMode || state.queue.length === 0);
 
   if (state.presentationMode) {
     cardStack.addEventListener('click', e => {
@@ -186,6 +188,7 @@ function renderStack() {
 
 function activateSwipeMode(clickedId) {
   state.presentationMode = false;
+  comecarPill.classList.add('hidden');
   // Put the clicked card first so it shows up first in the active area
   state.queue = [clickedId, ...state.queue.filter(id => id !== clickedId)];
   cardStack.classList.remove('presentation-mode');
@@ -553,6 +556,10 @@ function actionToDir(action) {
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
+comecarPill.addEventListener('click', () => {
+  if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
+});
+
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
 modalOverlay.addEventListener('click', closeCatalogue);
