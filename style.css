@@ -259,9 +259,6 @@ header h1 {
 .swipe-overlay {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: var(--radius);
   opacity: 0;
   transition: opacity 0.05s;
@@ -274,7 +271,14 @@ header h1 {
 .swipe-overlay.favorite { background: rgba(245,158,11,.25); border-color: var(--favorite); }
 .swipe-overlay.skip     { background: rgba(99,102,241,.25); border-color: var(--skip); }
 
-.overlay-label {
+/* ─── Swipe Pill (fixed, centered on viewport) ───────────────────────────── */
+#swipe-pill {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -282,25 +286,28 @@ header h1 {
   gap: 6px;
   background: rgba(255,255,255,0.94);
   border-radius: 100px;
-  padding: 18px 24px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  padding: 18px 28px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 0.08s;
 }
 
-.overlay-label span:first-child {
+#pill-icon {
   font-size: 3rem;
   line-height: 1;
+  color: #111;
 }
 
-.overlay-label span:last-child {
+#pill-label {
   font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.1em;
 }
 
-.swipe-overlay.keep     .overlay-label span:last-child { color: var(--keep); }
-.swipe-overlay.reject   .overlay-label span:last-child { color: var(--reject); }
-.swipe-overlay.favorite .overlay-label span:last-child { color: var(--favorite); }
-.swipe-overlay.skip     .overlay-label span:last-child { color: var(--skip); }
+#swipe-pill[data-dir="right"] #pill-label { color: var(--keep); }
+#swipe-pill[data-dir="left"]  #pill-label { color: var(--reject); }
+#swipe-pill[data-dir="up"]    #pill-label { color: var(--favorite); }
+#swipe-pill[data-dir="down"]  #pill-label { color: var(--skip); }
 
 /* ─── Fly-off Animations ─────────────────────────────────────────────────── */
 @keyframes fly-left {

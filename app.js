@@ -36,6 +36,9 @@ const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
 const swipeBg           = document.getElementById('swipe-bg');
 const swipeHints        = document.getElementById('swipe-hints');
+const swipePill         = document.getElementById('swipe-pill');
+const pillIcon          = document.getElementById('pill-icon');
+const pillLabel         = document.getElementById('pill-label');
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SWIPE_THRESHOLD = 80;
@@ -212,7 +215,6 @@ function buildCard(img) {
     const overlay = document.createElement('div');
     overlay.className = `swipe-overlay ${action.name}`;
     overlay.dataset.dir = dir;
-    overlay.innerHTML = `<div class="overlay-label"><span>${action.icon}</span><span>${action.label}</span></div>`;
     div.appendChild(overlay);
   });
 
@@ -292,13 +294,24 @@ function getDirection(dx, dy) {
 
 function setSwipeFeedback(direction, progress) {
   const [r, g, b] = FEEDBACK_COLORS[direction];
-  const opacity = Math.min(progress * 0.55, 0.55);
   swipeBg.style.backgroundColor = `rgb(${r},${g},${b})`;
-  swipeBg.style.opacity = opacity;
+  swipeBg.style.opacity = Math.min(progress * 0.55, 0.55);
 }
 
 function clearSwipeFeedback() {
   swipeBg.style.opacity = 0;
+}
+
+function updatePill(direction, progress) {
+  const action = ACTIONS[direction];
+  pillIcon.textContent  = action.icon;
+  pillLabel.textContent = action.label;
+  swipePill.dataset.dir = direction;
+  swipePill.style.opacity = Math.min(progress, 1);
+}
+
+function hidePill() {
+  swipePill.style.opacity = 0;
 }
 
 function updateOverlays(card, dx, dy) {
@@ -311,14 +324,17 @@ function updateOverlays(card, dx, dy) {
   });
   if (direction) {
     setSwipeFeedback(direction, progress);
+    updatePill(direction, progress);
   } else {
     clearSwipeFeedback();
+    hidePill();
   }
 }
 
 function clearOverlays(card) {
   card.querySelectorAll('.swipe-overlay').forEach(o => (o.style.opacity = 0));
   clearSwipeFeedback();
+  hidePill();
 }
 
 // ── Committing a Swipe ─────────────────────────────────────────────────────
@@ -331,6 +347,7 @@ function commitSwipe(card, direction) {
   card.classList.add(`fly-${direction}`);
   card.addEventListener('animationend', () => {
     clearSwipeFeedback();
+    hidePill();
     card.remove();
     recordAction(id, ACTIONS[direction].name);
     state.queue = state.queue.filter(qid => qid !== id);
@@ -368,6 +385,7 @@ function triggerAction(direction) {
   const overlay = card.querySelector(`.swipe-overlay[data-dir="${direction}"]`);
   if (overlay) overlay.style.opacity = 0.9;
   setSwipeFeedback(direction, 1);
+  updatePill(direction, 1);
   commitSwipe(card, direction);
 }
 
