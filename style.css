@@ -698,6 +698,134 @@ header h1 {
   padding: 20px 0;
 }
 
+/* ─── Landing Page ───────────────────────────────────────────────────────── */
+#landing-page {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow-y: auto;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#landing-page.is-dismissed {
+  opacity: 0;
+  transform: translateY(-24px);
+  pointer-events: none;
+}
+
+.landing-inner {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 48px 28px 40px;
+}
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.landing-flag {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.landing-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.landing-desc {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 300px;
+}
+
+.landing-guide {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landing-guide-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.landing-dirs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.landing-dir {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ldir-arrow {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 700;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.ldir-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.ldir-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+#btn-landing-start {
+  width: 100%;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 24px rgba(79, 70, 229, 0.45);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+#btn-landing-start:hover {
+  background: #4338ca;
+  box-shadow: 0 6px 28px rgba(79, 70, 229, 0.6);
+}
+
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 

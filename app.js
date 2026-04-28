@@ -5,8 +5,9 @@
  * before moving to the next date. Decisions are persisted in localStorage.
  * ───────────────────────────────────────────────────────────────────────── */
 
-const STORAGE_KEY = 'swipe-catalogue';
-const API_URL     = 'https://capas-scraper.digasnikas-digital.workers.dev'; // TODO: set after deploy
+const STORAGE_KEY  = 'swipe-catalogue';
+const ONBOARD_KEY  = 'capas-onboarded';
+const API_URL      = 'https://capas-scraper.digasnikas-digital.workers.dev'; // TODO: set after deploy
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -597,6 +598,21 @@ document.getElementById('cal-next').addEventListener('click', () => {
   if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
   renderCalendar();
 });
+
+// ── Landing page ───────────────────────────────────────────────────────────
+const landingPage = document.getElementById('landing-page');
+
+function dismissLanding() {
+  localStorage.setItem(ONBOARD_KEY, '1');
+  landingPage.classList.add('is-dismissed');
+  landingPage.addEventListener('transitionend', () => landingPage.remove(), { once: true });
+}
+
+if (localStorage.getItem(ONBOARD_KEY)) {
+  landingPage.remove();
+}
+
+document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 
 // ── Start ──────────────────────────────────────────────────────────────────
 init();
