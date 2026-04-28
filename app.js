@@ -140,15 +140,16 @@ async function init() {
 // ── Group navigation ───────────────────────────────────────────────────────
 function advanceToNextPendingGroup() {
   const savedIds = new Set(state.catalogue.map(e => e.id));
-  while (state.groupIndex < state.dateGroups.length) {
-    const pending = state.dateGroups[state.groupIndex].ids.filter(id => !savedIds.has(id));
+  for (let i = 0; i < state.dateGroups.length; i++) {
+    const pending = state.dateGroups[i].ids.filter(id => !savedIds.has(id));
     if (pending.length > 0) {
+      state.groupIndex = i;
       state.queue = pending;
       return;
     }
-    state.groupIndex++;
   }
-  state.queue = []; // all done
+  state.groupIndex = state.dateGroups.length;
+  state.queue = [];
 }
 
 // ── Stack Rendering ────────────────────────────────────────────────────────
@@ -366,7 +367,6 @@ function commitSwipe(card, direction) {
     cardStack.querySelector(`[data-id="${id}"]`)?.remove();
 
     if (state.queue.length === 0) {
-      state.groupIndex++;
       advanceToNextPendingGroup();
       syncCalToActiveDate();
       state.presentationMode = true;
