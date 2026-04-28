@@ -190,6 +190,7 @@ function activateSwipeMode(clickedId) {
   cardStack.classList.remove('presentation-mode');
   cardStack.classList.add('dimmed');
   swipeHints.classList.remove('hidden');
+  calSection.classList.add('hidden');
   showActiveCard();
   updateDateHeader();
 }
