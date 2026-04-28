@@ -29,7 +29,6 @@ const progressBar       = document.getElementById('progress-bar');
 const progressText      = document.getElementById('progress-text');
 const catalogueCount    = document.getElementById('catalogue-count');
 const catalogueModal    = document.getElementById('catalogue-modal');
-const instrucoesModal   = document.getElementById('instrucoes-modal');
 const catalogueGrid     = document.getElementById('catalogue-grid');
 const catalogueEmpty    = document.getElementById('catalogue-empty');
 const modalOverlay      = document.getElementById('modal-overlay');
@@ -544,15 +543,6 @@ function closeCatalogue() {
   modalOverlay.classList.add('hidden');
 }
 
-function openInstrucoes() {
-  instrucoesModal.classList.remove('hidden');
-  modalOverlay.classList.remove('hidden');
-}
-
-function closeInstrucoes() {
-  instrucoesModal.classList.add('hidden');
-  modalOverlay.classList.add('hidden');
-}
 
 function renderCatalogueGrid(filter) {
   activeFilter = filter;
@@ -587,11 +577,10 @@ comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
 });
 
-document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
-document.getElementById('btn-close-instrucoes').addEventListener('click', closeInstrucoes);
+document.getElementById('btn-instrucoes').addEventListener('click', () => landingPage.classList.remove('is-dismissed'));
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
-modalOverlay.addEventListener('click', () => { closeCatalogue(); closeInstrucoes(); });
+modalOverlay.addEventListener('click', closeCatalogue);
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => renderCatalogueGrid(btn.dataset.filter))
@@ -634,14 +623,16 @@ const landingPage = document.getElementById('landing-page');
 function dismissLanding() {
   localStorage.setItem(ONBOARD_KEY, '1');
   landingPage.classList.add('is-dismissed');
-  landingPage.addEventListener('transitionend', () => landingPage.remove(), { once: true });
 }
 
+// Hide instantly (no animation) for returning users
 if (localStorage.getItem(ONBOARD_KEY)) {
-  landingPage.remove();
-} else {
-  document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
+  landingPage.style.transition = 'none';
+  landingPage.classList.add('is-dismissed');
+  requestAnimationFrame(() => { landingPage.style.transition = ''; });
 }
+
+document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 
 // ── Start ──────────────────────────────────────────────────────────────────
 init();
