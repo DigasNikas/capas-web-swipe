@@ -498,8 +498,9 @@ function updateDateHeader() {
 }
 
 function updateProgress() {
-  const total = state.dateGroups.length;
-  const done  = state.groupIndex;
+  const total    = state.dateGroups.length;
+  const savedIds = new Set(state.catalogue.map(e => e.id));
+  const done     = state.dateGroups.filter(g => g.ids.every(id => savedIds.has(id))).length;
   progressBar.style.setProperty('--progress', `${total ? Math.round((done / total) * 100) : 0}%`);
   progressText.textContent = `${done} / ${total} days`;
   renderCalendar();
