@@ -736,6 +736,10 @@ header h1 {
   text-align: center;
 }
 
+.instrucoes-hero {
+  padding-top: 4px;
+}
+
 .landing-flag {
   font-size: 3.5rem;
   line-height: 1;
