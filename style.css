@@ -524,6 +524,17 @@ header h1 {
   font-weight: 600;
 }
 
+.cal-day.completed::after {
+  content: '✓';
+  position: absolute;
+  top: 0;
+  right: 1px;
+  font-size: 0.42rem;
+  font-weight: 900;
+  color: #22c55e;
+  line-height: 1;
+}
+
 /* ─── Progress Bar ───────────────────────────────────────────────────────── */
 #progress-bar-container {
   display: flex;
