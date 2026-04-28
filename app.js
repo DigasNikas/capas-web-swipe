@@ -5,8 +5,9 @@
  * before moving to the next date. Decisions are persisted in localStorage.
  * ───────────────────────────────────────────────────────────────────────── */
 
-const STORAGE_KEY  = 'swipe-catalogue';
-const ONBOARD_KEY  = 'capas-onboarded';
+const STORAGE_KEY      = 'swipe-catalogue';
+const ONBOARD_KEY      = 'capas-onboarded';
+const ACTIVE_DATE_KEY  = 'capas-active-date';
 const API_URL      = 'https://capas-scraper.digasnikas-digital.workers.dev'; // TODO: set after deploy
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -131,6 +132,18 @@ async function init() {
   // Start at the first group that still has unswiped images
   state.groupIndex = 0;
   advanceToNextPendingGroup();
+
+  // Restore the specific date the user was last on
+  const savedDate = localStorage.getItem(ACTIVE_DATE_KEY);
+  if (savedDate) {
+    const idx = state.dateGroups.findIndex(g => g.date === savedDate);
+    if (idx !== -1) {
+      const sIds = new Set(state.catalogue.map(e => e.id));
+      const pending = state.dateGroups[idx].ids.filter(id => !sIds.has(id));
+      if (pending.length > 0) { state.groupIndex = idx; state.queue = pending; }
+    }
+  }
+
   syncCalToActiveDate();
 
   loadingState.classList.add('hidden');
@@ -372,6 +385,7 @@ function commitSwipe(card, direction) {
 
     if (state.queue.length === 0) {
       advanceToNextPendingGroup();
+      localStorage.setItem(ACTIVE_DATE_KEY, state.dateGroups[state.groupIndex]?.date ?? '');
       syncCalToActiveDate();
       state.presentationMode = true;
       renderStack();
@@ -417,6 +431,7 @@ function goToCalendarDate(dateStr) {
   state.groupIndex      = groupIndex;
   state.queue           = [...state.dateGroups[groupIndex].ids];
   state.presentationMode = true;
+  localStorage.setItem(ACTIVE_DATE_KEY, dateStr);
 
   activeCardArea.classList.add('hidden');
   activeCardArea.innerHTML = '';
@@ -571,6 +586,7 @@ document.querySelectorAll('.filter-btn').forEach(btn =>
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(ACTIVE_DATE_KEY);
   state.catalogue       = [];
   state.groupIndex      = 0;
   state.presentationMode = true;
