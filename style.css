@@ -26,6 +26,9 @@ body {
   color: var(--text);
   min-height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
+  width: 100%;
 }
 
 #app {
@@ -140,6 +143,7 @@ header h1 {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  touch-action: none;
 }
 
 #card-stack {
