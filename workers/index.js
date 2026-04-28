@@ -101,7 +101,7 @@ async function scrapeNewspaper(newspaper, date, env) {
 // ── CORS headers for public endpoints ──────────────────────────────────────
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -110,6 +110,30 @@ function json(data, status = 200) {
     status,
     headers: { "Content-Type": "application/json", ...CORS },
   });
+}
+
+// ── POST /swipes — authenticated via Cloudflare Access ─────────────────────
+async function handleSwipe(request, env) {
+  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (!userEmail) return new Response("Unauthorized", { status: 401 });
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+
+  const { cover_id, action } = body;
+  if (!cover_id || !action) return json({ error: "Missing cover_id or action" }, 400);
+
+  await env.DB
+    .prepare(`
+      INSERT INTO swipes (user_email, cover_id, action)
+      VALUES (?, ?, ?)
+      ON CONFLICT (user_email, cover_id)
+      DO UPDATE SET action = excluded.action, swiped_at = datetime('now')
+    `)
+    .bind(userEmail, cover_id, action)
+    .run();
+
+  return json({ ok: true });
 }
 
 // ── GET /covers — public ────────────────────────────────────────────────────
@@ -139,6 +163,11 @@ export default {
     // Public: GET /covers
     if (method === "GET" && url.pathname === "/covers") {
       return handleCovers(env);
+    }
+
+    // Authenticated: POST /swipes
+    if (method === "POST" && url.pathname === "/swipes") {
+      return handleSwipe(request, env);
     }
 
     // Protected: manual scrape trigger — GET /scrape?days=7
