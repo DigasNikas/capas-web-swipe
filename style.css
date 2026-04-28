@@ -171,10 +171,10 @@ header h1 {
   transition: opacity 0.15s;
 }
 
-.dir-hint.left   { left: 14px;   top: 50%;  transform: translateY(-50%); }
-.dir-hint.right  { right: 14px;  top: 50%;  transform: translateY(-50%); }
-.dir-hint.up     { top: 14px;    left: 50%; transform: translateX(-50%); }
-.dir-hint.down   { bottom: 14px; left: 50%; transform: translateX(-50%); }
+.dir-hint.left   { left: calc(50% - var(--card-w)/2 - 2.5rem - 8px); top: 50%; transform: translateY(-50%); }
+.dir-hint.right  { left: calc(50% + var(--card-w)/2 + 8px);          top: 50%; transform: translateY(-50%); }
+.dir-hint.up     { top: calc(50% - var(--card-h)/2 - 2.5rem - 8px);  left: 50%; transform: translateX(-50%); }
+.dir-hint.down   { top: calc(50% + var(--card-h)/2 + 8px);           left: 50%; transform: translateX(-50%); }
 
 /* ─── Active card overlay ────────────────────────────────────────────────── */
 #active-card-area {
@@ -278,20 +278,23 @@ header h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.94);
+  border-radius: 100px;
+  padding: 18px 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
 .overlay-label span:first-child {
-  font-size: 4rem;
+  font-size: 3rem;
   line-height: 1;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,.5));
 }
 
 .overlay-label span:last-child {
-  font-size: 1.4rem;
+  font-size: 0.95rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
-  text-shadow: 0 2px 6px rgba(0,0,0,.6);
+  letter-spacing: 0.1em;
 }
 
 .swipe-overlay.keep     .overlay-label span:last-child { color: var(--keep); }
