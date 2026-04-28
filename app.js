@@ -29,6 +29,7 @@ const progressBar       = document.getElementById('progress-bar');
 const progressText      = document.getElementById('progress-text');
 const catalogueCount    = document.getElementById('catalogue-count');
 const catalogueModal    = document.getElementById('catalogue-modal');
+const instrucoesModal   = document.getElementById('instrucoes-modal');
 const catalogueGrid     = document.getElementById('catalogue-grid');
 const catalogueEmpty    = document.getElementById('catalogue-empty');
 const modalOverlay      = document.getElementById('modal-overlay');
@@ -543,6 +544,16 @@ function closeCatalogue() {
   modalOverlay.classList.add('hidden');
 }
 
+function openInstrucoes() {
+  instrucoesModal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
+}
+
+function closeInstrucoes() {
+  instrucoesModal.classList.add('hidden');
+  modalOverlay.classList.add('hidden');
+}
+
 function renderCatalogueGrid(filter) {
   activeFilter = filter;
   document.querySelectorAll('.filter-btn').forEach(btn =>
@@ -576,9 +587,11 @@ comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
 });
 
+document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
+document.getElementById('btn-close-instrucoes').addEventListener('click', closeInstrucoes);
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
-modalOverlay.addEventListener('click', closeCatalogue);
+modalOverlay.addEventListener('click', () => { closeCatalogue(); closeInstrucoes(); });
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => renderCatalogueGrid(btn.dataset.filter))
