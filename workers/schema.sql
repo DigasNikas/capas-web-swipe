@@ -7,3 +7,12 @@ CREATE TABLE IF NOT EXISTS covers (
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE (newspaper, date)
 );
+
+CREATE TABLE IF NOT EXISTS swipes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_email TEXT NOT NULL,
+  cover_id   INTEGER NOT NULL REFERENCES covers(id),
+  action     TEXT NOT NULL,           -- 'keep', 'reject', 'favorite', 'skip'
+  swiped_at  TEXT DEFAULT (datetime('now')),
+  UNIQUE (user_email, cover_id)       -- one record per user per cover; re-swipes update it
+);

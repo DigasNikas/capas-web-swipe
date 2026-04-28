@@ -405,6 +405,11 @@ function recordAction(id, action) {
   state.catalogue = state.catalogue.filter(e => e.id !== id);
   state.catalogue.push({ ...img, action, timestamp: new Date().toISOString() });
   saveToStorage();
+  fetch(`${API_URL}/swipes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cover_id: Number(id), action }),
+  }).catch(() => {});
 }
 
 function triggerAction(direction) {
