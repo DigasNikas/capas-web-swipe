@@ -462,6 +462,13 @@ header h1 {
   position: relative;
 }
 
+.cal-day.has-data {
+  cursor: pointer;
+}
+.cal-day.has-data:hover {
+  outline: 1px solid var(--border);
+}
+
 .cal-day.pending {
   color: var(--text);
 }
