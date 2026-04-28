@@ -115,7 +115,7 @@ function json(data, status = 200) {
 // ── POST /swipes — authenticated via Cloudflare Access ─────────────────────
 async function handleSwipe(request, env) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
-  if (!userEmail) return new Response("Unauthorized", { status: 401 });
+  if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
@@ -157,22 +157,25 @@ export default {
   async fetch(request, env, ctx) {
     const { method, url: rawUrl } = request;
     const url = new URL(rawUrl);
+    // Strip /api prefix so the Worker handles both
+    // capas.digasnikas.com/api/covers and capas-scraper.*.workers.dev/covers
+    const pathname = url.pathname.replace(/^\/api(?=\/|$)/, "") || "/";
 
     if (method === "OPTIONS") return new Response(null, { headers: CORS });
 
     // Public: GET /covers
-    if (method === "GET" && url.pathname === "/covers") {
+    if (method === "GET" && pathname === "/covers") {
       return handleCovers(env);
     }
 
     // Authenticated: POST /swipes
-    if (method === "POST" && url.pathname === "/swipes") {
+    if (method === "POST" && pathname === "/swipes") {
       return handleSwipe(request, env);
     }
 
     // Protected: manual scrape trigger — GET /scrape?days=7
     // Requires header: Authorization: Bearer <ADMIN_SECRET>
-    if (method === "GET" && url.pathname === "/scrape") {
+    if (method === "GET" && pathname === "/scrape") {
       const auth = request.headers.get("Authorization") ?? "";
       if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
         return new Response("Unauthorized", { status: 401 });
