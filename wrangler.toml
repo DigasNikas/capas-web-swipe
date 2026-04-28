@@ -5,6 +5,10 @@ compatibility_date = "2024-01-01"
 [triggers]
 crons = ["0 7 * * *"]   # 07:00 UTC daily (08:00 Lisbon time)
 
+[[routes]]
+pattern   = "capas.digasnikas.com/api/*"
+zone_name = "digasnikas.com"
+
 [[r2_buckets]]
 binding     = "COVERS_BUCKET"
 bucket_name = "capas-storage"

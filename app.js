@@ -8,7 +8,7 @@
 const STORAGE_KEY      = 'swipe-catalogue';
 const ONBOARD_KEY      = 'capas-onboarded';
 const ACTIVE_DATE_KEY  = 'capas-active-date';
-const API_URL      = 'https://capas-scraper.digasnikas-digital.workers.dev'; // TODO: set after deploy
+const API_URL      = '/api';
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
