@@ -167,6 +167,22 @@ function advanceToNextPendingGroup() {
   state.queue = [];
 }
 
+// ── Preloading ─────────────────────────────────────────────────────────────
+function preloadNextGroup() {
+  if (state.queue.length === 0) return;
+  const savedIds = new Set(state.catalogue.map(e => e.id));
+  for (let i = state.groupIndex + 1; i < state.dateGroups.length; i++) {
+    const pending = state.dateGroups[i].ids.filter(id => !savedIds.has(id));
+    if (pending.length > 0) {
+      pending.forEach(id => {
+        const img = state.images.find(im => im.id === id);
+        if (img) { const el = new Image(); el.src = img.src; }
+      });
+      return;
+    }
+  }
+}
+
 // ── Stack Rendering ────────────────────────────────────────────────────────
 function renderStack() {
   const existingIds = new Set(Array.from(cardStack.children).map(el => el.dataset.id));
@@ -198,6 +214,7 @@ function renderStack() {
 
   updateDateHeader();
   updateEmptyState();
+  preloadNextGroup();
 }
 
 function activateSwipeMode(clickedId) {
