@@ -208,14 +208,11 @@ export default {
         return new Response("Max 7 days per call (subrequest limit)", { status: 400 });
       }
 
-      const results = [];
-      for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-        for (const newspaper of NEWSPAPERS) {
-          results.push(scrapeNewspaper(newspaper, new Date(d), env));
+      ctx.waitUntil((async () => {
+        for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+          await Promise.all(NEWSPAPERS.map(n => scrapeNewspaper(n, new Date(d), env)));
         }
-      }
-
-      ctx.waitUntil(Promise.all(results));
+      })());
       return new Response(`Scraping ${totalDays} day(s) [${startStr}–${endStr}] for ${NEWSPAPERS.length} newspapers.`, { status: 202 });
     }
 
