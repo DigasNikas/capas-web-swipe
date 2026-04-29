@@ -182,8 +182,18 @@ export default {
       }
 
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-      const startStr = url.searchParams.get("start") ?? todayStr;
-      const endStr   = url.searchParams.get("end")   ?? todayStr;
+      let startStr, endStr;
+      const daysParam = url.searchParams.get("days");
+      if (daysParam) {
+        const days = Math.min(Math.max(parseInt(daysParam) || 1, 1), 7);
+        const s = new Date();
+        s.setUTCDate(s.getUTCDate() - (days - 1));
+        startStr = s.toISOString().slice(0, 10).replace(/-/g, "");
+        endStr   = todayStr;
+      } else {
+        startStr = url.searchParams.get("start") ?? todayStr;
+        endStr   = url.searchParams.get("end")   ?? todayStr;
+      }
 
       const parseYMD = s => new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00Z`);
       const startDate = parseYMD(startStr);
