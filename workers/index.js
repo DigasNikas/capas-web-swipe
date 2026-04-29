@@ -181,11 +181,9 @@ export default {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      const startStr = url.searchParams.get("start");
-      const endStr   = url.searchParams.get("end");
-      if (!startStr || !endStr) {
-        return new Response("Usage: /scrape?start=20260401&end=20260407", { status: 400 });
-      }
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const startStr = url.searchParams.get("start") ?? todayStr;
+      const endStr   = url.searchParams.get("end")   ?? todayStr;
 
       const parseYMD = s => new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00Z`);
       const startDate = parseYMD(startStr);
