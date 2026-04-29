@@ -181,10 +181,11 @@ export default {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      const days = Math.min(parseInt(url.searchParams.get("days") ?? "1"), 30);
+      const days   = Math.min(parseInt(url.searchParams.get("days")   ?? "1"),  7);
+      const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0"),  0);
 
     const results = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = offset; i < offset + days; i++) {
       const date = new Date();
       date.setUTCDate(date.getUTCDate() - i);
       for (const newspaper of NEWSPAPERS) {
