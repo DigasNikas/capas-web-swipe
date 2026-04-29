@@ -173,7 +173,7 @@ export default {
       return handleSwipe(request, env);
     }
 
-    // Protected: manual scrape trigger — GET /scrape?days=7
+    // Protected: manual scrape trigger — GET /scrape?start=20260401&end=20260407
     // Requires header: Authorization: Bearer <ADMIN_SECRET>
     if (method === "GET" && pathname === "/scrape") {
       const auth = request.headers.get("Authorization") ?? "";
@@ -181,20 +181,34 @@ export default {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      const days   = Math.min(parseInt(url.searchParams.get("days")   ?? "1"),  7);
-      const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0"),  0);
-
-    const results = [];
-    for (let i = offset; i < offset + days; i++) {
-      const date = new Date();
-      date.setUTCDate(date.getUTCDate() - i);
-      for (const newspaper of NEWSPAPERS) {
-        results.push(scrapeNewspaper(newspaper, date, env));
+      const startStr = url.searchParams.get("start");
+      const endStr   = url.searchParams.get("end");
+      if (!startStr || !endStr) {
+        return new Response("Usage: /scrape?start=20260401&end=20260407", { status: 400 });
       }
-    }
+
+      const parseYMD = s => new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00Z`);
+      const startDate = parseYMD(startStr);
+      const endDate   = parseYMD(endStr);
+
+      if (isNaN(startDate) || isNaN(endDate) || endDate < startDate) {
+        return new Response("Invalid date range", { status: 400 });
+      }
+
+      const totalDays = Math.round((endDate - startDate) / 86_400_000) + 1;
+      if (totalDays > 7) {
+        return new Response("Max 7 days per call (subrequest limit)", { status: 400 });
+      }
+
+      const results = [];
+      for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+        for (const newspaper of NEWSPAPERS) {
+          results.push(scrapeNewspaper(newspaper, new Date(d), env));
+        }
+      }
 
       ctx.waitUntil(Promise.all(results));
-      return new Response(`Scraping ${days} day(s) for ${NEWSPAPERS.length} newspapers.`, { status: 202 });
+      return new Response(`Scraping ${totalDays} day(s) [${startStr}–${endStr}] for ${NEWSPAPERS.length} newspapers.`, { status: 202 });
     }
 
     return new Response("Not found", { status: 404 });
