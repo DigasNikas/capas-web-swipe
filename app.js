@@ -619,21 +619,40 @@ function renderBundle(items) {
   catalogueGrid.appendChild(bundle);
 }
 
+const SHORT_MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+function formatShortDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+}
+
 function expandGrid(items) {
   catalogueGrid.innerHTML = '';
   catalogueGrid.classList.add('grid-view');
   items.forEach(entry => {
     const div = document.createElement('div');
     div.className = 'catalogue-item';
+
     const img = document.createElement('img');
     img.src = entry.src; img.alt = entry.name;
+
     const badge = document.createElement('div');
     badge.className = `catalogue-item-badge ${entry.action}`;
     badge.textContent = ACTIONS[actionToDir(entry.action)]?.icon ?? '?';
+
+    const footer = document.createElement('div');
+    footer.className = 'catalogue-item-footer';
+
+    const date = document.createElement('div');
+    date.className = 'catalogue-item-date';
+    date.textContent = formatShortDate(entry.date);
+
     const name = document.createElement('div');
     name.className = 'catalogue-item-name';
     name.textContent = entry.name;
-    div.append(img, badge, name);
+
+    footer.append(date, name);
+    div.append(img, badge, footer);
     catalogueGrid.appendChild(div);
   });
 }
