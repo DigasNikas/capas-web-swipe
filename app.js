@@ -579,11 +579,17 @@ function updateCatalogueCount() {
 
 // ── Catalogue Modal ────────────────────────────────────────────────────────
 let activeFilter = 'all';
+let drillLevel   = 0;   // 0=filter bundle  1=month bundles  2=card grid
+let drillMonth   = null; // 'YYYY-MM'
+
+const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Outros' };
 
 function openCatalogue() {
   catalogueModal.classList.remove('hidden');
   modalOverlay.classList.remove('hidden');
-  renderCatalogueGrid(activeFilter);
+  drillLevel = 0;
+  drillMonth = null;
+  renderCatalogueView();
 }
 
 function closeCatalogue() {
@@ -591,24 +597,105 @@ function closeCatalogue() {
   modalOverlay.classList.add('hidden');
 }
 
-
-function renderCatalogueGrid(filter) {
-  activeFilter = filter;
+function renderCatalogueView() {
   document.querySelectorAll('.filter-btn').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.filter === filter)
+    btn.classList.toggle('active', btn.dataset.filter === activeFilter)
   );
-  const items = filter === 'all' ? state.catalogue : state.catalogue.filter(e => e.action === filter);
-  catalogueEmpty.classList.toggle('hidden', items.length > 0);
+
   catalogueGrid.innerHTML = '';
   catalogueGrid.classList.remove('grid-view');
+
+  const catNav   = document.getElementById('catalogue-nav');
+  const navLabel = document.getElementById('catalogue-nav-label');
+  catNav.classList.toggle('hidden', drillLevel === 0);
+
+  const items = activeFilter === 'all'
+    ? state.catalogue
+    : state.catalogue.filter(e => e.action === activeFilter);
+
+  catalogueEmpty.classList.toggle('hidden', items.length > 0);
   if (items.length === 0) return;
-  renderBundle(items);
+
+  if (drillLevel === 0) {
+    navLabel.textContent = '';
+    catalogueGrid.appendChild(
+      buildBundle(items, () => { drillLevel = 1; renderCatalogueView(); })
+    );
+
+  } else if (drillLevel === 1) {
+    navLabel.textContent = FILTER_LABELS[activeFilter];
+    const monthGrid = document.createElement('div');
+    monthGrid.className = 'cat-month-grid';
+    groupByMonth(items).forEach(({ key, label, items: mi }) => {
+      monthGrid.appendChild(
+        buildMonthBundle(mi, label, () => { drillMonth = key; drillLevel = 2; renderCatalogueView(); })
+      );
+    });
+    catalogueGrid.appendChild(monthGrid);
+
+  } else {
+    const monthItems = items.filter(e => e.date.slice(0, 7) === drillMonth);
+    navLabel.textContent = `${FILTER_LABELS[activeFilter]} · ${formatMonth(drillMonth)}`;
+    catalogueEmpty.classList.toggle('hidden', monthItems.length > 0);
+    if (monthItems.length > 0) expandGrid(monthItems);
+  }
 }
 
-function renderBundle(items) {
+function groupByMonth(items) {
+  const map = new Map();
+  for (const item of items) {
+    const key = item.date.slice(0, 7);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+  }
+  return [...map.keys()]
+    .sort((a, b) => b.localeCompare(a))
+    .map(key => ({ key, label: formatMonth(key), items: map.get(key) }));
+}
+
+function formatMonth(key) {
+  const [y, m] = key.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+}
+
+function buildBundle(items, onClick) {
   const bundle = document.createElement('div');
   bundle.className = 'cat-bundle';
 
+  const stack = buildBundleStack(items);
+
+  const label = document.createElement('div');
+  label.className = 'bundle-label';
+  label.textContent = `${items.length} ${items.length === 1 ? 'capa' : 'capas'}`;
+
+  const hint = document.createElement('div');
+  hint.className = 'bundle-hint';
+  hint.textContent = 'toca para ver';
+
+  bundle.appendChild(stack);
+  bundle.appendChild(label);
+  bundle.appendChild(hint);
+  bundle.addEventListener('click', onClick);
+  return bundle;
+}
+
+function buildMonthBundle(items, label, onClick) {
+  const div = document.createElement('div');
+  div.className = 'cat-month-item';
+
+  const stack = buildBundleStack(items);
+
+  const monthLabel = document.createElement('div');
+  monthLabel.className = 'cat-month-label';
+  monthLabel.textContent = label;
+
+  div.appendChild(stack);
+  div.appendChild(monthLabel);
+  div.addEventListener('click', onClick);
+  return div;
+}
+
+function buildBundleStack(items) {
   const stack = document.createElement('div');
   stack.className = 'bundle-stack';
 
@@ -628,20 +715,7 @@ function renderBundle(items) {
   countBadge.textContent = items.length;
   stack.appendChild(countBadge);
 
-  const label = document.createElement('div');
-  label.className = 'bundle-label';
-  label.textContent = `${items.length} ${items.length === 1 ? 'capa' : 'capas'}`;
-
-  const hint = document.createElement('div');
-  hint.className = 'bundle-hint';
-  hint.textContent = 'toca para ver';
-
-  bundle.appendChild(stack);
-  bundle.appendChild(label);
-  bundle.appendChild(hint);
-  bundle.addEventListener('click', () => expandGrid(items));
-
-  catalogueGrid.appendChild(bundle);
+  return stack;
 }
 
 const SHORT_MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -697,8 +771,19 @@ document.getElementById('btn-close-modal').addEventListener('click', closeCatalo
 modalOverlay.addEventListener('click', closeCatalogue);
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
-  btn.addEventListener('click', () => renderCatalogueGrid(btn.dataset.filter))
+  btn.addEventListener('click', () => {
+    activeFilter = btn.dataset.filter;
+    drillLevel = 0;
+    drillMonth = null;
+    renderCatalogueView();
+  })
 );
+
+document.getElementById('btn-catalogue-back').addEventListener('click', () => {
+  drillLevel = Math.max(0, drillLevel - 1);
+  if (drillLevel < 2) drillMonth = null;
+  renderCatalogueView();
+});
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY);

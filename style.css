@@ -660,6 +660,76 @@ header h1 {
   gap: 8px;
 }
 
+/* ─── Catalogue Nav (back button + breadcrumb) ───────────────────────────── */
+#catalogue-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #818cf8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.btn-back:hover { color: var(--text); }
+
+#catalogue-nav-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Month bundle grid ──────────────────────────────────────────────────── */
+.cat-month-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cat-month-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.cat-month-item:hover { border-color: var(--text-muted); }
+
+.cat-month-item .bundle-stack {
+  width: 72px;
+  height: 96px;
+}
+
+.cat-month-item .bundle-count-badge {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  top: -8px;
+  right: -8px;
+}
+
+.cat-month-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  text-transform: capitalize;
+  line-height: 1.3;
+}
+
 /* ─── Catalogue Bundle View ──────────────────────────────────────────────── */
 .cat-bundle {
   display: flex;
