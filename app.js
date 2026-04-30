@@ -69,6 +69,11 @@ const ACTIONS = {
   down:  { name: 'skip',     icon: '🐉', label: 'PORTO',    decision: 'porto'    },
 };
 
+// Reverse map: server decision value → local action name
+const DECISION_TO_ACTION = Object.fromEntries(
+  Object.values(ACTIONS).map(a => [a.decision, a.name])
+);
+
 // ── Persistence ────────────────────────────────────────────────────────────
 function loadFromStorage() {
   try {
@@ -102,9 +107,6 @@ function formatDate(dateStr) {
 async function init() {
   loadingState.classList.remove('hidden');
 
-  const saved   = loadFromStorage();
-  const savedIds = new Set(saved.map(e => e.id));
-
   let covers;
   try {
     const res = await fetch(`${API_URL}/covers`);
@@ -124,10 +126,33 @@ async function init() {
 
   state.dateGroups = groupByDate(state.images);
 
-  state.catalogue = saved
-    .filter(e => savedIds.has(e.id))
-    .map(e => ({ ...state.images.find(i => i.id === e.id), action: e.action, timestamp: e.timestamp }))
-    .filter(Boolean);
+  // Prefer server history (persists across devices/sessions); fall back to localStorage
+  let serverSwipes = null;
+  try {
+    const res = await fetch(`${API_URL}/swipes`);
+    if (res.ok) serverSwipes = await res.json();
+  } catch { /* network error — use cache */ }
+
+  if (serverSwipes) {
+    state.catalogue = serverSwipes
+      .map(s => {
+        const img    = state.images.find(i => i.id === String(s.cover_id));
+        const action = DECISION_TO_ACTION[s.decision];
+        if (!img || !action) return null;
+        return { ...img, action, timestamp: s.swiped_at };
+      })
+      .filter(Boolean);
+    saveToStorage(); // keep localStorage in sync as a cache
+  } else {
+    const saved = loadFromStorage();
+    state.catalogue = saved
+      .map(e => {
+        const img = state.images.find(i => i.id === e.id);
+        if (!img) return null;
+        return { ...img, action: e.action, timestamp: e.timestamp };
+      })
+      .filter(Boolean);
+  }
 
   // Start at the first group that still has unswiped images
   state.groupIndex = 0;
