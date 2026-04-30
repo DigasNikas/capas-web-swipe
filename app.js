@@ -575,6 +575,53 @@ function renderCatalogueGrid(filter) {
   const items = filter === 'all' ? state.catalogue : state.catalogue.filter(e => e.action === filter);
   catalogueEmpty.classList.toggle('hidden', items.length > 0);
   catalogueGrid.innerHTML = '';
+  catalogueGrid.classList.remove('grid-view');
+  if (items.length === 0) return;
+  renderBundle(items);
+}
+
+function renderBundle(items) {
+  const bundle = document.createElement('div');
+  bundle.className = 'cat-bundle';
+
+  const stack = document.createElement('div');
+  stack.className = 'bundle-stack';
+
+  const count = Math.min(items.length, 3);
+  for (let i = 0; i < count; i++) {
+    const card = document.createElement('div');
+    card.className = `bundle-card bc-${i}`;
+    const img = document.createElement('img');
+    img.src = items[i].src;
+    img.alt = items[i].name;
+    card.appendChild(img);
+    stack.appendChild(card);
+  }
+
+  const countBadge = document.createElement('div');
+  countBadge.className = 'bundle-count-badge';
+  countBadge.textContent = items.length;
+  stack.appendChild(countBadge);
+
+  const label = document.createElement('div');
+  label.className = 'bundle-label';
+  label.textContent = `${items.length} ${items.length === 1 ? 'capa' : 'capas'}`;
+
+  const hint = document.createElement('div');
+  hint.className = 'bundle-hint';
+  hint.textContent = 'toca para ver';
+
+  bundle.appendChild(stack);
+  bundle.appendChild(label);
+  bundle.appendChild(hint);
+  bundle.addEventListener('click', () => expandGrid(items));
+
+  catalogueGrid.appendChild(bundle);
+}
+
+function expandGrid(items) {
+  catalogueGrid.innerHTML = '';
+  catalogueGrid.classList.add('grid-view');
   items.forEach(entry => {
     const div = document.createElement('div');
     div.className = 'catalogue-item';

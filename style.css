@@ -647,11 +647,89 @@ header h1 {
 }
 
 #catalogue-grid {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+#catalogue-grid.grid-view {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 10px;
-  overflow-y: auto;
-  padding-right: 4px;
+}
+
+/* ─── Catalogue Bundle View ──────────────────────────────────────────────── */
+.cat-bundle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 0 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cat-bundle:hover .bundle-stack {
+  transform: translateY(-4px);
+}
+
+.bundle-stack {
+  position: relative;
+  width: 130px;
+  height: 174px;
+  transition: transform 0.2s ease;
+}
+
+.bundle-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+
+.bundle-card.bc-0 { transform: none; z-index: 3; }
+.bundle-card.bc-1 { transform: rotate(4deg) translate(7px, 3px); z-index: 2; }
+.bundle-card.bc-2 { transform: rotate(-5deg) translate(-7px, 5px); z-index: 1; }
+
+.bundle-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bundle-count-badge {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 10;
+  background: #4f46e5;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  min-width: 26px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(79,70,229,.5);
+}
+
+.bundle-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+.bundle-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -12px;
 }
 
 .catalogue-item {
