@@ -805,7 +805,6 @@ header h1 {
 
 .catalogue-item {
   border-radius: 8px;
-  overflow: hidden;
   background: var(--surface2);
   position: relative;
 }
