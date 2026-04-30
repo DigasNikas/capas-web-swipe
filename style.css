@@ -656,8 +656,9 @@ header h1 {
 
 #catalogue-grid.grid-view {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  align-items: start;
 }
 
 /* ─── Catalogue Nav (back button + breadcrumb) ───────────────────────────── */
@@ -804,30 +805,36 @@ header h1 {
 
 .catalogue-item {
   position: relative;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   aspect-ratio: 3/4;
   background: var(--surface2);
+  isolation: isolate;
+  contain: layout paint;
 }
 
 .catalogue-item img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .catalogue-item-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 26px;
-  height: 26px;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.6rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .catalogue-item-badge.keep     { background: var(--keep);     color: #fff; }
@@ -840,7 +847,7 @@ header h1 {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 24px 4px 5px;
+  padding: 16px 3px 4px;
   background: linear-gradient(transparent, rgba(0,0,0,.85));
   display: flex;
   flex-direction: column;
@@ -849,7 +856,7 @@ header h1 {
 }
 
 .catalogue-item-date {
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   font-weight: 700;
   color: rgba(255,255,255,.95);
   text-align: center;
@@ -857,8 +864,8 @@ header h1 {
 }
 
 .catalogue-item-name {
-  font-size: 0.58rem;
-  color: rgba(255,255,255,.65);
+  font-size: 0.5rem;
+  color: rgba(255,255,255,.6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
