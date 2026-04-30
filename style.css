@@ -804,13 +804,17 @@ header h1 {
 }
 
 .catalogue-item {
-  position: relative;
   border-radius: 8px;
   overflow: hidden;
-  aspect-ratio: 3/4;
   background: var(--surface2);
-  isolation: isolate;
-  contain: layout paint;
+  position: relative;
+}
+
+/* Reliable portrait aspect ratio via padding-bottom — works in all browsers */
+.catalogue-item::before {
+  content: '';
+  display: block;
+  padding-bottom: 133.33%; /* height = width × 4/3  →  3:4 portrait */
 }
 
 .catalogue-item img {
