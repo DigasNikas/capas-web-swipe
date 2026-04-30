@@ -112,6 +112,18 @@ function json(data, status = 200) {
   });
 }
 
+// ── GET /swipes — authenticated user's swipe history ───────────────────────
+async function handleGetSwipes(request, env) {
+  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (!userEmail) return json({ error: "Unauthorized" }, 401);
+
+  const { results } = await env.DB
+    .prepare("SELECT cover_id, decision, swiped_at FROM swipes WHERE user_email = ?")
+    .bind(userEmail)
+    .all();
+  return json(results);
+}
+
 // ── POST /swipes — authenticated via Cloudflare Access ─────────────────────
 async function handleSwipe(request, env) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
@@ -166,6 +178,11 @@ export default {
     // Public: GET /covers
     if (method === "GET" && pathname === "/covers") {
       return handleCovers(env);
+    }
+
+    // Authenticated: GET /swipes (user's own history)
+    if (method === "GET" && pathname === "/swipes") {
+      return handleGetSwipes(request, env);
     }
 
     // Authenticated: POST /swipes
