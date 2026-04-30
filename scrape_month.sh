@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SECRET="${ADMIN_SECRET:-}"
-URL="https://capas-scraper.digasnikas-digital.workers.dev"
+URL="https://capas.digasnikas.com/api"
 YEAR="${1:-$(date +%Y)}"
 MONTH="${2:-$(date +%m)}"
 
