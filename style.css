@@ -524,6 +524,19 @@ header h1 {
   font-weight: 600;
 }
 
+.cal-match {
+  position: absolute;
+  bottom: 1px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  font-size: 0.38rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .cal-day.completed::after {
   content: '✓';
   position: absolute;

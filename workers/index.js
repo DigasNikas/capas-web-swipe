@@ -112,6 +112,14 @@ function json(data, status = 200) {
   });
 }
 
+// ── GET /matches — public ───────────────────────────────────────────────────
+async function handleGetMatches(env) {
+  const { results } = await env.DB
+    .prepare("SELECT club, match_date FROM matches ORDER BY match_date")
+    .all();
+  return json(results);
+}
+
 // ── GET /swipes — authenticated user's swipe history ───────────────────────
 async function handleGetSwipes(request, env) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
@@ -178,6 +186,11 @@ export default {
     // Public: GET /covers
     if (method === "GET" && pathname === "/covers") {
       return handleCovers(env);
+    }
+
+    // Public: GET /matches
+    if (method === "GET" && pathname === "/matches") {
+      return handleGetMatches(env);
     }
 
     // Authenticated: GET /swipes (user's own history)

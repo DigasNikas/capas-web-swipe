@@ -18,7 +18,10 @@ const state = {
   queue:            [],     // ids in current group not yet swiped
   catalogue:        [],     // { id, name, src, newspaper, date, action, timestamp }
   presentationMode: true,   // true = showing cards, waiting for tap to start swiping
+  matchDays:        new Map(), // 'YYYY-MM-DD' → Set<club slug>
 };
+
+const CLUB_EMOJI = { sporting: '🦁', benfica: '🦅', porto: '🐉' };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const cardStack         = document.getElementById('card-stack');
@@ -168,6 +171,17 @@ async function init() {
       if (pending.length > 0) { state.groupIndex = idx; state.queue = pending; }
     }
   }
+
+  // Load match days (non-critical — calendar still works without this)
+  try {
+    const res = await fetch(`${API_URL}/matches`);
+    if (res.ok) {
+      for (const { club, match_date } of await res.json()) {
+        if (!state.matchDays.has(match_date)) state.matchDays.set(match_date, new Set());
+        state.matchDays.get(match_date).add(club);
+      }
+    }
+  } catch { /* ignore */ }
 
   syncCalToActiveDate();
 
@@ -529,6 +543,21 @@ function renderCalendar() {
     else if (ds === activeDate)      el.classList.add('active');
     else if (allDates.has(ds))       el.classList.add('pending');
     el.textContent = d;
+
+    const matchClubs = state.matchDays.get(ds);
+    if (matchClubs) {
+      const matchEl = document.createElement('div');
+      matchEl.className = 'cal-match';
+      ['sporting', 'benfica', 'porto'].forEach(club => {
+        if (matchClubs.has(club)) {
+          const span = document.createElement('span');
+          span.textContent = CLUB_EMOJI[club];
+          matchEl.appendChild(span);
+        }
+      });
+      el.appendChild(matchEl);
+    }
+
     if (allDates.has(ds)) {
       el.classList.add('has-data');
       el.addEventListener('click', () => goToCalendarDate(ds));
