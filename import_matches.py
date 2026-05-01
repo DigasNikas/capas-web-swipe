@@ -16,6 +16,9 @@ Requirements:
 Usage:
   FOOTBALL_API_KEY=key python3 import_matches.py                  # 2024-25
   FOOTBALL_API_KEY=key APISPORTS_KEY=key2 python3 import_matches.py 2023
+
+  # List all Portuguese league IDs from api-sports.io (to find correct IDs):
+  APISPORTS_KEY=key2 python3 import_matches.py --list-leagues
 """
 
 import os
@@ -27,7 +30,7 @@ import urllib.error
 
 FOOTBALL_API_KEY = os.environ.get("FOOTBALL_API_KEY", "")
 APISPORTS_KEY    = os.environ.get("APISPORTS_KEY", "")
-SEASON           = sys.argv[1] if len(sys.argv) > 1 else "2024"
+SEASON           = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != "--list-leagues" else "2024"
 DB_NAME          = "capas-db"
 
 # ── football-data.org competitions (free tier) ─────────────────────────────
@@ -79,7 +82,27 @@ def slug_for(name):
     return TEAM_MAP.get(name)
 
 
+def list_portuguese_leagues():
+    if not APISPORTS_KEY:
+        print("Error: set APISPORTS_KEY.")
+        sys.exit(1)
+    url = "https://v3.football.api-sports.io/leagues?country=Portugal"
+    req = urllib.request.Request(url, headers={"x-apisports-key": APISPORTS_KEY})
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read())
+    leagues = data.get("response", [])
+    print(f"{'ID':<8} {'Type':<12} Name")
+    print("-" * 45)
+    for entry in sorted(leagues, key=lambda e: e["league"]["id"]):
+        lg = entry["league"]
+        print(f"{lg['id']:<8} {lg['type']:<12} {lg['name']}")
+
+
 def main():
+    if "--list-leagues" in sys.argv:
+        list_portuguese_leagues()
+        return
+
     if not FOOTBALL_API_KEY:
         print("Error: set FOOTBALL_API_KEY.")
         print("  Register free at https://www.football-data.org/client/register")
