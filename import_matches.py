@@ -136,12 +136,21 @@ def main():
     print(f"\nInserting {len(rows)} rows into D1 …")
 
     values = ", ".join(f"('{s}', '{d}')" for s, d in rows)
-    sql    = f"INSERT OR IGNORE INTO matches (club, match_date) VALUES {values};"
+    sql    = f"INSERT OR IGNORE INTO matches (club, match_date) VALUES {values};\n"
 
-    result = subprocess.run(
-        ["wrangler", "d1", "execute", DB_NAME, "--command", sql],
-        capture_output=True, text=True,
-    )
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sql", delete=False) as f:
+        f.write(sql)
+        tmp = f.name
+
+    try:
+        result = subprocess.run(
+            ["wrangler", "d1", "execute", DB_NAME, "--file", tmp],
+            capture_output=True, text=True,
+        )
+    finally:
+        os.unlink(tmp)
+
     if result.returncode != 0:
         print("wrangler error:\n" + result.stderr)
         sys.exit(1)
