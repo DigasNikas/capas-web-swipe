@@ -543,7 +543,9 @@ function renderCalendar() {
     else if (allDates.has(ds))       el.classList.add('pending');
     el.textContent = d;
 
-    if (state.matchDays.has(ds)) {
+    // show ball on the day AFTER a match
+    const prevDs = new Date(Date.UTC(calViewYear, calViewMonth, d - 1)).toISOString().slice(0, 10);
+    if (state.matchDays.has(prevDs)) {
       const matchEl = document.createElement('div');
       matchEl.className = 'cal-match';
       matchEl.textContent = '⚽';

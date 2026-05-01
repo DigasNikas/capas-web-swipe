@@ -537,6 +537,14 @@ header h1 {
   pointer-events: none;
 }
 
+#cal-legend {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text2);
+  opacity: 0.75;
+}
+
 .cal-day.completed::after {
   content: '✓';
   position: absolute;
