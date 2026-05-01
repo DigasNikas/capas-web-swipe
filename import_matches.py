@@ -50,9 +50,10 @@ APISPORTS_COMPETITIONS = [
 
 # ── Team name → slug mapping ────────────────────────────────────────────────
 TEAM_MAP = {
-    "Sporting CP":            "sporting",
-    "Sporting":               "sporting",
-    "Sport Lisboa e Benfica": "benfica",
+    "Sporting CP":                  "sporting",
+    "Sporting":                     "sporting",
+    "Sporting Clube de Portugal":   "sporting",
+    "Sport Lisboa e Benfica":       "benfica",
     "SL Benfica":             "benfica",
     "Benfica":                "benfica",
     "FC Porto":               "porto",
