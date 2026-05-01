@@ -125,6 +125,8 @@ def main():
             date = m["utcDate"][:10]
             for side in ("homeTeam", "awayTeam"):
                 name = m[side]["name"]
+                if not name:
+                    continue
                 s = slug_for(name)
                 if s:
                     rows.add((s, date))
@@ -152,6 +154,8 @@ def main():
                 date = f["fixture"]["date"][:10]
                 for side in ("home", "away"):
                     name = f["teams"][side]["name"]
+                    if not name:
+                        continue
                     s = slug_for(name)
                     if s:
                         rows.add((s, date))
