@@ -145,7 +145,7 @@ def main():
 
     try:
         result = subprocess.run(
-            ["wrangler", "d1", "execute", DB_NAME, "--file", tmp],
+            ["wrangler", "d1", "execute", DB_NAME, "--remote", "--file", tmp],
             capture_output=True, text=True,
         )
     finally:
