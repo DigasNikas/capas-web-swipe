@@ -44,7 +44,7 @@ FOOTBALL_DATA_COMPETITIONS = [
 # ── api-sports.io competitions ─────────────────────────────────────────────
 APISPORTS_COMPETITIONS = [
     (96, "Taça de Portugal"),
-    (95, "Taça da Liga"),
+    (97, "Taça da Liga"),
 ]
 
 # ── Team name → slug mapping ────────────────────────────────────────────────
