@@ -21,7 +21,6 @@ const state = {
   matchDays:        new Map(), // 'YYYY-MM-DD' → Set<club slug>
 };
 
-const CLUB_EMOJI = { sporting: '🦁', benfica: '🦅', porto: '🐉' };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const cardStack         = document.getElementById('card-stack');
@@ -544,17 +543,10 @@ function renderCalendar() {
     else if (allDates.has(ds))       el.classList.add('pending');
     el.textContent = d;
 
-    const matchClubs = state.matchDays.get(ds);
-    if (matchClubs) {
+    if (state.matchDays.has(ds)) {
       const matchEl = document.createElement('div');
       matchEl.className = 'cal-match';
-      ['sporting', 'benfica', 'porto'].forEach(club => {
-        if (matchClubs.has(club)) {
-          const span = document.createElement('span');
-          span.textContent = CLUB_EMOJI[club];
-          matchEl.appendChild(span);
-        }
-      });
+      matchEl.textContent = '⚽';
       el.appendChild(matchEl);
     }
 

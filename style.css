@@ -532,7 +532,7 @@ header h1 {
   display: flex;
   justify-content: center;
   gap: 0;
-  font-size: 0.38rem;
+  font-size: 0.65rem;
   line-height: 1;
   pointer-events: none;
 }
