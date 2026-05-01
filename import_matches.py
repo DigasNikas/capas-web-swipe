@@ -46,13 +46,12 @@ APISPORTS_COMPETITIONS = [
 
 # ── Team name → slug mapping ────────────────────────────────────────────────
 TEAM_MAP = {
-    # football-data.org names
+    # football-data.org
     "Sporting CP":            "sporting",
     "Sport Lisboa e Benfica": "benfica",
     "SL Benfica":             "benfica",
     "FC Porto":               "porto",
-    # api-sports.io names (may differ slightly)
-    "Sporting CP":            "sporting",
+    # api-sports.io (names may differ — run script to see actual values)
     "Benfica":                "benfica",
     "Porto":                  "porto",
 }
@@ -119,10 +118,17 @@ def main():
             for f in fixtures:
                 date = f["fixture"]["date"][:10]
                 for side in ("home", "away"):
-                    s = slug_for(f["teams"][side]["name"])
+                    name = f["teams"][side]["name"]
+                    s = slug_for(name)
                     if s:
                         rows.add((s, date))
-            print(f"{len(rows) - before} new rows  ({len(fixtures)} fixtures total)")
+            added = len(rows) - before
+            print(f"{added} new rows  ({len(fixtures)} fixtures total)")
+            if added == 0 and fixtures:
+                names = sorted({f["teams"][s]["name"] for f in fixtures for s in ("home","away")})
+                print(f"    ↳ team names in response (add missing ones to TEAM_MAP):")
+                for n in names:
+                    print(f"       {n!r}")
     else:
         print("\n  Taça de Portugal and Taça da Liga skipped.")
         print("  Set APISPORTS_KEY to include them.")
