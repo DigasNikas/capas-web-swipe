@@ -43,19 +43,19 @@ FOOTBALL_DATA_COMPETITIONS = [
 
 # ── api-sports.io competitions ─────────────────────────────────────────────
 APISPORTS_COMPETITIONS = [
+    (94, "Primeira Liga"),
     (96, "Taça de Portugal"),
     (97, "Taça da Liga"),
 ]
 
 # ── Team name → slug mapping ────────────────────────────────────────────────
 TEAM_MAP = {
-    # football-data.org
     "Sporting CP":            "sporting",
+    "Sporting":               "sporting",
     "Sport Lisboa e Benfica": "benfica",
     "SL Benfica":             "benfica",
-    "FC Porto":               "porto",
-    # api-sports.io (names may differ — run script to see actual values)
     "Benfica":                "benfica",
+    "FC Porto":               "porto",
     "Porto":                  "porto",
 }
 
@@ -120,15 +120,26 @@ def main():
             print(f"skipped ({e.code})")
             continue
         before = len(rows)
+        unknown = set()
         for m in matches:
             date = m["utcDate"][:10]
             for side in ("homeTeam", "awayTeam"):
-                s = slug_for(m[side]["name"])
+                name = m[side]["name"]
+                if not name:
+                    continue
+                s = slug_for(name)
                 if s:
                     rows.add((s, date))
-        print(f"{len(rows) - before} new rows  ({len(matches)} matches total)")
+                else:
+                    unknown.add(name)
+        added = len(rows) - before
+        print(f"{added} new rows  ({len(matches)} matches total)")
+        if unknown:
+            print(f"    ↳ unrecognised team names (add to TEAM_MAP if needed):")
+            for n in sorted(unknown):
+                print(f"       {n!r}")
 
-    # ── api-sports.io (Portuguese cups) ───────────────────────────────────
+    # ── api-sports.io ──────────────────────────────────────────────────────
     if APISPORTS_KEY:
         for league_id, label in APISPORTS_COMPETITIONS:
             print(f"  [{label}]", end=" ", flush=True)
@@ -138,22 +149,26 @@ def main():
                 print(f"skipped ({e.code})")
                 continue
             before = len(rows)
+            unknown = set()
             for f in fixtures:
                 date = f["fixture"]["date"][:10]
                 for side in ("home", "away"):
                     name = f["teams"][side]["name"]
+                    if not name:
+                        continue
                     s = slug_for(name)
                     if s:
                         rows.add((s, date))
+                    else:
+                        unknown.add(name)
             added = len(rows) - before
             print(f"{added} new rows  ({len(fixtures)} fixtures total)")
-            if added == 0 and fixtures:
-                names = sorted({f["teams"][s]["name"] for f in fixtures for s in ("home","away")})
-                print(f"    ↳ team names in response (add missing ones to TEAM_MAP):")
-                for n in names:
+            if unknown:
+                print(f"    ↳ unrecognised team names (add to TEAM_MAP if needed):")
+                for n in sorted(unknown):
                     print(f"       {n!r}")
     else:
-        print("\n  Taça de Portugal and Taça da Liga skipped.")
+        print("\n  api-sports.io competitions skipped (Primeira Liga, Taça de Portugal, Taça da Liga).")
         print("  Set APISPORTS_KEY to include them.")
         print("  Register free at https://dashboard.api-football.com/register")
 
@@ -162,6 +177,13 @@ def main():
         sys.exit(1)
 
     rows = sorted(rows, key=lambda r: (r[1], r[0]))
+    by_club = {}
+    for s, d in rows:
+        by_club.setdefault(s, 0)
+        by_club[s] += 1
+    print("\nRows per club:")
+    for club, cnt in sorted(by_club.items()):
+        print(f"  {club}: {cnt}")
     print(f"\nInserting {len(rows)} rows into D1 …")
 
     values = ", ".join(f"('{s}', '{d}')" for s, d in rows)
