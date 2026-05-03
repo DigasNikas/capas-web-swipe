@@ -18,7 +18,6 @@ const state = {
   queue:            [],     // ids in current group not yet swiped
   catalogue:        [],     // { id, name, src, newspaper, date, action, timestamp }
   presentationMode: true,   // true = showing cards, waiting for tap to start swiping
-  matchDays:        new Map(), // 'YYYY-MM-DD' → Set<club slug>
 };
 
 
@@ -171,16 +170,6 @@ async function init() {
     }
   }
 
-  // Load match days (non-critical — calendar still works without this)
-  try {
-    const res = await fetch(`${API_URL}/matches`);
-    if (res.ok) {
-      for (const { club, match_date } of await res.json()) {
-        if (!state.matchDays.has(match_date)) state.matchDays.set(match_date, new Set());
-        state.matchDays.get(match_date).add(club);
-      }
-    }
-  } catch { /* ignore */ }
 
   syncCalToActiveDate();
 
@@ -542,15 +531,6 @@ function renderCalendar() {
     else if (ds === activeDate)      el.classList.add('active');
     else if (allDates.has(ds))       el.classList.add('pending');
     el.textContent = d;
-
-    // show ball on the day AFTER a match
-    const prevDs = new Date(Date.UTC(calViewYear, calViewMonth, d - 1)).toISOString().slice(0, 10);
-    if (state.matchDays.has(prevDs)) {
-      const matchEl = document.createElement('div');
-      matchEl.className = 'cal-match';
-      matchEl.textContent = '⚽';
-      el.appendChild(matchEl);
-    }
 
     if (allDates.has(ds)) {
       el.classList.add('has-data');
