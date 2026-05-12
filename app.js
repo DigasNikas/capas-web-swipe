@@ -803,7 +803,9 @@ document.getElementById('btn-view-catalogue').addEventListener('click', openCata
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
 document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
 document.getElementById('btn-close-leaderboard').addEventListener('click', closeLeaderboard);
+catalogueModal.addEventListener('click', e => { if (e.target === catalogueModal) closeCatalogue(); });
 modalOverlay.addEventListener('click', closeCatalogue);
+leaderboardModal.addEventListener('click', e => { if (e.target === leaderboardModal) closeLeaderboard(); });
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => {
