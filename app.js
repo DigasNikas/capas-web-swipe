@@ -247,6 +247,23 @@ function renderStack() {
   preloadNextGroup();
 }
 
+function deactivateSwipeMode() {
+  state.presentationMode = true;
+  activeCardArea.classList.add('hidden');
+  activeCardArea.innerHTML = '';
+  swipeHints.classList.add('hidden');
+  clearSwipeFeedback();
+  cardStack.classList.add('presentation-mode');
+  cardStack.classList.remove('dimmed');
+  calSection.classList.remove('hidden');
+  renderCalendar();
+  comecarPill.classList.toggle('hidden', state.queue.length === 0);
+  cardStack.addEventListener('click', e => {
+    const card = e.target.closest('.card');
+    if (card) activateSwipeMode(card.dataset.id);
+  }, { once: true });
+}
+
 function activateSwipeMode(clickedId) {
   state.presentationMode = false;
   comecarPill.classList.add('hidden');
@@ -819,6 +836,12 @@ function closeLeaderboard() {
 // ── Event Listeners ────────────────────────────────────────────────────────
 comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
+});
+
+document.getElementById('card-area').addEventListener('click', e => {
+  if (!state.presentationMode && e.target === document.getElementById('card-area')) {
+    deactivateSwipeMode();
+  }
 });
 
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
