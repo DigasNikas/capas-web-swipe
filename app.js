@@ -40,6 +40,7 @@ const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
 const activeCardArea    = document.getElementById('active-card-area');
+const swipeBackdrop     = document.getElementById('swipe-backdrop');
 const swipeBg           = document.getElementById('swipe-bg');
 const swipeHints        = document.getElementById('swipe-hints');
 const calSection        = document.getElementById('calendar-section');
@@ -251,6 +252,7 @@ function deactivateSwipeMode() {
   state.presentationMode = true;
   activeCardArea.classList.add('hidden');
   activeCardArea.innerHTML = '';
+  swipeBackdrop.classList.add('hidden');
   swipeHints.classList.add('hidden');
   clearSwipeFeedback();
   cardStack.classList.add('presentation-mode');
@@ -271,6 +273,7 @@ function activateSwipeMode(clickedId) {
   state.queue = [clickedId, ...state.queue.filter(id => id !== clickedId)];
   cardStack.classList.remove('presentation-mode');
   cardStack.classList.add('dimmed');
+  swipeBackdrop.classList.remove('hidden');
   swipeHints.classList.remove('hidden');
   calSection.classList.add('hidden');
   showActiveCard();
@@ -838,10 +841,9 @@ comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
 });
 
-document.getElementById('card-area').addEventListener('click', e => {
-  if (!state.presentationMode && e.target === document.getElementById('card-area')) {
-    deactivateSwipeMode();
-  }
+swipeBackdrop.addEventListener('click', deactivateSwipeMode);
+activeCardArea.addEventListener('click', e => {
+  if (!e.target.closest('.card')) deactivateSwipeMode();
 });
 
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
