@@ -579,7 +579,8 @@ header h1 {
 }
 
 #catalogue-modal,
-#leaderboard-modal {
+#leaderboard-modal,
+#instrucoes-modal {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -589,10 +590,12 @@ header h1 {
 }
 
 #catalogue-modal:not(.hidden),
-#leaderboard-modal:not(.hidden) { pointer-events: all; }
+#leaderboard-modal:not(.hidden),
+#instrucoes-modal:not(.hidden) { pointer-events: all; }
 
 #catalogue-modal:not(.hidden) .modal-content,
-#leaderboard-modal:not(.hidden) .modal-content {
+#leaderboard-modal:not(.hidden) .modal-content,
+#instrucoes-modal:not(.hidden) .modal-content {
   animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 

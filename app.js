@@ -35,6 +35,7 @@ const catalogueEmpty    = document.getElementById('catalogue-empty');
 const modalOverlay      = document.getElementById('modal-overlay');
 const leaderboardModal  = document.getElementById('leaderboard-modal');
 const leaderboardList   = document.getElementById('leaderboard-list');
+const instrucoesModal   = document.getElementById('instrucoes-modal');
 const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
@@ -765,6 +766,10 @@ function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
 
+// ── Instruções modal ───────────────────────────────────────────────────────
+function openInstrucoes() { instrucoesModal.classList.remove('hidden'); }
+function closeInstrucoes() { instrucoesModal.classList.add('hidden'); }
+
 // ── Leaderboard ────────────────────────────────────────────────────────────
 async function openLeaderboard() {
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
@@ -798,7 +803,9 @@ comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
 });
 
-document.getElementById('btn-instrucoes').addEventListener('click', () => landingPage.classList.remove('is-dismissed'));
+document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
+document.getElementById('btn-close-instrucoes').addEventListener('click', closeInstrucoes);
+instrucoesModal.addEventListener('click', e => { if (e.target === instrucoesModal) closeInstrucoes(); });
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
 document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
