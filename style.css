@@ -1159,6 +1159,14 @@ header h1 {
   list-style: none;
 }
 
+/* ─── Swipe backdrop ─────────────────────────────────────────────────────── */
+#swipe-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  cursor: pointer;
+}
+
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
