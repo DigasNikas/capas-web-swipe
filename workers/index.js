@@ -120,7 +120,21 @@ async function handleLeaderboard(request, env) {
   const { results } = await env.DB
     .prepare("SELECT user_email, COUNT(*) as swipes FROM swipes GROUP BY user_email ORDER BY swipes DESC")
     .all();
-  return json(results);
+
+  const entries = results.map((r, i) => ({
+    user_email: r.user_email,
+    swipes: r.swipes,
+    rank: i + 1,
+    is_me: r.user_email === userEmail,
+  }));
+
+  // If the user has no swipes yet they won't appear — add them at the end
+  const inList = entries.some(e => e.is_me);
+  if (!inList) {
+    entries.push({ user_email: userEmail, swipes: 0, rank: entries.length + 1, is_me: true });
+  }
+
+  return json(entries);
 }
 
 // ── GET /matches — public ───────────────────────────────────────────────────

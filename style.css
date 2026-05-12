@@ -1072,6 +1072,31 @@ header h1 {
   flex-shrink: 0;
 }
 
+.lb-me {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.lb-you {
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--accent, var(--keep));
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.lb-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  list-style: none;
+}
+
 .lb-loading {
   text-align: center;
   padding: 24px 0;
