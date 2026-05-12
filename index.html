@@ -16,6 +16,7 @@
         <button id="btn-view-catalogue" class="btn-secondary">
           Histórico <span id="catalogue-count" class="badge">0</span>
         </button>
+        <button id="btn-leaderboard" class="btn-secondary">🏆</button>
       </div>
     </header>
 
@@ -86,6 +87,17 @@
       </div>
     </div>
     <div id="modal-overlay" class="hidden"></div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🏆 Leaderboard</h2>
+          <button id="btn-close-leaderboard" class="btn-icon">✕</button>
+        </div>
+        <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      </div>
+    </div>
 
     <!-- Progress bar -->
     <div id="progress-bar-container" class="hidden">
