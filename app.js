@@ -871,12 +871,16 @@ document.getElementById('btn-catalogue-back').addEventListener('click', () => {
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(ACTIVE_DATE_KEY);
-  state.catalogue       = [];
-  state.groupIndex      = 0;
+  const first = state.dateGroups[0];
+  if (!first) return;
+  state.groupIndex       = 0;
+  state.queue            = [...first.ids];
   state.presentationMode = true;
-  advanceToNextPendingGroup();
+  localStorage.setItem(ACTIVE_DATE_KEY, first.date);
+  activeCardArea.classList.add('hidden');
+  activeCardArea.innerHTML = '';
+  swipeHints.classList.add('hidden');
+  clearSwipeFeedback();
   syncCalToActiveDate();
   renderStack();
   updateProgress();
