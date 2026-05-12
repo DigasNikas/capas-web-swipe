@@ -112,6 +112,17 @@ function json(data, status = 200) {
   });
 }
 
+// ── GET /leaderboard — authenticated ───────────────────────────────────────
+async function handleLeaderboard(request, env) {
+  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (!userEmail) return json({ error: "Unauthorized" }, 401);
+
+  const { results } = await env.DB
+    .prepare("SELECT user_email, COUNT(*) as swipes FROM swipes GROUP BY user_email ORDER BY swipes DESC")
+    .all();
+  return json(results);
+}
+
 // ── GET /matches — public ───────────────────────────────────────────────────
 async function handleGetMatches(env) {
   const { results } = await env.DB
@@ -191,6 +202,11 @@ export default {
     // Public: GET /matches
     if (method === "GET" && pathname === "/matches") {
       return handleGetMatches(env);
+    }
+
+    // Authenticated: GET /leaderboard
+    if (method === "GET" && pathname === "/leaderboard") {
+      return handleLeaderboard(request, env);
     }
 
     // Authenticated: GET /swipes (user's own history)

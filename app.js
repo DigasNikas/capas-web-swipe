@@ -33,6 +33,8 @@ const catalogueModal    = document.getElementById('catalogue-modal');
 const catalogueGrid     = document.getElementById('catalogue-grid');
 const catalogueEmpty    = document.getElementById('catalogue-empty');
 const modalOverlay      = document.getElementById('modal-overlay');
+const leaderboardModal  = document.getElementById('leaderboard-modal');
+const leaderboardList   = document.getElementById('leaderboard-list');
 const dateHeader        = document.getElementById('date-header');
 const dateLabel         = document.getElementById('date-label');
 const dateProgress      = document.getElementById('date-progress');
@@ -763,6 +765,36 @@ function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
 
+// ── Leaderboard ────────────────────────────────────────────────────────────
+async function openLeaderboard() {
+  leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
+  leaderboardModal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${API_URL}/leaderboard`);
+    const data = res.ok ? await res.json() : [];
+    leaderboardList.innerHTML = '';
+    const medals = ['🥇', '🥈', '🥉'];
+    data.forEach(({ user_email, swipes }, i) => {
+      const li = document.createElement('li');
+      li.className = 'lb-row';
+      const rank = medals[i] ?? `${i + 1}.`;
+      const name = user_email.split('@')[0];
+      li.innerHTML = `<span class="lb-rank">${rank}</span><span class="lb-name">${name}</span><span class="lb-count">${swipes}</span>`;
+      leaderboardList.appendChild(li);
+    });
+    if (data.length === 0) leaderboardList.innerHTML = '<li class="lb-loading">Sem votos ainda.</li>';
+  } catch {
+    leaderboardList.innerHTML = '<li class="lb-loading">Erro ao carregar.</li>';
+  }
+}
+
+function closeLeaderboard() {
+  leaderboardModal.classList.add('hidden');
+  modalOverlay.classList.add('hidden');
+}
+
 // ── Event Listeners ────────────────────────────────────────────────────────
 comecarPill.addEventListener('click', () => {
   if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
@@ -771,7 +803,9 @@ comecarPill.addEventListener('click', () => {
 document.getElementById('btn-instrucoes').addEventListener('click', () => landingPage.classList.remove('is-dismissed'));
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
-modalOverlay.addEventListener('click', closeCatalogue);
+document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
+document.getElementById('btn-close-leaderboard').addEventListener('click', closeLeaderboard);
+modalOverlay.addEventListener('click', () => { closeCatalogue(); closeLeaderboard(); });
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => {
