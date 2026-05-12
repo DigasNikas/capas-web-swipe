@@ -5,6 +5,7 @@ on:
     paths:
       - "workers/**"
       - "wrangler.toml"
+  workflow_dispatch:
 
 jobs:
   deploy:
