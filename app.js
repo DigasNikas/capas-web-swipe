@@ -839,7 +839,7 @@ comecarPill.addEventListener('click', () => {
 });
 
 document.getElementById('card-area').addEventListener('click', e => {
-  if (!state.presentationMode && e.target === document.getElementById('card-area')) {
+  if (!state.presentationMode && !activeCardArea.contains(e.target)) {
     deactivateSwipeMode();
   }
 });
