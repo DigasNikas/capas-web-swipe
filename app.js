@@ -769,6 +769,7 @@ function actionToDir(action) {
 async function openLeaderboard() {
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
   leaderboardModal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
 
   try {
     const res = await fetch(`${API_URL}/leaderboard`);
@@ -791,6 +792,7 @@ async function openLeaderboard() {
 
 function closeLeaderboard() {
   leaderboardModal.classList.add('hidden');
+  modalOverlay.classList.add('hidden');
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
@@ -803,7 +805,7 @@ document.getElementById('btn-view-catalogue').addEventListener('click', openCata
 document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
 document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
 document.getElementById('btn-close-leaderboard').addEventListener('click', closeLeaderboard);
-modalOverlay.addEventListener('click', closeCatalogue);
+modalOverlay.addEventListener('click', () => { closeCatalogue(); closeLeaderboard(); });
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => {

@@ -578,7 +578,8 @@ header h1 {
   z-index: 50;
 }
 
-#catalogue-modal {
+#catalogue-modal,
+#leaderboard-modal {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -587,7 +588,18 @@ header h1 {
   pointer-events: none;
 }
 
-#catalogue-modal:not(.hidden) { pointer-events: all; }
+#catalogue-modal:not(.hidden),
+#leaderboard-modal:not(.hidden) { pointer-events: all; }
+
+#catalogue-modal:not(.hidden) .modal-content,
+#leaderboard-modal:not(.hidden) .modal-content {
+  animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
 
 .modal-content {
   background: var(--surface);
