@@ -1048,6 +1048,15 @@ header h1 {
 .instrucoes-body p { margin: 0; }
 .instrucoes-body strong { color: var(--text); }
 
+.instrucoes-highlight {
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .instrucoes-label {
   font-weight: 600;
   color: var(--text);
