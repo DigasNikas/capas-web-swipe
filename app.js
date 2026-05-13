@@ -802,7 +802,8 @@ async function openLeaderboard() {
 
     others.forEach(({ user_email, swipes, rank }) => {
       const li = document.createElement('li');
-      li.className = 'lb-row';
+      const rankClass = rank <= 3 ? ` lb-rank-${rank}` : '';
+      li.className = `lb-row${rankClass}`;
       const rankLabel = medals[rank - 1] ?? `${rank}.`;
       const name = user_email.split('@')[0];
       li.innerHTML = `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name}</span><span class="lb-count">${swipes}</span>`;
@@ -816,7 +817,8 @@ async function openLeaderboard() {
         leaderboardList.appendChild(sep);
       }
       const li = document.createElement('li');
-      li.className = 'lb-row lb-me';
+      const rankClass = meEntry.rank <= 3 ? ` lb-rank-${meEntry.rank}` : '';
+      li.className = `lb-row lb-me${rankClass}`;
       const rankLabel = medals[meEntry.rank - 1] ?? `${meEntry.rank}.`;
       const name = meEntry.user_email.split('@')[0];
       li.innerHTML = `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name} <span class="lb-you">tu</span></span><span class="lb-count">${meEntry.swipes}</span>`;
