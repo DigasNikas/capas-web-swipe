@@ -785,15 +785,22 @@ function actionToDir(action) {
 }
 
 // ── Instruções modal ───────────────────────────────────────────────────────
-function openInstrucoes() { instrucoesModal.classList.remove('hidden'); }
+function openInstrucoes() {
+  instrucoesModal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
+}
 function closeInstrucoes() {
-  animateModalClose(instrucoesModal, () => instrucoesModal.classList.add('hidden'));
+  animateModalClose(instrucoesModal, () => {
+    instrucoesModal.classList.add('hidden');
+    modalOverlay.classList.add('hidden');
+  });
 }
 
 // ── Leaderboard ────────────────────────────────────────────────────────────
 async function openLeaderboard() {
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
   leaderboardModal.classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
 
   try {
     const res = await fetch(`${API_URL}/leaderboard`);
@@ -835,7 +842,10 @@ async function openLeaderboard() {
 }
 
 function closeLeaderboard() {
-  animateModalClose(leaderboardModal, () => leaderboardModal.classList.add('hidden'));
+  animateModalClose(leaderboardModal, () => {
+    leaderboardModal.classList.add('hidden');
+    modalOverlay.classList.add('hidden');
+  });
 }
 
 // ── Modal close helpers ────────────────────────────────────────────────────
@@ -890,7 +900,11 @@ addSwipeDownToClose(instrucoesModal, closeInstrucoes);
 
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
 catalogueModal.addEventListener('click', e => { if (e.target === catalogueModal) closeCatalogue(); });
-modalOverlay.addEventListener('click', closeCatalogue);
+modalOverlay.addEventListener('click', () => {
+  if (!catalogueModal.classList.contains('hidden'))  closeCatalogue();
+  if (!leaderboardModal.classList.contains('hidden')) closeLeaderboard();
+  if (!instrucoesModal.classList.contains('hidden'))  closeInstrucoes();
+});
 addSwipeDownToClose(catalogueModal, closeCatalogue);
 
 document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
