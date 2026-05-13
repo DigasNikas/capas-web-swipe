@@ -842,6 +842,9 @@ comecarPill.addEventListener('click', () => {
 });
 
 swipeBackdrop.addEventListener('click', deactivateSwipeMode);
+activeCardArea.addEventListener('click', e => {
+  if (!e.target.closest('.card')) deactivateSwipeMode();
+});
 
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
 document.getElementById('btn-close-instrucoes').addEventListener('click', closeInstrucoes);
