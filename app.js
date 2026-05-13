@@ -860,11 +860,16 @@ function addSwipeDownToClose(modal, closeFn) {
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
+let swipeActivatedAt = 0;
 comecarPill.addEventListener('click', () => {
-  if (state.presentationMode && state.queue.length > 0) activateSwipeMode(state.queue[0]);
+  if (state.presentationMode && state.queue.length > 0) {
+    swipeActivatedAt = Date.now();
+    activateSwipeMode(state.queue[0]);
+  }
 });
 
 activeCardArea.addEventListener('click', e => {
+  if (Date.now() - swipeActivatedAt < 350) return;
   if (!e.target.closest('.card')) deactivateSwipeMode();
 });
 
