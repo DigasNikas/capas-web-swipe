@@ -1,0 +1,21 @@
+name: Scrape Newspaper Covers (Date Range)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "Start date (YYYYMMDD)"
+        required: true
+      end:
+        description: "End date (YYYYMMDD)"
+        required: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scraper
+        run: |
+          curl -f \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+            "https://capas.digasnikas.com/api/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}"
