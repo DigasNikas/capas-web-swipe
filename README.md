@@ -87,15 +87,6 @@ Authenticated endpoints require a valid Cloudflare Access session cookie.
 | `GET` | `/leaderboard` | Access | Swipe count ranked by user |
 | `GET` | `/scrape` | Bearer | Trigger scraper manually (see below) |
 
-### Swipe decisions
-
-| Value | Direction | Club |
-|---|---|---|
-| `sporting` | → right | Sporting CP |
-| `benfica` | ← left | SL Benfica |
-| `porto` | ↓ down | FC Porto |
-| `others` | ↑ up | Other / mixed |
-
 ---
 
 ## Deployment
