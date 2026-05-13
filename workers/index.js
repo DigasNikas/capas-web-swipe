@@ -33,7 +33,7 @@ export default {
 
     if (method === "OPTIONS") return new Response(null, { headers: CORS });
 
-    if (method === "GET"  && pathname === "/covers")      return handleCovers(request, env);
+    if (method === "GET"  && pathname === "/covers")      return handleCovers(env);
     if (method === "GET"  && pathname === "/matches")     return handleGetMatches(env);
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);

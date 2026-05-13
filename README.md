@@ -80,7 +80,7 @@ Authenticated endpoints require a valid Cloudflare Access session cookie.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/covers` | — | Covers from the last 30 days; pass `?since=YYYY-MM-DD` to override |
+| `GET` | `/covers` | — | All covers, ordered by date desc |
 | `GET` | `/matches` | — | All match dates |
 | `GET` | `/swipes` | Access | Authenticated user's swipe history |
 | `POST` | `/swipes` | Access | Record a swipe `{ cover_id, decision }` |
