@@ -579,10 +579,9 @@ function updateDateHeader() {
     dateProgress.textContent = 'tap to start';
     dateProgress.classList.add('hint');
   } else {
-    const savedIds = new Set(state.catalogue.map(e => e.id));
     const total    = group.ids.length;
-    const done     = group.ids.filter(id => savedIds.has(id)).length;
-    dateProgress.textContent = `${done + 1} / ${total}`;
+    const current  = total - state.queue.length + 1;
+    dateProgress.textContent = `${current} / ${total}`;
     dateProgress.classList.remove('hint');
   }
 }
