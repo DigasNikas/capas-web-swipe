@@ -393,8 +393,8 @@ header h1 {
 .card.fly-down     { animation: fly-down  0.35s ease-in forwards; }
 .card.snap-back    { animation: snap-back 0.3s cubic-bezier(.34,1.56,.64,1) forwards; }
 
-/* ─── Empty / No-Images States ──────────────────────────────────────────── */
-#empty-state, #no-images-state {
+/* ─── Empty State ───────────────────────────────────────────────────────── */
+#empty-state {
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -408,7 +408,7 @@ header h1 {
   margin-bottom: 4px;
 }
 
-#empty-state p, #no-images-state p {
+#empty-state p {
   color: var(--text-muted);
   font-size: 1rem;
 }
@@ -418,11 +418,6 @@ header h1 {
   color: var(--border) !important;
 }
 
-#no-images-state {
-  position: absolute;
-}
-
-#card-stack:not(:empty) ~ #no-images-state,
 #card-stack:not(:empty) ~ #empty-state {
   display: none;
 }
@@ -1041,7 +1036,7 @@ header h1 {
   flex-direction: column;
   gap: 10px;
   font-size: 0.88rem;
-  color: var(--text2);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -1122,7 +1117,7 @@ header h1 {
 
 .lb-count {
   font-size: 0.85rem;
-  color: var(--text2);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -1154,17 +1149,9 @@ header h1 {
 .lb-loading {
   text-align: center;
   padding: 24px 0;
-  color: var(--text2);
+  color: var(--text-muted);
   font-size: 0.9rem;
   list-style: none;
-}
-
-/* ─── Swipe backdrop ─────────────────────────────────────────────────────── */
-#swipe-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  cursor: pointer;
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
