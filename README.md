@@ -164,7 +164,7 @@ python3 scrape_record.py 30      # just Record, last 30 days
 The calendar highlights days after a match to make it easier to find covers that might feature a club's result. Match dates are imported manually into D1:
 
 ```bash
-FOOTBALL_API_KEY=<key> python3 scripts/import_matches.py
+FOOTBALL_API_KEY=<key> APISPORTS_KEY=<key> python3 scripts/import_matches.py
 ```
 
-Data sources: [football-data.org](https://www.football-data.org) (free) and [api-sports.io](https://dashboard.api-football.com) (free tier, for Taça de Portugal / Taça da Liga).
+Data sources: [football-data.org](https://www.football-data.org) (Primeira Liga + European cups) and [api-sports.io](https://dashboard.api-football.com) (Taça de Portugal + Taça da Liga). Both have free tiers.
