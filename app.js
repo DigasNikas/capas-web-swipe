@@ -615,8 +615,10 @@ function openCatalogue() {
 }
 
 function closeCatalogue() {
-  catalogueModal.classList.add('hidden');
-  modalOverlay.classList.add('hidden');
+  animateModalClose(catalogueModal, () => {
+    catalogueModal.classList.add('hidden');
+    modalOverlay.classList.add('hidden');
+  });
 }
 
 function renderCatalogueView() {
@@ -784,7 +786,9 @@ function actionToDir(action) {
 
 // ── Instruções modal ───────────────────────────────────────────────────────
 function openInstrucoes() { instrucoesModal.classList.remove('hidden'); }
-function closeInstrucoes() { instrucoesModal.classList.add('hidden'); }
+function closeInstrucoes() {
+  animateModalClose(instrucoesModal, () => instrucoesModal.classList.add('hidden'));
+}
 
 // ── Leaderboard ────────────────────────────────────────────────────────────
 async function openLeaderboard() {
@@ -831,7 +835,44 @@ async function openLeaderboard() {
 }
 
 function closeLeaderboard() {
-  leaderboardModal.classList.add('hidden');
+  animateModalClose(leaderboardModal, () => leaderboardModal.classList.add('hidden'));
+}
+
+// ── Modal close helpers ────────────────────────────────────────────────────
+function animateModalClose(modal, onDone) {
+  const content = modal.querySelector('.modal-content');
+  if (!content) { onDone(); return; }
+  content.classList.add('is-closing');
+  content.addEventListener('animationend', () => {
+    content.classList.remove('is-closing');
+    onDone();
+  }, { once: true });
+}
+
+function addSwipeDownToClose(modal, closeFn) {
+  const content = modal.querySelector('.modal-content');
+  let startY = 0, dragging = false;
+
+  content.addEventListener('touchstart', e => {
+    startY   = e.touches[0].clientY;
+    dragging = true;
+    content.style.transition = 'none';
+  }, { passive: true });
+
+  content.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = Math.max(0, e.touches[0].clientY - startY);
+    content.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  content.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    content.style.transition = '';
+    content.style.transform  = '';
+    if (dy > 80) closeFn();
+  });
 }
 
 // ── Event Listeners ────────────────────────────────────────────────────────
@@ -844,15 +885,17 @@ activeCardArea.addEventListener('click', e => {
 });
 
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
-document.getElementById('btn-close-instrucoes').addEventListener('click', closeInstrucoes);
 instrucoesModal.addEventListener('click', e => { if (e.target === instrucoesModal) closeInstrucoes(); });
+addSwipeDownToClose(instrucoesModal, closeInstrucoes);
+
 document.getElementById('btn-view-catalogue').addEventListener('click', openCatalogue);
-document.getElementById('btn-close-modal').addEventListener('click', closeCatalogue);
-document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
-document.getElementById('btn-close-leaderboard').addEventListener('click', closeLeaderboard);
 catalogueModal.addEventListener('click', e => { if (e.target === catalogueModal) closeCatalogue(); });
 modalOverlay.addEventListener('click', closeCatalogue);
+addSwipeDownToClose(catalogueModal, closeCatalogue);
+
+document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
 leaderboardModal.addEventListener('click', e => { if (e.target === leaderboardModal) closeLeaderboard(); });
+addSwipeDownToClose(leaderboardModal, closeLeaderboard);
 
 document.querySelectorAll('.filter-btn').forEach(btn =>
   btn.addEventListener('click', () => {
