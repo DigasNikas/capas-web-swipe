@@ -1,0 +1,19 @@
+name: Scrape Newspaper Covers
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days to scrape"
+        required: true
+        default: "2"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scraper
+        run: |
+          curl -f \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+            "https://capas.digasnikas.com/api/scrape?days=${{ inputs.days }}"
