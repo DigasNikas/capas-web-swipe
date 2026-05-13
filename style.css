@@ -75,6 +75,10 @@ header h1 {
   -webkit-text-fill-color: transparent;
 }
 
+header h1 .title-emoji {
+  -webkit-text-fill-color: initial;
+}
+
 .header-actions {
   display: flex;
   gap: 8px;
