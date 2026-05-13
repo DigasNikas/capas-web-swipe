@@ -2,10 +2,9 @@
  * Avaliador de Capas — app.js
  * Loads covers from the Cloudflare Worker API (D1 + R2).
  * Images are grouped by date; all 3 covers per date must be swiped
- * before moving to the next date. Decisions are persisted in localStorage.
+ * before moving to the next date. Decisions are persisted server-side.
  * ───────────────────────────────────────────────────────────────────────── */
 
-const STORAGE_KEY      = 'swipe-catalogue';
 const ONBOARD_KEY      = 'capas-onboarded';
 const ACTIVE_DATE_KEY  = 'capas-active-date';
 const API_URL      = '/api';
@@ -78,17 +77,6 @@ const DECISION_TO_ACTION = Object.fromEntries(
   Object.values(ACTIONS).map(a => [a.decision, a.name])
 );
 
-// ── Persistence ────────────────────────────────────────────────────────────
-function loadFromStorage() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch { return []; }
-}
-
-function saveToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.catalogue));
-}
-
 // ── Date grouping ──────────────────────────────────────────────────────────
 function groupByDate(images) {
   const map = new Map();
@@ -130,33 +118,20 @@ async function init() {
 
   state.dateGroups = groupByDate(state.images);
 
-  // Prefer server history (persists across devices/sessions); fall back to localStorage
-  let serverSwipes = null;
+  let serverSwipes = [];
   try {
     const res = await fetch(`${API_URL}/swipes`);
     if (res.ok) serverSwipes = await res.json();
-  } catch { /* network error — use cache */ }
+  } catch { /* server unreachable — start with empty catalogue */ }
 
-  if (serverSwipes) {
-    state.catalogue = serverSwipes
-      .map(s => {
-        const img    = state.images.find(i => i.id === String(s.cover_id));
-        const action = DECISION_TO_ACTION[s.decision];
-        if (!img || !action) return null;
-        return { ...img, action, timestamp: s.swiped_at };
-      })
-      .filter(Boolean);
-    saveToStorage(); // keep localStorage in sync as a cache
-  } else {
-    const saved = loadFromStorage();
-    state.catalogue = saved
-      .map(e => {
-        const img = state.images.find(i => i.id === e.id);
-        if (!img) return null;
-        return { ...img, action: e.action, timestamp: e.timestamp };
-      })
-      .filter(Boolean);
-  }
+  state.catalogue = serverSwipes
+    .map(s => {
+      const img    = state.images.find(i => i.id === String(s.cover_id));
+      const action = DECISION_TO_ACTION[s.decision];
+      if (!img || !action) return null;
+      return { ...img, action, timestamp: s.swiped_at };
+    })
+    .filter(Boolean);
 
   // Start at the first group that still has unswiped images
   state.groupIndex = 0;
@@ -468,7 +443,6 @@ function recordAction(id, action) {
   if (!img) return;
   state.catalogue = state.catalogue.filter(e => e.id !== id);
   state.catalogue.push({ ...img, action, timestamp: new Date().toISOString() });
-  saveToStorage();
   const decision = Object.values(ACTIONS).find(a => a.name === action)?.decision;
   fetch(`${API_URL}/swipes`, {
     method: 'POST',
