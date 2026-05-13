@@ -704,6 +704,7 @@ function buildBundleStack(items) {
     const img = document.createElement('img');
     img.src = items[i].src;
     img.alt = items[i].name;
+    img.loading = 'lazy';
     card.appendChild(img);
     stack.appendChild(card);
   }
@@ -731,7 +732,7 @@ function expandGrid(items) {
     div.className = 'catalogue-item';
 
     const img = document.createElement('img');
-    img.src = entry.src; img.alt = entry.name;
+    img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
 
     const badge = document.createElement('div');
     badge.className = `catalogue-item-badge ${entry.action}`;
