@@ -842,11 +842,11 @@ function closeLeaderboard() {
 function animateModalClose(modal, onDone) {
   const content = modal.querySelector('.modal-content');
   if (!content) { onDone(); return; }
-  content.classList.add('is-closing');
-  content.addEventListener('animationend', () => {
-    content.classList.remove('is-closing');
+  content.style.animation = 'slide-down 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
     onDone();
-  }, { once: true });
+  }, 280);
 }
 
 function addSwipeDownToClose(modal, closeFn) {
