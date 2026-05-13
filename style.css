@@ -653,10 +653,6 @@ header h1 .title-emoji {
   to   { transform: translateY(100%); }
 }
 
-.modal-content.is-closing {
-  animation: slide-down 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-}
-
 .modal-content {
   background: var(--surface);
   border-radius: 24px 24px 0 0;
