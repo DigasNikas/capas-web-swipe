@@ -8,6 +8,7 @@ Usage:
 """
 
 import sys
+import os
 import subprocess
 
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -16,9 +17,10 @@ if not args:
     sys.exit(1)
 
 flags = [a for a in sys.argv[1:] if a.startswith("--")]
+here = os.path.dirname(os.path.abspath(__file__))
 
 for script in ("scrape_record.py", "scrape_abola.py", "scrape_ojogo.py"):
     print(f"\n{'─' * 40}")
     print(f"  {script}")
     print(f"{'─' * 40}")
-    subprocess.run([sys.executable, script] + sys.argv[1:], check=False)
+    subprocess.run([sys.executable, os.path.join(here, script)] + sys.argv[1:], check=False)
