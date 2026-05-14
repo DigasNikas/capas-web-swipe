@@ -20,10 +20,21 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 capas-web-swipe/
 ├── index.html            Frontend entry point
 ├── style.css             All styles
-├── app.js                Frontend logic (vanilla JS)
+├── app.js                Frontend entry (ES module): event listeners + init()
 ├── CNAME                 Custom domain for GitHub Pages
 ├── wrangler.toml         Cloudflare Worker configuration
 ├── package.json          Wrangler dev dependency
+│
+├── src/                  Frontend ES modules (imported by app.js)
+│   ├── state.js          Shared mutable state + all constants (ACTIONS, API_URL, …)
+│   ├── dom.js            DOM element references
+│   ├── dates.js          Date/time formatting and grouping helpers
+│   ├── calendar.js       Calendar rendering, month navigation, date-click handler
+│   ├── ui.js             Progress bar, date header, empty state updates
+│   ├── cards.js          Card stack, swipe gestures, commit logic, group navigation
+│   ├── catalogue.js      Histórico modal (drill-down, filters, image grid)
+│   ├── leaderboard.js    Leaderboard modal (fetch + render)
+│   └── modals.js         animateModalClose, swipe-down-to-close, instrucoes modal
 │
 ├── workers/              Cloudflare Worker (single bundle, split by responsibility)
 │   ├── index.js          Router + cron entry point
@@ -52,6 +63,10 @@ capas-web-swipe/
     ├── record.png
     └── manifest.json
 ```
+
+The frontend uses native ES modules (`<script type="module">`) — no build step required. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+
+> **Note:** ES modules require a server context. `index.html` cannot be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
 
 ---
 
