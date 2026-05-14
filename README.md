@@ -122,6 +122,14 @@ wrangler secret put ADMIN_SECRET
 wrangler secret put R2_PUBLIC_URL
 ```
 
+### R2 CORS policy
+
+The bucket CORS policy is stored in `cors.json`. Apply it with:
+
+```bash
+wrangler r2 bucket cors put capas-storage --file cors.json
+```
+
 ### Frontend
 
 Deployed automatically by GitHub Pages from the `main` branch root.
