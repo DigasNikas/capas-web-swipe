@@ -153,15 +153,15 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
 ```
 
-### Local Python scrapers
+### Bulk backfill (full month)
 
-The scripts in `scripts/` download covers locally (useful for bulk backfills before the Worker was set up):
+For scraping large amounts of covers at once, use `scrape_month.sh` — it calls the `/scrape` API for every day in a given month:
 
 ```bash
-cd scripts
-python3 scrape_all.py 7          # scrape last 7 days for all newspapers
-python3 scrape_record.py 30      # just Record, last 30 days
+ADMIN_SECRET=<secret> ./scripts/scrape_month.sh 2025 11
 ```
+
+This is the main way to backfill a full month without triggering the GitHub Actions workflow day by day or crafting individual curl commands.
 
 ---
 
