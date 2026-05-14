@@ -3,7 +3,7 @@ main            = "workers/index.js"
 compatibility_date = "2024-01-01"
 
 [triggers]
-crons = ["0 5 * * *"]   # 05:00 UTC daily (06:00 Lisbon winter / 07:00 Lisbon summer)
+crons = ["0 5-8 * * *"]   # 05:00–08:00 UTC daily, hourly (06:00–09:00 Lisbon winter / 07:00–10:00 Lisbon summer)
 
 [[routes]]
 pattern   = "capas.digasnikas.com/api/*"
