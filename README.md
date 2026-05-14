@@ -95,7 +95,7 @@ Authenticated endpoints require a valid Cloudflare Access session cookie.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/covers` | — | All covers, ordered by date desc |
+| `GET` | `/covers` | Access | All covers, ordered by date desc |
 | `GET` | `/matches` | — | All match dates |
 | `GET` | `/swipes` | Access | Authenticated user's swipe history |
 | `POST` | `/swipes` | Access | Record a swipe `{ cover_id, decision }` |
@@ -132,7 +132,7 @@ Deployed automatically by GitHub Pages from the `main` branch root.
 
 ### Automatic (cron)
 
-The Worker runs daily at **04:00 UTC** (05:00/06:00 Lisbon), scraping today's cover for each newspaper.
+The Worker runs hourly from **05:00–08:00 UTC** (06:00–09:00/07:00–10:00 Lisbon), scraping today's cover for each newspaper. Running four times ensures the cover is captured even if sapo.pt is slow to publish.
 
 ### Manual (GitHub Actions)
 
