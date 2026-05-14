@@ -1,0 +1,8 @@
+[
+  {
+    "AllowedOrigins": ["https://capas.digasnikas.com"],
+    "AllowedMethods": ["GET"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
