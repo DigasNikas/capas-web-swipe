@@ -287,7 +287,6 @@ function recordAction(id, action) {
   if (!img) return;
   state.catalogue = state.catalogue.filter(e => e.id !== id);
   state.catalogue.push({ ...img, action, timestamp: new Date().toISOString() });
-  state.lastSwipeAt = Date.now();
   const decision = Object.values(ACTIONS).find(a => a.name === action)?.decision;
   fetch(`${API_URL}/swipes`, {
     method: 'POST',

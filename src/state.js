@@ -30,5 +30,4 @@ export const state = {
   queue:            [],
   catalogue:        [],
   presentationMode: true,
-  lastSwipeAt:      0,
 };
