@@ -95,6 +95,17 @@ if (localStorage.getItem(ONBOARD_KEY)) {
 
 document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 
+// ── Cross-device sync ─────────────────────────────────────────────────────
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    const res = await fetch(`${API_URL}/swipes`);
+    if (!res.ok) return;
+    const swipes = await res.json();
+    if (swipes.length !== state.catalogue.length) location.reload();
+  } catch {}
+});
+
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   loadingState.classList.remove('hidden');
