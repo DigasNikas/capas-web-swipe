@@ -96,15 +96,27 @@ if (localStorage.getItem(ONBOARD_KEY)) {
 document.getElementById('btn-landing-start').addEventListener('click', dismissLanding);
 
 // ── Cross-device sync ─────────────────────────────────────────────────────
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible') return;
+let lastActivityAt = Date.now();
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(event =>
+  document.addEventListener(event, () => lastActivityAt = Date.now(), { passive: true })
+);
+
+async function syncIfStale() {
   try {
     const res = await fetch(`${API_URL}/swipes`);
     if (!res.ok) return;
     const swipes = await res.json();
     if (swipes.length !== state.catalogue.length) location.reload();
   } catch {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncIfStale();
 });
+
+setInterval(() => {
+  if (Date.now() - lastActivityAt > 10 * 60 * 1000) syncIfStale();
+}, 60_000);
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
