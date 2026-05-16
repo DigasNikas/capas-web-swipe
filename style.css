@@ -211,6 +211,7 @@ header h1 .title-emoji {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  z-index: 11;
 }
 
 .edge-oval.oval-left {
