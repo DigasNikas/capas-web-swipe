@@ -238,6 +238,19 @@ header h1 .title-emoji {
   background: rgba(99, 102, 241, 0.22);
 }
 
+@media (max-width: 480px) {
+  .dir-hint { font-size: 2.8rem; }
+  .dir-hint.left  { left: calc(50% - var(--card-w)/2 + 1rem); }
+  .dir-hint.right { left: calc(50% + var(--card-w)/2 - 3.8rem); }
+  .dir-hint.up    { top: calc(50% - var(--card-h)/2 + 1rem); }
+  .dir-hint.down  { top: calc(50% + var(--card-h)/2 - 3.8rem); }
+
+  .edge-oval.oval-left  { width: 130px; transform: translateX(-35%); }
+  .edge-oval.oval-right { width: 130px; transform: translateX(35%); }
+  .edge-oval.oval-up    { height: 130px; transform: translateY(-35%); }
+  .edge-oval.oval-down  { height: 130px; transform: translateY(35%); }
+}
+
 /* ─── Começar Pill ───────────────────────────────────────────────────────── */
 #comecar-pill {
   position: absolute;
