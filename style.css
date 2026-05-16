@@ -189,7 +189,7 @@ header h1 .title-emoji {
 #swipe-hints {
   position: absolute;
   inset: 0;
-  z-index: 9;
+  z-index: 11;
   pointer-events: none;
 }
 
@@ -211,7 +211,6 @@ header h1 .title-emoji {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 11;
 }
 
 .edge-oval.oval-left {
