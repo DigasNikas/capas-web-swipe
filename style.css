@@ -198,8 +198,6 @@ header h1 .title-emoji {
   font-size: 2rem;
   line-height: 1;
   transition: opacity 0.15s;
-  pointer-events: auto;
-  cursor: pointer;
 }
 
 .dir-hint.left   { left: calc(50% - var(--card-w)/2 - 2.5rem - 8px); top: 50%; transform: translateY(-50%); }
