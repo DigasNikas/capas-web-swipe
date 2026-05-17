@@ -241,7 +241,7 @@ header h1 .title-emoji {
 @media (max-width: 480px) {
   .dir-hint {
     font-size: 1.5rem;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.75);
     border-radius: 50%;
     width: 2.6rem;
     height: 2.6rem;
