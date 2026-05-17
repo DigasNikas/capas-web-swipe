@@ -76,6 +76,11 @@ document.addEventListener('keydown', e => {
   if (map[e.key]) triggerAction(map[e.key]);
 });
 
+document.querySelectorAll('.dir-hint').forEach(el => {
+  const dir = el.classList[1]; // left, right, up, down
+  el.addEventListener('click', () => triggerAction(dir));
+});
+
 document.getElementById('cal-prev').addEventListener('click', prevMonth);
 document.getElementById('cal-next').addEventListener('click', nextMonth);
 
