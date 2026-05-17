@@ -238,7 +238,7 @@ header h1 .title-emoji {
 }
 
 @media (max-width: 480px) {
-  .dir-hint { font-size: 2.8rem; }
+  .dir-hint { font-size: 1.5rem; }
   .dir-hint.left  { left: calc(50% - var(--card-w)/2 + 1rem); }
   .dir-hint.right { left: calc(50% + var(--card-w)/2 - 3.8rem); }
   .dir-hint.up    { top: calc(50% - var(--card-h)/2 - 1rem); }
