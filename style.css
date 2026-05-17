@@ -217,25 +217,25 @@ header h1 .title-emoji {
   left: 0; top: 45px; bottom: 45px;
   width: 90px;
   transform: translateX(-50%);
-  background: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.5);
 }
 .edge-oval.oval-right {
   right: 0; top: 45px; bottom: 45px;
   width: 90px;
   transform: translateX(50%);
-  background: rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.5);
 }
 .edge-oval.oval-up {
   top: 0; left: 45px; right: 45px;
   height: 90px;
   transform: translateY(-50%);
-  background: rgba(245, 158, 11, 0.22);
+  background: rgba(245, 158, 11, 0.5);
 }
 .edge-oval.oval-down {
   bottom: 0; left: 45px; right: 45px;
   height: 90px;
   transform: translateY(50%);
-  background: rgba(99, 102, 241, 0.22);
+  background: rgba(99, 102, 241, 0.5);
 }
 
 @media (max-width: 480px) {
