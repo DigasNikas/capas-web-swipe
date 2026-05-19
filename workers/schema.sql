@@ -17,6 +17,15 @@ CREATE TABLE IF NOT EXISTS swipes (
   UNIQUE (user_email, cover_id)       -- one record per user per cover; re-swipes update it
 );
 
+CREATE VIEW IF NOT EXISTS users AS
+  SELECT
+    user_email                          AS email,
+    MIN(swiped_at)                      AS first_swipe_at,
+    MAX(swiped_at)                      AS last_swipe_at,
+    COUNT(*)                            AS swipe_count
+  FROM swipes
+  GROUP BY user_email;
+
 CREATE TABLE IF NOT EXISTS matches (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   club       TEXT NOT NULL,            -- 'sporting', 'benfica', 'porto'
