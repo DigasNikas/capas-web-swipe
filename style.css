@@ -223,7 +223,7 @@ header h1 .title-emoji {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  filter: blur(50px);
+  filter: blur(30px);
 }
 
 .edge-oval.oval-left {
