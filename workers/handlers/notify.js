@@ -1,7 +1,7 @@
 import { json } from '../lib/http.js';
 import { buildEmailHtml } from '../lib/email.js';
 
-const FROM = 'Capas Desportivas <capas@digasnikas.com>';
+const FROM = 'Capas Desportivas <capas@capas.digasnikas.com>';
 
 export async function handleNotify(request, env) {
   const auth = request.headers.get('Authorization');
