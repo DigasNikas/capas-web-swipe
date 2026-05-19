@@ -5,14 +5,14 @@ export async function handleLeaderboard(request, env) {
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   const { results } = await env.DB
-    .prepare("SELECT user_email, COUNT(*) as swipes FROM swipes GROUP BY user_email ORDER BY swipes DESC")
+    .prepare("SELECT email, swipe_count FROM users ORDER BY swipe_count DESC")
     .all();
 
   const entries = results.map((r, i) => ({
-    user_email: r.user_email,
-    swipes: r.swipes,
-    rank: i + 1,
-    is_me: r.user_email === userEmail,
+    user_email: r.email,
+    swipes:     r.swipe_count,
+    rank:       i + 1,
+    is_me:      r.email === userEmail,
   }));
 
   const inList = entries.some(e => e.is_me);
