@@ -2,7 +2,7 @@ import { state } from './state.js';
 import {
   cardStack, emptyState, dateHeader, dateLabel, dateProgress,
   progressBar, progressText, progressContainer, calSection,
-  activeCardArea, catalogueCount,
+  activeCardArea,
 } from './dom.js';
 import { formatDate } from './dates.js';
 import { renderCalendar } from './calendar.js';
@@ -39,8 +39,4 @@ export function updateProgress() {
   progressBar.style.setProperty('--progress', `${total ? Math.round((done / total) * 100) : 0}%`);
   progressText.textContent = `${done} / ${total} days`;
   renderCalendar();
-}
-
-export function updateCatalogueCount() {
-  catalogueCount.textContent = state.catalogue.length;
 }

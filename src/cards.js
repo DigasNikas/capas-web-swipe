@@ -6,7 +6,7 @@ import {
   cardStack, activeCardArea, swipeHints, calSection,
   comecarPill, swipeBg, swipePill, pillIcon, pillLabel,
 } from './dom.js';
-import { updateDateHeader, updateEmptyState, updateProgress, updateCatalogueCount } from './ui.js';
+import { updateDateHeader, updateEmptyState, updateProgress } from './ui.js';
 import { syncCalToActiveDate, renderCalendar } from './calendar.js';
 
 export function advanceToNextPendingGroup() {
@@ -278,7 +278,6 @@ function commitSwipe(card, direction) {
     }
 
     updateProgress();
-    updateCatalogueCount();
   }, { once: true });
 }
 
@@ -323,5 +322,4 @@ export function goToCalendarDate(dateStr) {
 
   renderStack();
   updateProgress();
-  updateCatalogueCount();
 }

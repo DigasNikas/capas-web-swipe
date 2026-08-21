@@ -1,4 +1,3 @@
-export const ONBOARD_KEY     = 'capas-onboarded';
 export const ACTIVE_DATE_KEY = 'capas-active-date';
 export const API_URL         = '/api';
 

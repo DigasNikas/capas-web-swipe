@@ -9,8 +9,9 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 ## How It Works
 
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers from sapo.pt and stores them in **R2** (images) and **D1** (metadata).
-2. The **frontend** loads the covers, presents them as a swipeable card stack, and records each user's classification back to the Worker API.
-3. Authentication is handled by **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users.
+2. The **landing page** (`/`) is public — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
+3. Clicking "Entrar" takes you to the **swipe app** (`/app/`), which is behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
+4. The **account page** (`/account/`, also behind Access) shows a user's own stats, leaderboard rank, and swipe history.
 
 ---
 
@@ -18,21 +19,26 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 ```
 capas-web-swipe/
-├── index.html            Frontend entry point
-├── style.css             All styles
-├── app.js                Frontend entry (ES module): event listeners + init()
+├── index.html            Public landing page (results, no login)
+├── landing.js            Landing page: fetches /api/stats + /api/matches, renders it
+├── landing.css           Landing page styles (separate visual language from the app)
+├── app/index.html        Swipe app (behind Cloudflare Access)
+├── account/index.html    Account page: stats, rank, Histórico (behind Cloudflare Access)
+├── account.js            Account page logic
+├── style.css             Styles shared by the app + account pages
+├── app.js                Swipe app entry (ES module): event listeners + init()
 ├── CNAME                 Custom domain for GitHub Pages
 ├── wrangler.toml         Cloudflare Worker configuration
 ├── package.json          Wrangler dev dependency
 │
-├── src/                  Frontend ES modules (imported by app.js)
+├── src/                  Frontend ES modules (imported by app.js / account.js)
 │   ├── state.js          Shared mutable state + all constants (ACTIONS, API_URL, …)
-│   ├── dom.js            DOM element references
+│   ├── dom.js            DOM element references (app page)
 │   ├── dates.js          Date/time formatting and grouping helpers
 │   ├── calendar.js       Calendar rendering, month navigation, date-click handler
 │   ├── ui.js             Progress bar, date header, empty state updates
 │   ├── cards.js          Card stack, swipe gestures, commit logic, group navigation
-│   ├── catalogue.js      Histórico modal (drill-down, filters, image grid)
+│   ├── catalogue.js      Histórico rendering (drill-down, filters, image grid)
 │   ├── leaderboard.js    Leaderboard modal (fetch + render)
 │   └── modals.js         animateModalClose, swipe-down-to-close, instrucoes modal
 │
@@ -45,7 +51,8 @@ capas-web-swipe/
 │   └── handlers/
 │       ├── covers.js     GET  /covers
 │       ├── matches.js    GET  /matches
-│       ├── swipes.js     GET  + POST /swipes
+│       ├── stats.js      GET  /stats  (public — reads analytics_covers only, never swipes)
+│       ├── swipes.js     GET  + POST /swipes (POST also refreshes analytics_covers)
 │       ├── leaderboard.js GET /leaderboard
 │       └── scrape.js     GET  /scrape  (admin, bearer-protected)
 │
@@ -64,9 +71,9 @@ capas-web-swipe/
     └── manifest.json
 ```
 
-The frontend uses native ES modules (`<script type="module">`) — no build step required. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+The frontend uses native ES modules (`<script type="module">`) — no build step required. `app.js`/`src/*.js` stay at the repo root and are referenced by absolute path from `app/index.html`, so their relative imports keep working unchanged. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
 
-> **Note:** ES modules require a server context. `index.html` cannot be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
+> **Note:** ES modules require a server context. Pages can't be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
 
 ---
 
@@ -74,17 +81,18 @@ The frontend uses native ES modules (`<script type="module">`) — no build step
 
 | Resource | Provider | Purpose |
 |---|---|---|
-| Frontend hosting | GitHub Pages | Serves `index.html`, `style.css`, `app.js` |
+| Frontend hosting | GitHub Pages | Serves the static pages (`/`, `/app/`, `/account/`) |
 | Worker | Cloudflare Workers | API + scheduled scraper |
-| Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates |
+| Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
 | Image storage | Cloudflare R2 | Front page images |
-| Auth | Cloudflare Access | User identity via email |
+| Auth | Cloudflare Access | Gates `/app*`, `/account*`, `/api/covers*`, `/api/swipes*`, `/api/leaderboard*` — everything else (`/`, `/api/stats`, `/api/matches`) is public |
 
 ### D1 Schema
 
 **`covers`** — one row per newspaper per day  
 **`swipes`** — one row per user per cover (upserted on re-swipe)  
-**`matches`** — match dates for Sporting, Benfica, Porto (used to highlight the calendar)
+**`matches`** — match dates for Sporting, Benfica, Porto (used to highlight the calendar)  
+**`analytics_covers`** — one row per cover with ≥1 vote: the winning club + vote counts, refreshed on every swipe. Never joined with `swipes`/`user_email` — this is the only table the public landing page's API reads.
 
 ---
 
@@ -97,8 +105,9 @@ Authenticated endpoints require a valid Cloudflare Access session cookie.
 |---|---|---|---|
 | `GET` | `/covers` | Access | All covers, ordered by date desc |
 | `GET` | `/matches` | — | All match dates |
+| `GET` | `/stats` | — | Public aggregate results (per-paper breakdown, per-day winners, latest classified day) — reads only `analytics_covers` |
 | `GET` | `/swipes` | Access | Authenticated user's swipe history |
-| `POST` | `/swipes` | Access | Record a swipe `{ cover_id, decision }` |
+| `POST` | `/swipes` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
 | `GET` | `/leaderboard` | Access | Swipe count ranked by user |
 | `GET` | `/scrape` | Bearer | Trigger scraper manually (see below) |
 
