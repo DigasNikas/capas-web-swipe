@@ -17,30 +17,36 @@
     <header class="l-header">
       <div class="l-header-left">
         <span class="l-live">● AO VIVO</span>
-        <span class="l-kicker">INVESTIGAÇÃO DESPORTIVA</span>
+        <select id="epoca-select" class="l-epoca-select"></select>
+        <span class="l-kicker">· INVESTIGAÇÃO DESPORTIVA</span>
       </div>
-      <a href="/app/" class="l-cta">Entrar →</a>
+      <div class="l-header-right">
+        <a href="/app/" class="l-cta l-cta-small">Entrar →</a>
+        <h1 class="l-title">Analisador <span class="l-accent">de capas desportivas</span></h1>
+        <p class="l-tagline">Três jornais. Três clubes. Quem cobre quem?</p>
+      </div>
     </header>
-
-    <div class="l-title-block">
-      <h1 class="l-title">Analisador <span class="l-accent">de capas desportivas</span></h1>
-      <p class="l-tagline">Três jornais. Três clubes. Quem cobre quem?</p>
-    </div>
 
     <section class="l-brief">
       <div class="l-brief-copy">
         <div class="l-eyebrow">▸ BRIEFING</div>
-        <p>Recolhemos as capas de <strong>A&nbsp;Bola</strong>, <strong>O&nbsp;Jogo</strong> e <strong>Record</strong> e deixámos a comunidade classificar cada uma. Os números não deixam dúvidas — cada jornal tem um clube de estimação.</p>
+        <p>Recolhemos as capas de <strong>A&nbsp;Bola</strong>, <strong>O&nbsp;Jogo</strong> e <strong>Record</strong> e deixámos a comunidade classificar cada uma. <mark>Os números não deixam dúvidas</mark> — cada jornal tem um clube de estimação.</p>
       </div>
-      <div class="l-brief-stats">
-        <div><span id="stat-covers" class="l-brief-num">–</span><span class="l-brief-label">capas classificadas</span></div>
-        <div><span id="stat-days" class="l-brief-num">–</span><span class="l-brief-label">dias</span></div>
-        <div><span id="stat-votes" class="l-brief-num">–</span><span class="l-brief-label">votos</span></div>
+      <div class="l-brief-right">
+        <div class="l-methodology">
+          <div class="l-eyebrow">METODOLOGIA</div>
+          <p>Cada capa é classificada pela comunidade, por votação — a maioria decide qual o clube em destaque.</p>
+        </div>
+        <div class="l-brief-stats">
+          <div><span id="stat-covers" class="l-brief-num">–</span><span class="l-brief-label">capas</span></div>
+          <div><span id="stat-days" class="l-brief-num">–</span><span class="l-brief-label">dias</span></div>
+          <div><span id="stat-votes" class="l-brief-num">–</span><span class="l-brief-label">votos</span></div>
+        </div>
       </div>
     </section>
 
     <section class="l-section">
-      <div class="l-eyebrow">O VEREDICTO</div>
+      <div id="papers-eyebrow" class="l-eyebrow">O VEREDICTO</div>
       <h2 class="l-h2">O clube de cada <span class="l-accent">jornal</span></h2>
       <div id="papers" class="l-papers"></div>
     </section>

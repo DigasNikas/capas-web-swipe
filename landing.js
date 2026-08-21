@@ -7,6 +7,7 @@ const CLUB_META = {
   benfica:  { name: 'Benfica',  short: 'SLB', color: 'var(--l-benfica)' },
   others:   { name: 'Outros',   short: 'OTH', color: 'var(--l-others)' },
 };
+const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 
 const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
@@ -14,6 +15,17 @@ function prevDateStr(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+
+// Época = Aug 1 → Jun 30. Dates in July belong to no época (off-season gap).
+function epocaLabelForDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth(); // 0-indexed, Aug=7, Jun=5
+  let startYear;
+  if (m >= 7) startYear = y;
+  else if (m <= 5) startYear = y - 1;
+  else return null;
+  return `${String(startYear % 100).padStart(2, '0')}/${String((startYear + 1) % 100).padStart(2, '0')}`;
 }
 
 async function init() {
@@ -31,24 +43,64 @@ async function init() {
     matchesByDate.get(m.match_date).push(m.club);
   });
 
-  renderBrief(stats);
-  renderPapers(stats.papers);
-  renderCalendar(stats.days, matchesByDate);
+  const rows = stats.rows.map(r => ({ ...r, epoca: epocaLabelForDate(r.date) })).filter(r => r.epoca);
+
+  const countByEpoca = new Map();
+  rows.forEach(r => countByEpoca.set(r.epoca, (countByEpoca.get(r.epoca) || 0) + 1));
+  const epocas = [...countByEpoca.keys()].sort().reverse();
+  const defaultEpoca = [...countByEpoca.entries()].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0]?.[0];
+
+  const select = document.getElementById('epoca-select');
+  select.innerHTML = epocas.map(e => `<option value="${e}">ÉPOCA ${e}</option>`).join('');
+  select.value = defaultEpoca;
+  select.addEventListener('change', () => renderEpoca(rows, select.value, matchesByDate));
+
+  renderEpoca(rows, defaultEpoca, matchesByDate);
   renderLatest(stats.latest);
 }
 
-function renderBrief(stats) {
-  document.getElementById('stat-covers').textContent = stats.totals.covers;
-  document.getElementById('stat-days').textContent = stats.days.length;
-  document.getElementById('stat-votes').textContent = stats.totals.votes;
+function renderEpoca(rows, epoca, matchesByDate) {
+  const epocaRows = rows.filter(r => r.epoca === epoca);
+
+  document.getElementById('papers-eyebrow').textContent = `O VEREDICTO · ÉPOCA ${epoca}`;
+
+  const dias = new Set(epocaRows.map(r => r.date)).size;
+  const votes = epocaRows.reduce((sum, r) => sum + r.votes_total, 0);
+  document.getElementById('stat-covers').textContent = epocaRows.length;
+  document.getElementById('stat-days').textContent = dias;
+  document.getElementById('stat-votes').textContent = votes;
+
+  renderPapers(epocaRows);
+
+  const byDate = new Map();
+  epocaRows.forEach(r => {
+    if (!byDate.has(r.date)) byDate.set(r.date, {});
+    byDate.get(r.date)[r.newspaper] = r.club;
+  });
+  const days = [...byDate.entries()].map(([date, covers]) => {
+    const tally = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
+    Object.values(covers).forEach(c => tally[c]++);
+    const winner = CLUB_KEYS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUB_KEYS[0]);
+    return { date, covers, winner, tally };
+  });
+
+  renderCalendar(days, matchesByDate, epoca);
 }
 
-function renderPapers(papers) {
+function renderPapers(rows) {
   const container = document.getElementById('papers');
-  const sorted = [...papers].sort((a, b) => b.topPct - a.topPct);
   container.innerHTML = '';
 
-  sorted.forEach(paper => {
+  const papers = Object.keys(PAPERS_BY_ID).map(id => {
+    const paperRows = rows.filter(r => r.newspaper === id);
+    const counts = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
+    paperRows.forEach(r => counts[r.club]++);
+    const total = paperRows.length;
+    const topClub = CLUB_KEYS.reduce((a, b) => (counts[b] > counts[a] ? b : a), CLUB_KEYS[0]);
+    return { id, name: PAPERS_BY_ID[id], counts, total, topClub, topPct: total ? counts[topClub] / total : 0 };
+  }).sort((a, b) => b.topPct - a.topPct);
+
+  papers.forEach(paper => {
     const top = CLUB_META[paper.topClub];
     const card = document.createElement('div');
     card.className = 'paper-card';
@@ -68,12 +120,16 @@ function renderPapers(papers) {
       }).join('');
 
     card.innerHTML = `
-      <div class="p-label">Jornal</div>
-      <div class="p-name">${paper.name}</div>
-      <div class="p-label">Clube favorito da capa</div>
-      <div class="p-club">${top.name}</div>
-      <div class="p-pct">${Math.round(paper.topPct * 100)}<small>%</small></div>
-      ${bars}
+      <div class="p-wash"></div>
+      <div class="p-edge"></div>
+      <div class="p-content">
+        <div class="p-label">Jornal</div>
+        <div class="p-name">${paper.name}</div>
+        <div class="p-label">Clube favorito da capa</div>
+        <div class="p-club">${top.name}</div>
+        <div class="p-pct">${Math.round(paper.topPct * 100)}<small>%</small></div>
+        ${bars}
+      </div>
     `;
     container.appendChild(card);
   });
@@ -100,7 +156,7 @@ function pulseFor(day, matchesByDate) {
   return null;
 }
 
-function renderCalendar(days, matchesByDate) {
+function renderCalendar(days, matchesByDate, epoca) {
   let paperFilter = null;
   const calEl = document.getElementById('calendar');
   const legendEl = document.getElementById('legend');
@@ -108,10 +164,8 @@ function renderCalendar(days, matchesByDate) {
   const eyebrowEl = document.getElementById('cal-eyebrow');
   const filterEl = document.getElementById('paper-filter');
 
-  const papersById = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
-
   filterEl.innerHTML = '';
-  [{ id: null, name: 'Todos' }, ...Object.keys(papersById).map(id => ({ id, name: papersById[id] }))]
+  [{ id: null, name: 'Todos' }, ...Object.keys(PAPERS_BY_ID).map(id => ({ id, name: PAPERS_BY_ID[id] }))]
     .forEach(p => {
       const btn = document.createElement('button');
       btn.textContent = p.name;
@@ -130,16 +184,16 @@ function renderCalendar(days, matchesByDate) {
     const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
     if (paperFilter && !focusClub) {
       const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
-      panelEl.innerHTML = `<div class="l-day-hint">${papersById[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
+      panelEl.innerHTML = `<div class="l-day-hint">${PAPERS_BY_ID[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
       return;
     }
     const { hasMajority } = dayStats(day);
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
     const pulse = pulseFor(day, matchesByDate);
 
-    const papersHtml = Object.keys(papersById).map(id => `
+    const papersHtml = Object.keys(PAPERS_BY_ID).map(id => `
       <div style="border-top:2px solid ${CLUB_META[day.covers[id]]?.color ?? 'var(--l-panel2)'}">
-        <div class="dp-name">${papersById[id]}</div>
+        <div class="dp-name">${PAPERS_BY_ID[id]}</div>
         <div class="dp-club" style="color:${day.covers[id] ? CLUB_META[day.covers[id]].color : 'var(--l-muted)'}">${day.covers[id] ? CLUB_META[day.covers[id]].short : '—'}</div>
       </div>
     `).join('');
@@ -160,13 +214,14 @@ function renderCalendar(days, matchesByDate) {
 
   function draw() {
     eyebrowEl.textContent = paperFilter
-      ? `CALENDÁRIO · LENTE: ${papersById[paperFilter].toUpperCase()}`
-      : 'CALENDÁRIO · 1 CLUBE POR DIA';
+      ? `CALENDÁRIO · ÉPOCA ${epoca} · LENTE: ${PAPERS_BY_ID[paperFilter].toUpperCase()}`
+      : `CALENDÁRIO · ÉPOCA ${epoca} · 1 CLUBE POR DIA`;
     [...filterEl.children].forEach((btn, i) => {
-      const ids = [null, ...Object.keys(papersById)];
+      const ids = [null, ...Object.keys(PAPERS_BY_ID)];
       btn.classList.toggle('active', ids[i] === paperFilter);
     });
     legendEl.innerHTML = legendMarkup();
+    panelEl.innerHTML = '<div class="l-day-hint">toca num dia →</div>';
 
     const byMonth = new Map();
     days.forEach(d => {
@@ -176,7 +231,7 @@ function renderCalendar(days, matchesByDate) {
     });
 
     calEl.innerHTML = '';
-    [...byMonth.entries()].forEach(([key, monthDays]) => {
+    [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([key, monthDays]) => {
       const [y, m] = key.split('-');
       const block = document.createElement('div');
       block.className = 'cal-month';
@@ -200,7 +255,7 @@ function renderCalendar(days, matchesByDate) {
         if (paperFilter && !focusClub) {
           cell.className = 'cal-day no-data';
           cell.style.background = 'var(--l-panel2)';
-          cell.title = `${day.date} · sem votos de ${papersById[paperFilter]}`;
+          cell.title = `${day.date} · sem votos de ${PAPERS_BY_ID[paperFilter]}`;
         } else {
           const { unanimous, hasMajority } = dayStats(day);
           cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
