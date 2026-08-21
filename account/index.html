@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A minha conta · Avaliador de capas desportivas</title>
+  <link rel="stylesheet" href="/style.css?v=3" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+  <style>
+    #account-app { max-width: 600px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+    .acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .acc-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; text-align: center; }
+    .acc-stat-value { font-size: 1.6rem; font-weight: 800; }
+    .acc-stat-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .acc-breakdown { display: flex; flex-direction: column; gap: 8px; }
+    .acc-bar-row { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 10px; font-size: 0.8rem; }
+    .acc-bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .acc-bar-fill { height: 100%; }
+    .acc-section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div id="account-app">
+    <header>
+      <h1>A minha conta</h1>
+      <div class="header-actions">
+        <a href="/" class="btn-secondary">Início</a>
+        <a href="/app/" class="btn-secondary">Votar</a>
+        <a href="/cdn-cgi/access/logout" class="btn-secondary">Sair</a>
+      </div>
+    </header>
+
+    <div class="acc-stats">
+      <div class="acc-stat"><div id="acc-total" class="acc-stat-value">–</div><div class="acc-stat-label">Votos</div></div>
+      <div class="acc-stat"><div id="acc-rank" class="acc-stat-value">–</div><div class="acc-stat-label">Posição</div></div>
+      <div class="acc-stat"><div id="acc-pending" class="acc-stat-value">–</div><div class="acc-stat-label">Por votar</div></div>
+    </div>
+
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="acc-section-title">Os teus votos</div>
+      <div id="acc-breakdown" class="acc-breakdown"></div>
+    </div>
+
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="modal-header">
+        <h2>Histórico</h2>
+      </div>
+      <div class="modal-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="keep">Sporting</button>
+        <button class="filter-btn" data-filter="favorite">Outros</button>
+        <button class="filter-btn" data-filter="reject">Benfica</button>
+        <button class="filter-btn" data-filter="skip">Porto</button>
+      </div>
+      <div id="catalogue-nav" class="hidden">
+        <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
+        <span id="catalogue-nav-label"></span>
+      </div>
+      <div id="catalogue-grid"></div>
+      <p id="catalogue-empty" class="catalogue-empty hidden">Ainda não há votos aqui.</p>
+    </div>
+  </div>
+
+  <script type="module" src="/account.js"></script>
+</body>
+</html>

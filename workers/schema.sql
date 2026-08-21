@@ -32,3 +32,15 @@ CREATE TABLE IF NOT EXISTS matches (
   match_date TEXT NOT NULL,            -- 'YYYY-MM-DD'
   UNIQUE (club, match_date)
 );
+
+-- Public results, derived from swipes. Never joined with user_email —
+-- this is the only table the public landing page's API is allowed to read.
+CREATE TABLE IF NOT EXISTS analytics_covers (
+  cover_id    INTEGER PRIMARY KEY REFERENCES covers(id),
+  newspaper   TEXT NOT NULL,
+  date        TEXT NOT NULL,
+  club        TEXT NOT NULL,           -- winning decision for this cover
+  votes_club  INTEGER NOT NULL,
+  votes_total INTEGER NOT NULL,
+  updated_at  TEXT DEFAULT (datetime('now'))
+);

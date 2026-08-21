@@ -1,27 +1,23 @@
-import { state, ACTIONS } from './state.js';
-import { catalogueModal, catalogueGrid, catalogueEmpty, modalOverlay } from './dom.js';
+import { ACTIONS } from './state.js';
 import { formatMonth, formatShortDate, groupByMonth } from './dates.js';
-import { animateModalClose } from './modals.js';
 
+const catalogueGrid  = document.getElementById('catalogue-grid');
+const catalogueEmpty = document.getElementById('catalogue-empty');
+const catNav         = document.getElementById('catalogue-nav');
+const navLabel        = document.getElementById('catalogue-nav-label');
+
+let catalogue    = [];
 let activeFilter = 'all';
 let drillLevel   = 0;
 let drillMonth   = null;
 
 const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Outros' };
 
-export function openCatalogue() {
-  catalogueModal.classList.remove('hidden');
-  modalOverlay.classList.remove('hidden');
+export function renderCatalogue(items) {
+  catalogue  = items;
   drillLevel = 0;
   drillMonth = null;
   renderCatalogueView();
-}
-
-export function closeCatalogue() {
-  animateModalClose(catalogueModal, () => {
-    catalogueModal.classList.add('hidden');
-    modalOverlay.classList.add('hidden');
-  });
 }
 
 export function setActiveFilter(filter) {
@@ -44,14 +40,11 @@ function renderCatalogueView() {
 
   catalogueGrid.innerHTML = '';
   catalogueGrid.classList.remove('grid-view');
-
-  const catNav   = document.getElementById('catalogue-nav');
-  const navLabel = document.getElementById('catalogue-nav-label');
   catNav.classList.toggle('hidden', drillLevel === 0);
 
   const items = activeFilter === 'all'
-    ? state.catalogue
-    : state.catalogue.filter(e => e.action === activeFilter);
+    ? catalogue
+    : catalogue.filter(e => e.action === activeFilter);
 
   catalogueEmpty.classList.toggle('hidden', items.length > 0);
   if (items.length === 0) return;

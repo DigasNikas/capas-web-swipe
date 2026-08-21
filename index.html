@@ -1,199 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Avaliador de capas desportivas ⚽</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <title>Analisador de capas desportivas ⚽</title>
+  <meta name="description" content="Que clube cada jornal desportivo português mais cobre? Resultados ao vivo, votados pela comunidade." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/landing.css?v=1" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 </head>
 <body>
-  <div id="app">
-    <!-- Header -->
-    <header>
-      <h1>Avaliador de capas desportivas <span class="title-emoji">⚽</span></h1>
-      <div class="header-actions">
-        <button id="btn-instrucoes" class="btn-secondary">Instruções</button>
-        <button id="btn-view-catalogue" class="btn-secondary">
-          Histórico <span id="catalogue-count" class="badge">0</span>
-        </button>
-        <button id="btn-leaderboard" class="btn-secondary">🏆</button>
+  <div id="landing">
+
+    <header class="l-header">
+      <div class="l-header-left">
+        <span class="l-live">● AO VIVO</span>
+        <span class="l-kicker">INVESTIGAÇÃO DESPORTIVA</span>
       </div>
+      <a href="/app/" class="l-cta">Entrar →</a>
     </header>
 
-    <!-- Date header -->
-    <div id="date-header" class="hidden">
-      <span id="date-label"></span>
-      <span id="date-progress"></span>
+    <div class="l-title-block">
+      <h1 class="l-title">Analisador <span class="l-accent">de capas desportivas</span></h1>
+      <p class="l-tagline">Três jornais. Três clubes. Quem cobre quem?</p>
     </div>
 
-    <!-- Card Stack -->
-    <main id="card-area">
-      <div id="card-stack"></div>
-      <button id="comecar-pill" class="hidden">Começar</button>
-      <div id="active-card-area" class="hidden"></div>
-
-      <!-- Direction hints (shown during swipe mode) -->
-      <div id="swipe-hints" class="hidden">
-        <div class="edge-oval oval-left"></div>
-        <div class="edge-oval oval-right"></div>
-        <div class="edge-oval oval-up"></div>
-        <div class="edge-oval oval-down"></div>
-        <div class="dir-hint left">🦅</div>
-        <div class="dir-hint up">?</div>
-        <div class="dir-hint down">🐉</div>
-        <div class="dir-hint right">🦁</div>
+    <section class="l-brief">
+      <div class="l-brief-copy">
+        <div class="l-eyebrow">▸ BRIEFING</div>
+        <p>Recolhemos as capas de <strong>A&nbsp;Bola</strong>, <strong>O&nbsp;Jogo</strong> e <strong>Record</strong> e deixámos a comunidade classificar cada uma. Os números não deixam dúvidas — cada jornal tem um clube de estimação.</p>
       </div>
-
-      <!-- All done -->
-      <div id="empty-state" class="hidden">
-        <div class="empty-icon">✓</div>
-        <p>All images catalogued!</p>
-        <button id="btn-reset" class="btn-primary">Start Over</button>
+      <div class="l-brief-stats">
+        <div><span id="stat-covers" class="l-brief-num">–</span><span class="l-brief-label">capas classificadas</span></div>
+        <div><span id="stat-days" class="l-brief-num">–</span><span class="l-brief-label">dias</span></div>
+        <div><span id="stat-votes" class="l-brief-num">–</span><span class="l-brief-label">votos</span></div>
       </div>
+    </section>
 
-      <!-- Loading -->
-      <div id="loading-state" class="hidden">
-        <div class="empty-icon">⏳</div>
-        <p>Loading images…</p>
+    <section class="l-section">
+      <div class="l-eyebrow">O VEREDICTO</div>
+      <h2 class="l-h2">O clube de cada <span class="l-accent">jornal</span></h2>
+      <div id="papers" class="l-papers"></div>
+    </section>
+
+    <section class="l-section">
+      <div class="l-cal-head">
+        <div>
+          <div id="cal-eyebrow" class="l-eyebrow">CALENDÁRIO · 1 CLUBE POR DIA</div>
+          <h2 class="l-h2">Cada dia tem um <span class="l-accent">dono</span></h2>
+        </div>
+        <div class="l-cal-controls">
+          <div id="paper-filter" class="l-filter-group"></div>
+          <div id="legend" class="l-legend"></div>
+        </div>
       </div>
-    </main>
-
-    <!-- Full-app swipe feedback background -->
-    <div id="swipe-bg"></div>
-
-    <!-- Swipe pill (fixed center, shows icon + label during swipe) -->
-    <div id="swipe-pill"><span id="pill-icon"></span><span id="pill-label"></span></div>
-
-    <!-- Catalogue Modal -->
-    <div id="catalogue-modal" class="modal hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Histórico</h2>
-        </div>
-        <div class="modal-filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="keep">Sporting</button>
-          <button class="filter-btn" data-filter="favorite">Outros</button>
-          <button class="filter-btn" data-filter="reject">Benfica</button>
-          <button class="filter-btn" data-filter="skip">Porto</button>
-        </div>
-        <div id="catalogue-nav" class="hidden">
-          <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
-          <span id="catalogue-nav-label"></span>
-        </div>
-        <div id="catalogue-grid"></div>
-        <p id="catalogue-empty" class="catalogue-empty hidden">No items in this category yet.</p>
+      <div id="calendar" class="l-calendar"></div>
+      <div id="day-panel" class="l-day-panel">
+        <div class="l-day-hint">toca num dia →</div>
       </div>
-    </div>
-    <div id="modal-overlay" class="hidden"></div>
+    </section>
 
-    <!-- Leaderboard Modal -->
-    <div id="leaderboard-modal" class="modal hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>🏆 Classificação</h2>
+    <section id="latest" class="l-section l-latest hidden">
+      <div class="l-latest-inner">
+        <div class="l-latest-left">
+          <div class="l-eyebrow">ÚLTIMA CLASSIFICAÇÃO</div>
+          <h2 class="l-h2" id="latest-title">Hoje é dia <span class="l-accent">de quem?</span></h2>
+          <p class="l-latest-desc">Classificação em tempo real, votada pela comunidade — sem intervenção editorial.</p>
+          <div id="latest-date" class="l-latest-date"></div>
+          <div id="latest-covers" class="l-latest-covers"></div>
         </div>
-        <ol id="leaderboard-list" class="leaderboard-list"></ol>
-      </div>
-    </div>
-
-    <!-- Instruções Modal -->
-    <div id="instrucoes-modal" class="modal hidden">
-      <div class="modal-content instrucoes-content">
-        <div class="modal-header">
-          <h2>Como avaliar</h2>
-        </div>
-        <p class="instrucoes-highlight">Desliza a capa para a direção do clube que domina a capa. Desliza para cima se o destaque for de outro clube, se a capa mencionar vários clubes de forma equilibrada, ou até mesmo se for outro desporto.</p>
-        <div class="landing-dirs">
-          <div class="landing-dir" style="--accent: var(--reject)">
-            <span class="ldir-arrow">←</span>
-            <span class="ldir-icon">🦅</span>
-            <span class="ldir-name">Benfica</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--keep)">
-            <span class="ldir-arrow">→</span>
-            <span class="ldir-icon">🦁</span>
-            <span class="ldir-name">Sporting</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--skip)">
-            <span class="ldir-arrow">↓</span>
-            <span class="ldir-icon">🐉</span>
-            <span class="ldir-name">Porto</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--favorite)">
-            <span class="ldir-arrow">↑</span>
-            <span class="ldir-icon">?</span>
-            <span class="ldir-name">Outros</span>
-          </div>
-        </div>
-        <div class="instrucoes-body">
-          <div class="instrucoes-tip">
-            <span class="instrucoes-tip-icon">💡</span>
-            <p>O objectivo é detectar quando um jornal dá mais ênfase a um clube em detrimento de outros. Isto acontece quando a maioria do espaço visível na capa é dominada por um clube, empurrando o restante conteúdo para áreas menos visíveis da capa.</p>
+        <div class="l-latest-right">
+          <div class="l-eyebrow">RESULTADO</div>
+          <div id="latest-winner" class="l-latest-winner"></div>
+          <div class="l-latest-conf-row">
+            <div class="l-latest-conf-track"><div id="latest-conf-fill" class="l-latest-conf-fill"></div></div>
+            <span id="latest-conf-label" class="l-latest-conf-label"></span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Progress bar -->
-    <div id="progress-bar-container" class="hidden">
-      <div id="progress-bar"></div>
-      <span id="progress-text"></span>
-    </div>
+    <footer class="l-footer">
+      <p>Queres votar tu também?</p>
+      <a href="/app/" class="l-cta">Entrar →</a>
+    </footer>
 
-    <!-- Calendar -->
-    <div id="calendar-section" class="hidden">
-      <div id="calendar-nav">
-        <button id="cal-prev" class="cal-nav-btn">‹</button>
-        <span id="cal-month-label"></span>
-        <button id="cal-next" class="cal-nav-btn">›</button>
-      </div>
-      <div id="calendar-grid"></div>
-    </div>
   </div>
 
-  <!-- Landing page (shown on first visit) -->
-  <div id="landing-page">
-    <div class="landing-inner">
-
-      <div class="landing-hero">
-        <div class="landing-flag">⚽</div>
-        <h1 class="landing-title">Avaliador de capas<br>desportivas</h1>
-        <p class="landing-desc">Classifica as capas dos maiores jornais desportivos nacionais com um simples deslize.</p>
-      </div>
-
-      <div class="landing-guide">
-        <p class="landing-guide-label">Como avaliar</p>
-        <div class="landing-dirs">
-          <div class="landing-dir" style="--accent: var(--reject)">
-            <span class="ldir-arrow">←</span>
-            <span class="ldir-icon">🦅</span>
-            <span class="ldir-name">Benfica</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--keep)">
-            <span class="ldir-arrow">→</span>
-            <span class="ldir-icon">🦁</span>
-            <span class="ldir-name">Sporting</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--skip)">
-            <span class="ldir-arrow">↓</span>
-            <span class="ldir-icon">🐉</span>
-            <span class="ldir-name">Porto</span>
-          </div>
-          <div class="landing-dir" style="--accent: var(--favorite)">
-            <span class="ldir-arrow">↑</span>
-            <span class="ldir-icon">?</span>
-            <span class="ldir-name">Outros</span>
-          </div>
-        </div>
-      </div>
-
-      <button id="btn-landing-start">Continuar</button>
-
-    </div>
-  </div>
-
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="/landing.js?v=1"></script>
 </body>
 </html>

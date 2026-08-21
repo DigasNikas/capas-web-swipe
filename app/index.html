@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliador de capas desportivas ⚽</title>
+  <link rel="stylesheet" href="/style.css?v=3" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <h1>Avaliador de capas desportivas <span class="title-emoji">⚽</span></h1>
+      <div class="header-actions">
+        <a href="/" class="btn-secondary">Início</a>
+        <a href="/account/" class="btn-secondary">Conta</a>
+        <button id="btn-instrucoes" class="btn-secondary">Instruções</button>
+        <button id="btn-leaderboard" class="btn-secondary">🏆</button>
+      </div>
+    </header>
+
+    <!-- Date header -->
+    <div id="date-header" class="hidden">
+      <span id="date-label"></span>
+      <span id="date-progress"></span>
+    </div>
+
+    <!-- Card Stack -->
+    <main id="card-area">
+      <div id="card-stack"></div>
+      <button id="comecar-pill" class="hidden">Começar</button>
+      <div id="active-card-area" class="hidden"></div>
+
+      <!-- Direction hints (shown during swipe mode) -->
+      <div id="swipe-hints" class="hidden">
+        <div class="edge-oval oval-left"></div>
+        <div class="edge-oval oval-right"></div>
+        <div class="edge-oval oval-up"></div>
+        <div class="edge-oval oval-down"></div>
+        <div class="dir-hint left">🦅</div>
+        <div class="dir-hint up">?</div>
+        <div class="dir-hint down">🐉</div>
+        <div class="dir-hint right">🦁</div>
+      </div>
+
+      <!-- All done -->
+      <div id="empty-state" class="hidden">
+        <div class="empty-icon">✓</div>
+        <p>All images catalogued!</p>
+        <button id="btn-reset" class="btn-primary">Start Over</button>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading-state" class="hidden">
+        <div class="empty-icon">⏳</div>
+        <p>Loading images…</p>
+      </div>
+    </main>
+
+    <!-- Full-app swipe feedback background -->
+    <div id="swipe-bg"></div>
+
+    <!-- Swipe pill (fixed center, shows icon + label during swipe) -->
+    <div id="swipe-pill"><span id="pill-icon"></span><span id="pill-label"></span></div>
+
+    <!-- Modal overlay (shared by leaderboard + instruções) -->
+    <div id="modal-overlay" class="hidden"></div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🏆 Classificação</h2>
+        </div>
+        <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      </div>
+    </div>
+
+    <!-- Instruções Modal -->
+    <div id="instrucoes-modal" class="modal hidden">
+      <div class="modal-content instrucoes-content">
+        <div class="modal-header">
+          <h2>Como avaliar</h2>
+        </div>
+        <p class="instrucoes-highlight">Desliza a capa para a direção do clube que domina a capa. Desliza para cima se o destaque for de outro clube, se a capa mencionar vários clubes de forma equilibrada, ou até mesmo se for outro desporto.</p>
+        <div class="landing-dirs">
+          <div class="landing-dir" style="--accent: var(--reject)">
+            <span class="ldir-arrow">←</span>
+            <span class="ldir-icon">🦅</span>
+            <span class="ldir-name">Benfica</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--keep)">
+            <span class="ldir-arrow">→</span>
+            <span class="ldir-icon">🦁</span>
+            <span class="ldir-name">Sporting</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--skip)">
+            <span class="ldir-arrow">↓</span>
+            <span class="ldir-icon">🐉</span>
+            <span class="ldir-name">Porto</span>
+          </div>
+          <div class="landing-dir" style="--accent: var(--favorite)">
+            <span class="ldir-arrow">↑</span>
+            <span class="ldir-icon">?</span>
+            <span class="ldir-name">Outros</span>
+          </div>
+        </div>
+        <div class="instrucoes-body">
+          <div class="instrucoes-tip">
+            <span class="instrucoes-tip-icon">💡</span>
+            <p>O objectivo é detectar quando um jornal dá mais ênfase a um clube em detrimento de outros. Isto acontece quando a maioria do espaço visível na capa é dominada por um clube, empurrando o restante conteúdo para áreas menos visíveis da capa.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div id="progress-bar-container" class="hidden">
+      <div id="progress-bar"></div>
+      <span id="progress-text"></span>
+    </div>
+
+    <!-- Calendar -->
+    <div id="calendar-section" class="hidden">
+      <div id="calendar-nav">
+        <button id="cal-prev" class="cal-nav-btn">‹</button>
+        <span id="cal-month-label"></span>
+        <button id="cal-next" class="cal-nav-btn">›</button>
+      </div>
+      <div id="calendar-grid"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js?v=5"></script>
+</body>
+</html>
