@@ -127,8 +127,13 @@ function renderCalendar(days, matchesByDate) {
   }
 
   function showDay(day) {
-    const { unanimous, hasMajority } = dayStats(day);
     const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
+    if (paperFilter && !focusClub) {
+      const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
+      panelEl.innerHTML = `<div class="l-day-hint">${papersById[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
+      return;
+    }
+    const { hasMajority } = dayStats(day);
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
     const pulse = pulseFor(day, matchesByDate);
 
@@ -190,14 +195,20 @@ function renderCalendar(days, matchesByDate) {
         grid.appendChild(empty);
       }
       monthDays.forEach(day => {
-        const { unanimous, hasMajority } = dayStats(day);
         const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
         const cell = document.createElement('div');
-        cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
-        cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
-        cell.title = `${day.date} · ${CLUB_META[focusClub].name}`;
-        const pulse = pulseFor(day, matchesByDate);
-        if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
+        if (paperFilter && !focusClub) {
+          cell.className = 'cal-day no-data';
+          cell.style.background = 'var(--l-panel2)';
+          cell.title = `${day.date} · sem votos de ${papersById[paperFilter]}`;
+        } else {
+          const { unanimous, hasMajority } = dayStats(day);
+          cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
+          cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
+          cell.title = `${day.date} · ${CLUB_META[focusClub].name}`;
+          const pulse = pulseFor(day, matchesByDate);
+          if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
+        }
         cell.addEventListener('click', () => showDay(day));
         grid.appendChild(cell);
       });
