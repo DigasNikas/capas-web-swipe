@@ -242,11 +242,12 @@ body {
 .l-latest-date { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--l-muted); letter-spacing: 0.1em; margin-top: 14px; text-transform: uppercase; }
 .l-latest-covers { display: flex; gap: 8px; margin-top: 10px; }
 .l-latest-covers > div { flex: 1; text-align: center; }
-.l-latest-covers img { width: 100%; aspect-ratio: 0.72; object-fit: cover; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+.l-latest-covers img { width: 100%; aspect-ratio: 0.72; object-fit: cover; box-shadow: 0 4px 14px rgba(0,0,0,0.4); cursor: zoom-in; transition: transform 0.15s ease; }
+.l-latest-covers img:hover { transform: scale(1.03); }
 .l-latest-covers .lc-name { font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-muted); margin-top: 4px; text-transform: uppercase; }
 .l-latest-covers .lc-club { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-top: 1px; }
 .l-latest-right { padding: 24px 26px; border-left: 1px solid var(--l-panel2); display: flex; flex-direction: column; justify-content: center; }
-.l-latest-winner { font-size: clamp(2.4rem, 8vw, 4.5rem); font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 0.85; }
+.l-latest-winner { font-size: clamp(2.4rem, 8vw, 4.5rem); font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 0.85; white-space: nowrap; overflow: hidden; }
 .l-latest-conf-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .l-latest-conf-track { flex: 1; height: 6px; background: var(--l-bg); }
 .l-latest-conf-fill { height: 100%; }
@@ -255,6 +256,34 @@ body {
 .l-footer { text-align: center; padding: 30px 0 50px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--l-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 
 .hidden { display: none !important; }
+
+.l-cover-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  cursor: zoom-out;
+}
+.l-cover-modal img {
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.l-cover-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--l-text);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
 
 @media (max-width: 760px) {
   .l-header-right { text-align: left; }

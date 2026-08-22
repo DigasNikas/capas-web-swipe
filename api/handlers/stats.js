@@ -23,10 +23,12 @@ export async function handleStats(env) {
     const tally = Object.fromEntries(CLUBS.map(c => [c, 0]));
     latestRows.forEach(r => tally[r.club]++);
     const winner = CLUBS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUBS[0]);
+    const winnerVotes = tally[winner];
     latest = {
       date: latestDate,
       winner,
-      confidence: tally[winner] / latestRows.length,
+      hasMajority: winnerVotes > latestRows.length - winnerVotes,
+      confidence: winnerVotes / latestRows.length,
       covers: latestRows.map(r => ({
         newspaper: r.newspaper,
         name: PAPER_NAMES[r.newspaper],
