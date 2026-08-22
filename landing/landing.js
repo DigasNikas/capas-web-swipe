@@ -137,7 +137,7 @@ function renderEpoca(rows, epoca, matchesByDate) {
   epocaRows.forEach(r => {
     if (!byDate.has(r.date)) byDate.set(r.date, { covers: {}, urls: {} });
     byDate.get(r.date).covers[r.newspaper] = r.club;
-    byDate.get(r.date).urls[r.newspaper] = r.url;
+    byDate.get(r.date).urls[r.newspaper] = { url: r.url, thumb: r.thumb_url };
   });
   const days = [...byDate.entries()].map(([date, { covers, urls }]) => {
     const tally = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
@@ -256,8 +256,8 @@ function renderCalendar(days, matchesByDate, epoca) {
 
     const papersHtml = Object.keys(PAPERS_BY_ID).map(id => {
       const club = day.covers[id];
-      const url = day.urls[id];
-      const cover = club && url ? `<img src="${url}" alt="${PAPERS_BY_ID[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
+      const u = day.urls[id];
+      const cover = club && u ? `<img src="${u.thumb}" data-full="${u.url}" alt="${PAPERS_BY_ID[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
       return `
         <div>
           ${cover}
@@ -281,7 +281,7 @@ function renderCalendar(days, matchesByDate, epoca) {
     `;
 
     panelEl.querySelectorAll('.l-day-papers img').forEach(img => {
-      img.addEventListener('click', () => openCoverModal(img.src, img.alt));
+      img.addEventListener('click', () => openCoverModal(img.dataset.full, img.alt));
     });
 
     if (window.innerWidth <= 760) {
@@ -368,7 +368,7 @@ function renderLatest(latest) {
   latest.covers.forEach(c => {
     const div = document.createElement('div');
     div.innerHTML = `
-      <img src="${c.url}" alt="${c.name}" loading="lazy" />
+      <img src="${c.thumb_url}" alt="${c.name}" loading="lazy" />
       <div class="lc-name">${c.name}</div>
       <div class="lc-club" style="color:${CLUB_META[c.club].color}">${CLUB_META[c.club].name}</div>
     `;
