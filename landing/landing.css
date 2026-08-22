@@ -207,7 +207,11 @@ body {
 }
 .l-filter-group button:first-child { border-left: none; }
 .l-filter-group button.active { background: var(--l-yellow); color: var(--l-bg); }
-.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
+/* min-height reserves room for the "Sem maioria" item wrapping the
+   legend onto a 2nd line on narrow screens — only "Todos" has that
+   item, so without this the legend (and everything below it) still
+   shifts by one line's height when switching filters at phone widths. */
+.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; min-height: 35px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
 .l-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .l-legend i { width: 10px; height: 10px; display: inline-block; }
 
