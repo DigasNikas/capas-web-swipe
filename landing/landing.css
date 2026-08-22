@@ -66,9 +66,14 @@ body {
   padding: 4px 8px;
 }
 /* Same card language as the calendar's hover tooltip: solid dark
-   background, panel border, rounded corners, drifting shadow. */
+   background, panel border, rounded corners, drifting shadow. Uses
+   --l-panel rather than --l-bg (what the tooltip itself uses) because
+   this control sits directly on the page background — which *is*
+   --l-bg — so matching it would (and did) render invisibly flat. The
+   tooltip gets away with --l-bg only because it floats over colorful
+   calendar cells, not the plain page. */
 .l-epoca-select {
-  background-color: var(--l-bg);
+  background-color: var(--l-panel);
   color: var(--l-yellow);
   border: 1px solid var(--l-panel2);
   border-radius: 4px;
@@ -93,7 +98,7 @@ body {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
   outline: none;
 }
-.l-epoca-select option { background: var(--l-bg); color: var(--l-yellow); }
+.l-epoca-select option { background: var(--l-panel); color: var(--l-yellow); }
 .l-kicker {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
