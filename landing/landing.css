@@ -238,6 +238,7 @@ body {
   display: grid; grid-template-columns: 1fr 1.2fr; gap: 0;
 }
 .l-latest-left { padding: 24px 26px; }
+#latest-title { white-space: nowrap; overflow: hidden; }
 .l-latest-desc { font-size: 0.82rem; color: var(--l-muted); line-height: 1.5; margin-top: 6px; }
 .l-latest-date { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--l-muted); letter-spacing: 0.1em; margin-top: 14px; text-transform: uppercase; }
 .l-latest-covers { display: flex; gap: 8px; margin-top: 10px; }
@@ -246,8 +247,18 @@ body {
 .l-latest-covers img:hover { transform: scale(1.03); }
 .l-latest-covers .lc-name { font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-muted); margin-top: 4px; text-transform: uppercase; }
 .l-latest-covers .lc-club { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-top: 1px; }
-.l-latest-right { padding: 24px 26px; border-left: 1px solid var(--l-panel2); display: flex; flex-direction: column; justify-content: center; }
-.l-latest-winner { font-size: clamp(2.4rem, 8vw, 4.5rem); font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 0.85; white-space: nowrap; overflow: hidden; }
+/* min-width:0 — this is itself a grid item of .l-latest-inner, and grid
+   items have the same min-width:auto-refuses-to-shrink default as flex
+   items. Without it, this column grows to fit #latest-winner's
+   unshrunk content width regardless of the min-width:0 set there,
+   pushing the whole card past the viewport edge. */
+.l-latest-right { min-width: 0; padding: 24px 26px; border-left: 1px solid var(--l-panel2); display: flex; flex-direction: column; justify-content: center; }
+/* min-width:0 overrides the flex item default of min-width:auto, which
+   otherwise refuses to shrink below the text's natural width — without
+   it, fitTextToContainer's scrollWidth/clientWidth comparison always
+   read as "already fits" (both track the unshrunk content width) even
+   while the text visibly overflowed its container. */
+.l-latest-winner { min-width: 0; font-size: clamp(2.4rem, 8vw, 4.5rem); font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 0.85; white-space: nowrap; overflow: hidden; }
 .l-latest-conf-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .l-latest-conf-track { flex: 1; height: 6px; background: var(--l-bg); }
 .l-latest-conf-fill { height: 100%; }

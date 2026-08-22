@@ -282,6 +282,8 @@ function renderLatest(latest) {
   const section = document.getElementById('latest');
   section.classList.remove('hidden');
 
+  fitTextToContainer(document.getElementById('latest-title'), 2.6, 1);
+
   const dateLabel = new Date(latest.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
   document.getElementById('latest-date').textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 
@@ -302,7 +304,7 @@ function renderLatest(latest) {
   const winnerColor = latest.hasMajority ? CLUB_META[latest.winner].color : 'var(--l-yellow)';
   winnerEl.textContent = latest.hasMajority ? CLUB_META[latest.winner].name : 'Empate técnico';
   winnerEl.style.color = winnerColor;
-  fitTextToContainer(winnerEl);
+  fitTextToContainer(winnerEl, 4.5, 1);
 
   const pct = Math.round(latest.confidence * 100);
   document.getElementById('latest-conf-fill').style.width = `${pct}%`;
