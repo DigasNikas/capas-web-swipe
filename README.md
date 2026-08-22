@@ -11,7 +11,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers from sapo.pt and stores them in **R2** (images) and **D1** (metadata).
 2. The **landing page** (`/`) is public — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
 3. Clicking "Entrar" takes you to the **swipe app** (`/app/`), which is behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
-4. The **account page** (`/account/`, also behind Access) shows a user's own stats, leaderboard rank, and swipe history.
+4. Everything past login lives under `/app/*` — the **account page** (`/app/account/`) shows a user's own stats, leaderboard rank, and swipe history, and future logged-in pages join it there.
 
 ---
 
@@ -24,13 +24,12 @@ capas-web-swipe/
 │   ├── landing.js        Fetches /api/stats + /api/matches, renders the landing page
 │   └── landing.css       Landing page styles (separate visual language from the app)
 │
-├── app/
-│   ├── index.html        Swipe app (behind Cloudflare Access)
-│   └── app.js            Swipe app entry (ES module): event listeners + init()
-│
-├── account/
-│   ├── index.html        Account page: stats, rank, Histórico (behind Cloudflare Access)
-│   └── account.js        Account page logic
+├── app/                  Everything behind Cloudflare Access lives under here
+│   ├── index.html        Swipe app
+│   ├── app.js            Swipe app entry (ES module): event listeners + init()
+│   └── account/          First of what will be more logged-in subpages
+│       ├── index.html    Account page: stats, rank, Histórico
+│       └── account.js    Account page logic
 │
 ├── style.css             Styles shared by the app + account pages
 ├── CNAME                 Custom domain for GitHub Pages
@@ -77,7 +76,7 @@ capas-web-swipe/
     └── manifest.json
 ```
 
-The frontend uses native ES modules (`<script type="module">`) — no build step required. Each page's HTML lives in its own folder next to its entry JS (`app/app.js`, `account/account.js`, `landing/landing.js`); `index.html` is the one exception, pinned at the repo root because GitHub Pages needs it there to serve `/`. Every cross-folder reference (`src/*.js`, `style.css`) uses an absolute path (`/src/state.js`) rather than a relative one, so it resolves the same regardless of which page imports it. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+The frontend uses native ES modules (`<script type="module">`) — no build step required. Each page's HTML lives in its own folder next to its entry JS (`app/app.js`, `app/account/account.js`, `landing/landing.js`); `index.html` is the one exception, pinned at the repo root because GitHub Pages needs it there to serve `/`. Every cross-folder reference (`src/*.js`, `style.css`) uses an absolute path (`/src/state.js`) rather than a relative one, so it resolves the same regardless of which page imports it. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
 
 > **Note:** ES modules require a server context. Pages can't be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
 
@@ -87,11 +86,11 @@ The frontend uses native ES modules (`<script type="module">`) — no build step
 
 | Resource | Provider | Purpose |
 |---|---|---|
-| Frontend hosting | GitHub Pages | Serves the static pages (`/`, `/app/`, `/account/`) |
+| Frontend hosting | GitHub Pages | Serves the static pages (`/`, `/app/`, `/app/account/`) |
 | Worker | Cloudflare Workers | API + scheduled scraper |
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
 | Image storage | Cloudflare R2 | Front page images |
-| Auth | Cloudflare Access | Gates `/app*`, `/account*`, `/api/covers*`, `/api/swipes*`, `/api/leaderboard*` — everything else (`/`, `/api/stats`, `/api/matches`) is public |
+| Auth | Cloudflare Access | Gates `/app*` (covers `/app/account/` and any future logged-in subpage) plus `/api/covers*`, `/api/swipes*`, `/api/leaderboard*` — everything else (`/`, `/api/stats`, `/api/matches`) is public |
 
 ### D1 Schema
 
