@@ -191,8 +191,18 @@ body {
 .p-bar-row .p-bar-val { font-family: 'JetBrains Mono', monospace; text-align: right; font-weight: 700; }
 
 /* Calendar */
-.l-cal-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.l-cal-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 16px; }
 .l-cal-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+/* Below this, stack unconditionally rather than relying on flex-wrap —
+   the legend's width changes with the active filter ("Sem maioria" only
+   shows for "Todos"), so content-driven wrapping put the two filter
+   states on different sides of the wrap point and made the calendar
+   section jump vertically when switching between them. */
+@media (max-width: 1080px) {
+  .l-cal-head { flex-direction: column; align-items: flex-start; }
+  .l-cal-controls { align-items: flex-start; }
+}
 .l-filter-group { display: flex; border: 1px solid var(--l-panel2); }
 .l-filter-group button {
   background: transparent; color: var(--l-text); border: none; border-left: 1px solid var(--l-panel2);
