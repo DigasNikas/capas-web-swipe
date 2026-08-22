@@ -211,7 +211,12 @@ body {
 }
 .l-filter-group button:first-child { border-left: none; }
 .l-filter-group button.active { background: var(--l-yellow); color: var(--l-bg); }
-.l-legend { display: flex; flex-wrap: wrap; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
+/* Capped so its rendered width — and therefore how much horizontal
+   room is left for the title next to it — stays constant whether or
+   not the "Sem maioria" item is present (only shown for "Todos").
+   Without this, the title's own line-wrap point shifted by filter
+   state, which is what actually caused the section to jump. */
+.l-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 10px; max-width: 260px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
 .l-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .l-legend i { width: 10px; height: 10px; display: inline-block; }
 
