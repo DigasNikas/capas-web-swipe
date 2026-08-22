@@ -135,14 +135,15 @@ function renderEpoca(rows, epoca, matchesByDate) {
 
   const byDate = new Map();
   epocaRows.forEach(r => {
-    if (!byDate.has(r.date)) byDate.set(r.date, {});
-    byDate.get(r.date)[r.newspaper] = r.club;
+    if (!byDate.has(r.date)) byDate.set(r.date, { covers: {}, urls: {} });
+    byDate.get(r.date).covers[r.newspaper] = r.club;
+    byDate.get(r.date).urls[r.newspaper] = r.url;
   });
-  const days = [...byDate.entries()].map(([date, covers]) => {
+  const days = [...byDate.entries()].map(([date, { covers, urls }]) => {
     const tally = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
     Object.values(covers).forEach(c => tally[c]++);
     const winner = CLUB_KEYS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUB_KEYS[0]);
-    return { date, covers, winner, tally };
+    return { date, covers, urls, winner, tally };
   });
 
   renderCalendar(days, matchesByDate, epoca);
@@ -253,12 +254,18 @@ function renderCalendar(days, matchesByDate, epoca) {
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
 
-    const papersHtml = Object.keys(PAPERS_BY_ID).map(id => `
-      <div style="border-top:2px solid ${CLUB_META[day.covers[id]]?.color ?? 'var(--l-panel2)'}">
-        <div class="dp-name">${PAPERS_BY_ID[id]}</div>
-        <div class="dp-club" style="color:${day.covers[id] ? CLUB_META[day.covers[id]].color : 'var(--l-muted)'}">${day.covers[id] ? CLUB_META[day.covers[id]].short : '—'}</div>
-      </div>
-    `).join('');
+    const papersHtml = Object.keys(PAPERS_BY_ID).map(id => {
+      const club = day.covers[id];
+      const url = day.urls[id];
+      const cover = club && url ? `<img src="${url}" alt="${PAPERS_BY_ID[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
+      return `
+        <div>
+          ${cover}
+          <div class="dp-name">${PAPERS_BY_ID[id]}</div>
+          <div class="dp-club" style="color:${club ? CLUB_META[club].color : 'var(--l-muted)'}">${club ? CLUB_META[club].short : '—'}</div>
+        </div>
+      `;
+    }).join('');
 
     const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 
@@ -272,6 +279,10 @@ function renderCalendar(days, matchesByDate, epoca) {
         <div class="l-day-papers">${papersHtml}</div>
       </div>
     `;
+
+    panelEl.querySelectorAll('.l-day-papers img').forEach(img => {
+      img.addEventListener('click', () => openCoverModal(img.src, img.alt));
+    });
 
     if (window.innerWidth <= 760) {
       panelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
