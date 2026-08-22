@@ -3,49 +3,53 @@
 A crowd-sourced tool for cataloguing Portuguese sports newspaper front pages. Users swipe covers left/right/up/down to classify which football club dominates each edition — Benfica (←), Sporting (→), Porto (↓), or Other (↑).
 
 Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
+(the logged-in app lives on its own subdomain: **[app.capas.digasnikas.com](https://app.capas.digasnikas.com)**)
 
 ---
 
 ## How It Works
 
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers from sapo.pt and stores them in **R2** (images) and **D1** (metadata).
-2. The **landing page** (`/`) is public — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
-3. Clicking "Entrar" takes you to the **swipe app** (`/app/`), which is behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
-4. Everything past login lives under `/app/*` — the **account page** (`/app/account/`) shows a user's own stats, leaderboard rank, and swipe history, and future logged-in pages join it there.
+2. **`capas.digasnikas.com`** is the public landing page — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
+3. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
+4. Everything past login lives on that subdomain — the **account page** (`app.capas.digasnikas.com/account/`) shows a user's own stats, leaderboard rank, and swipe history, and future logged-in pages join it there. Access is configured as a multi-domain application, so signing in on one host authenticates the other too.
 
 ---
 
 ## Project Structure
 
+Two Cloudflare Pages projects deploy from this same repo/branch, each
+pointed at a different `destination_dir` — that's what makes `landing/`
+and `app/` self-contained (each holds its own `index.html`, not just its
+JS):
+
 ```
 capas-web-swipe/
-├── index.html            Public landing page (results, no login) — pinned at root by GitHub Pages
-├── landing/
-│   ├── landing.js        Fetches /api/stats + /api/matches, renders the landing page
-│   └── landing.css       Landing page styles (separate visual language from the app)
+├── landing/               Pages project "capas-landing" → capas.digasnikas.com
+│   ├── index.html         Public landing page (results, no login)
+│   ├── landing.js         Fetches /api/stats + /api/matches, renders it
+│   └── landing.css        Landing page styles (separate visual language from the app)
 │
-├── app/                  Everything behind Cloudflare Access lives under here
-│   ├── index.html        Swipe app
-│   ├── app.js            Swipe app entry (ES module): event listeners + init()
-│   └── account/          First of what will be more logged-in subpages
-│       ├── index.html    Account page: stats, rank, Histórico
-│       └── account.js    Account page logic
+├── app/                   Pages project "capas-app" → app.capas.digasnikas.com (behind Access)
+│   ├── index.html         Swipe app
+│   ├── app.js             Swipe app entry (ES module): event listeners + init()
+│   ├── style.css          Styles shared by the app + account pages
+│   ├── src/                Frontend ES modules shared by app.js and account.js
+│   │   ├── state.js        Shared mutable state + all constants (ACTIONS, API_URL, …)
+│   │   ├── dom.js           DOM element references (app page)
+│   │   ├── dates.js        Date/time formatting and grouping helpers
+│   │   ├── calendar.js     Calendar rendering, month navigation, date-click handler
+│   │   ├── ui.js            Progress bar, date header, empty state updates
+│   │   ├── cards.js        Card stack, swipe gestures, commit logic, group navigation
+│   │   ├── catalogue.js    Histórico rendering (drill-down, filters, image grid)
+│   │   ├── leaderboard.js  Leaderboard modal (fetch + render)
+│   │   └── modals.js       animateModalClose, swipe-down-to-close, instrucoes modal
+│   └── account/            First of what will be more logged-in subpages
+│       ├── index.html      Account page: stats, rank, Histórico
+│       └── account.js      Account page logic
 │
-├── style.css             Styles shared by the app + account pages
-├── CNAME                 Custom domain for GitHub Pages
 ├── wrangler.toml         Cloudflare Worker configuration
 ├── package.json          Wrangler dev dependency
-│
-├── src/                  Frontend ES modules shared by app.js and account.js
-│   ├── state.js          Shared mutable state + all constants (ACTIONS, API_URL, …)
-│   ├── dom.js            DOM element references (app page)
-│   ├── dates.js          Date/time formatting and grouping helpers
-│   ├── calendar.js       Calendar rendering, month navigation, date-click handler
-│   ├── ui.js             Progress bar, date header, empty state updates
-│   ├── cards.js          Card stack, swipe gestures, commit logic, group navigation
-│   ├── catalogue.js      Histórico rendering (drill-down, filters, image grid)
-│   ├── leaderboard.js    Leaderboard modal (fetch + render)
-│   └── modals.js         animateModalClose, swipe-down-to-close, instrucoes modal
 │
 ├── api/                  Cloudflare Worker (single bundle, split by responsibility)
 │   ├── index.js          Router + cron entry point
@@ -76,7 +80,9 @@ capas-web-swipe/
     └── manifest.json
 ```
 
-The frontend uses native ES modules (`<script type="module">`) — no build step required. Each page's HTML lives in its own folder next to its entry JS (`app/app.js`, `app/account/account.js`, `landing/landing.js`); `index.html` is the one exception, pinned at the repo root because GitHub Pages needs it there to serve `/`. Every cross-folder reference (`src/*.js`, `style.css`) uses an absolute path (`/src/state.js`) rather than a relative one, so it resolves the same regardless of which page imports it. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+The frontend uses native ES modules (`<script type="module">`) — no build step required. `src/` and `style.css` live inside `app/` because only `app.js`/`account.js` use them — `landing/` never touches either. Every reference across files (`/src/state.js`, `/style.css`) uses an absolute path rather than a relative one, so it resolves the same regardless of which page imports it. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+
+Cross-host links (landing's "Entrar", app's "Início") are absolute URLs, since `landing/` and `app/` are two different hostnames now, not two paths on one host. Same-host links (account's "Votar", the Access logout link) stay relative.
 
 > **Note:** ES modules require a server context. Pages can't be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
 
@@ -86,11 +92,16 @@ The frontend uses native ES modules (`<script type="module">`) — no build step
 
 | Resource | Provider | Purpose |
 |---|---|---|
-| Frontend hosting | GitHub Pages | Serves the static pages (`/`, `/app/`, `/app/account/`) |
-| Worker | Cloudflare Workers | API + scheduled scraper |
+| Landing hosting | Cloudflare Pages (`capas-landing`) | Serves `landing/` at `capas.digasnikas.com` — public |
+| App hosting | Cloudflare Pages (`capas-app`) | Serves `app/` (incl. `/account/`) at `app.capas.digasnikas.com` — behind Access |
+| Worker | Cloudflare Workers | API + scheduled scraper, routed on both hostnames' `/api/*` |
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
 | Image storage | Cloudflare R2 | Front page images |
-| Auth | Cloudflare Access | Gates `/app*` (covers `/app/account/` and any future logged-in subpage) plus `/api/covers*`, `/api/swipes*`, `/api/leaderboard*` — everything else (`/`, `/api/stats`, `/api/matches`) is public |
+| Auth | Cloudflare Access | Gates the entire `app.capas.digasnikas.com` — pages and its `/api/covers`, `/api/swipes`, `/api/leaderboard`. `capas.digasnikas.com` (landing, `/api/stats`, `/api/matches`) is fully public. |
+
+Both Pages projects git-connect to this repo/branch and deploy on every
+push — same push, same commit, two independent deploys (different
+`destination_dir` per project: `landing` vs `app`).
 
 ### D1 Schema
 
@@ -103,18 +114,19 @@ The frontend uses native ES modules (`<script type="module">`) — no build step
 
 ## API
 
-All endpoints live under `https://capas.digasnikas.com/api/`.  
-Authenticated endpoints require a valid Cloudflare Access session cookie.
+The Worker is routed on `/api/*` on **both** hostnames — same code, same
+D1, so each frontend calls its own same-origin API (no cross-origin
+credentialed requests, no CORS/cookie complexity).
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/covers` | Access | All covers, ordered by date desc |
-| `GET` | `/matches` | — | All match dates |
-| `GET` | `/stats` | — | Public aggregate results (per-paper breakdown, per-day winners, latest classified day) — reads only `analytics_covers` |
-| `GET` | `/swipes` | Access | Authenticated user's swipe history |
-| `POST` | `/swipes` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
-| `GET` | `/leaderboard` | Access | Swipe count ranked by user |
-| `GET` | `/scrape` | Bearer | Trigger scraper manually (see below) |
+| Method | Path | Host | Auth | Description |
+|---|---|---|---|---|
+| `GET` | `/api/covers` | `app.` | Access | All covers, ordered by date desc |
+| `GET` | `/api/matches` | either | — | All match dates |
+| `GET` | `/api/stats` | `capas.` | — | Public aggregate results (per-paper breakdown, per-day winners, latest classified day) — reads only `analytics_covers` |
+| `GET` | `/api/swipes` | `app.` | Access | Authenticated user's swipe history |
+| `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
+| `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
+| `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
 
 ---
 
@@ -146,7 +158,13 @@ wrangler r2 bucket cors put capas-storage --file cors.json
 
 ### Frontend
 
-Deployed automatically by GitHub Pages from the `main` branch root.
+Deployed automatically by the two git-connected Cloudflare Pages
+projects (`capas-landing`, `capas-app`) on every push to this branch —
+no build step, no GitHub Actions workflow involved.
+
+> The frontend used to be served by GitHub Pages. DNS has moved off it,
+> but the repo's Pages source setting (Settings → Pages) hasn't been
+> switched to "None" yet — cosmetic cleanup, not urgent.
 
 ---
 
