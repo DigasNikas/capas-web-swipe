@@ -25,7 +25,7 @@ async function init() {
       const cover  = covers.find(c => String(c.id) === String(s.cover_id));
       const action = DECISION_TO_ACTION[s.decision];
       if (!cover || !action) return null;
-      return { id: String(cover.id), name: cover.newspaper, src: cover.url, date: cover.date, action, timestamp: s.swiped_at };
+      return { id: String(cover.id), name: cover.newspaper, src: cover.thumb_url, date: cover.date, action, timestamp: s.swiped_at };
     })
     .filter(Boolean);
 

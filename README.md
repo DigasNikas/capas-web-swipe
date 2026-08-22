@@ -96,7 +96,8 @@ Cross-host links (landing's "Entrar", app's "Início") are absolute URLs, since 
 | App hosting | Cloudflare Pages (`capas-app`) | Serves `app/` (incl. `/account/`) at `app.capas.digasnikas.com` — behind Access |
 | Worker | Cloudflare Workers | API + scheduled scraper, routed on both hostnames' `/api/*` |
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
-| Image storage | Cloudflare R2 | Front page images |
+| Image storage | Cloudflare R2 | Full-res covers + generated thumbnails |
+| Image processing | Cloudflare Images (Workers binding) | Generates a 220px WebP thumbnail per cover at scrape time (free tier: 5,000 transformations/month) |
 | Auth | Cloudflare Access | Gates the entire `app.capas.digasnikas.com` — pages and its `/api/covers`, `/api/swipes`, `/api/leaderboard`. `capas.digasnikas.com` (landing, `/api/stats`, `/api/matches`) is fully public. |
 
 Both Pages projects git-connect to this repo/branch and deploy on every
@@ -105,7 +106,7 @@ push — same push, same commit, two independent deploys (different
 
 ### D1 Schema
 
-**`covers`** — one row per newspaper per day  
+**`covers`** — one row per newspaper per day. `url` is the full-res image; `thumb_url` is a generated 220px WebP thumbnail (nullable — falls back to `url` in `/api/covers` and `/api/stats` for covers scraped before thumbnails existed; backfill with `/api/backfill-thumbs`). Thumbnails feed small on-screen previews (landing calendar, catalogue grid); the swipe card and cover modal always use the full-res `url`.  
 **`swipes`** — one row per user per cover (upserted on re-swipe)  
 **`matches`** — match dates for Sporting, Benfica, Porto (used to highlight the calendar)  
 **`analytics_covers`** — one row per cover with ≥1 vote: the winning club + vote counts, refreshed on every swipe. Never joined with `swipes`/`user_email` — this is the only table the public landing page's API reads.
@@ -127,6 +128,7 @@ credentialed requests, no CORS/cookie complexity).
 | `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
 | `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
 | `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
+| `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generate `thumb_url` for covers scraped before thumbnails existed |
 
 ---
 
@@ -191,6 +193,9 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 
 # Specific date range (max 7 days per call)
 curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
+
+# One-off: backfill thumb_url for covers that predate thumbnails
+curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/backfill-thumbs"
 ```
 
 ### Bulk backfill (full month)
