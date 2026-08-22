@@ -1,7 +1,7 @@
 import { API_URL, DECISION_TO_ACTION } from '/src/state.js';
 import { renderCatalogue, setActiveFilter, catalogueBack } from '/src/catalogue.js';
 
-const ACTION_LABELS = { keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Outros' };
+const ACTION_LABELS = { keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Restantes' };
 const ACTION_COLORS = { keep: 'var(--keep)', reject: 'var(--reject)', skip: 'var(--skip)', favorite: 'var(--favorite)' };
 
 document.querySelectorAll('.filter-btn').forEach(btn =>

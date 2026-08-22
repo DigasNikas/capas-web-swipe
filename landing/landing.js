@@ -5,7 +5,7 @@ const CLUB_META = {
   sporting: { name: 'Sporting', short: 'SCP', color: 'var(--l-sporting)' },
   porto:    { name: 'Porto',    short: 'FCP', color: 'var(--l-porto)' },
   benfica:  { name: 'Benfica',  short: 'SLB', color: 'var(--l-benfica)' },
-  others:   { name: 'Outros',   short: 'OTH', color: 'var(--l-others)' },
+  others:   { name: 'Restantes', short: 'RES', color: 'var(--l-others)' },
 };
 const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 

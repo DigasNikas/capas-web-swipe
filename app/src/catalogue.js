@@ -11,7 +11,7 @@ let activeFilter = 'all';
 let drillLevel   = 0;
 let drillMonth   = null;
 
-const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Outros' };
+const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Restantes' };
 
 export function renderCatalogue(items) {
   catalogue  = items;
