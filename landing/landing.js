@@ -11,10 +11,19 @@ const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 
 const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
+// Local getters in, local getters out — mixing in toISOString() (UTC)
+// here silently shifted this back an extra day in any positive-UTC-offset
+// timezone (e.g. Europe/Lisbon in summer): local midnight on the 10th is
+// still the 9th in UTC, so .toISOString() reported the 9th as local
+// midnight *before* setDate even ran, making the net result two days
+// back instead of one.
 function prevDateStr(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // Época = Aug 1 → Jun 30. Dates in July belong to no época (off-season gap).
