@@ -211,6 +211,10 @@ function renderCalendar(days, matchesByDate, epoca) {
         <div class="l-day-papers">${papersHtml}</div>
       </div>
     `;
+
+    if (window.innerWidth <= 760) {
+      panelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function draw() {
@@ -256,12 +260,12 @@ function renderCalendar(days, matchesByDate, epoca) {
         if (paperFilter && !focusClub) {
           cell.className = 'cal-day no-data';
           cell.style.background = 'var(--l-panel2)';
-          cell.title = `${day.date} · sem votos de ${PAPERS_BY_ID[paperFilter]}`;
+          cell.dataset.tip = `${day.date} · sem votos de ${PAPERS_BY_ID[paperFilter]}`;
         } else {
           const { unanimous, hasMajority } = dayStats(day);
           cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
           cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
-          cell.title = `${day.date} · ${(paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo'}`;
+          cell.dataset.tip = `${day.date} · ${(paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo'}`;
           const pulse = pulseFor(day, matchesByDate);
           if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
         }
