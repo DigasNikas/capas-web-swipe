@@ -32,13 +32,6 @@ body {
   margin-bottom: 6px;
 }
 
-/* This eyebrow's text length changes with the active filter ("· LENTE:
-   A BOLA" vs "· 1 CLUBE POR DIA"), so on very narrow screens one wraps
-   to 2 lines and the other doesn't — min-height reserves the 2nd line
-   unconditionally so the wrap decision itself can't shift anything
-   below it. */
-#cal-eyebrow { min-height: 28px; }
-
 .l-h2 {
   font-size: clamp(1.6rem, 5vw, 2.6rem);
   font-weight: 900;
@@ -214,11 +207,7 @@ body {
 }
 .l-filter-group button:first-child { border-left: none; }
 .l-filter-group button.active { background: var(--l-yellow); color: var(--l-bg); }
-/* min-height reserves room for the "Sem maioria" item wrapping the
-   legend onto a 2nd line on narrow screens — only "Todos" has that
-   item, so without this the legend (and everything below it) still
-   shifts by one line's height when switching filters at phone widths. */
-.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; min-height: 35px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
+.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
 .l-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .l-legend i { width: 10px; height: 10px; display: inline-block; }
 
@@ -283,4 +272,13 @@ body {
 @media (max-width: 460px) {
   .l-calendar { grid-template-columns: repeat(2, 1fr); }
   .l-brief-stats { grid-template-columns: 1fr; }
+
+  /* Below this width, the eyebrow and legend can wrap to an extra
+     line depending on which filter is active (their text/item count
+     changes by state — see comments where these classes are defined).
+     Reserving that line only in this narrow range avoids adding dead
+     space above it at normal desktop widths, where nothing ever wraps
+     and no reservation is needed. */
+  #cal-eyebrow { min-height: 28px; }
+  .l-legend { min-height: 35px; }
 }
