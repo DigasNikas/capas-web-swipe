@@ -48,7 +48,11 @@ async function init() {
   const countByEpoca = new Map();
   rows.forEach(r => countByEpoca.set(r.epoca, (countByEpoca.get(r.epoca) || 0) + 1));
   const epocas = [...countByEpoca.keys()].sort().reverse();
-  const defaultEpoca = [...countByEpoca.entries()].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0]?.[0];
+  // Default to whichever época today's date actually falls in; if it has
+  // no data yet (season just started, or we're in the July gap), fall
+  // back to the most recent época that does.
+  const todayEpoca = epocaLabelForDate(new Date().toISOString().slice(0, 10));
+  const defaultEpoca = epocas.includes(todayEpoca) ? todayEpoca : epocas[0];
 
   const select = document.getElementById('epoca-select');
   select.innerHTML = epocas.map(e => `<option value="${e}">ÉPOCA ${e}</option>`).join('');
