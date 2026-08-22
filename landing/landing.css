@@ -65,10 +65,14 @@ body {
   letter-spacing: 0.14em;
   padding: 4px 8px;
 }
+/* Same card language as the calendar's hover tooltip: solid dark
+   background, panel border, rounded corners, drifting shadow. */
 .l-epoca-select {
-  background: transparent;
+  background-color: var(--l-bg);
   color: var(--l-yellow);
   border: 1px solid var(--l-panel2);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
   font-weight: 700;
@@ -82,6 +86,12 @@ body {
   background-repeat: no-repeat;
   background-position: right 7px center;
   color-scheme: dark;
+  transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.l-epoca-select:hover, .l-epoca-select:focus {
+  border-color: var(--l-yellow);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  outline: none;
 }
 .l-epoca-select option { background: var(--l-bg); color: var(--l-yellow); }
 .l-kicker {
