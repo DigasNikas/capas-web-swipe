@@ -4,11 +4,13 @@ export const API_URL         = '/api';
 export const SWIPE_THRESHOLD = 80;
 export const ROTATION_FACTOR = 0.08;
 
+// Matches landing's club colors exactly (landing/landing.css :root) —
+// keep this in sync with app/style.css's --keep/--reject/--favorite/--skip.
 export const FEEDBACK_COLORS = {
-  left:  [239, 68,  68],
-  right: [34,  197, 94],
-  up:    [245, 158, 11],
-  down:  [99,  102, 241],
+  left:  [220, 38,  38],  // Benfica  #dc2626
+  right: [22,  163, 74],  // Sporting #16a34a
+  up:    [82,  82,  91],  // Restantes #52525b
+  down:  [29,  78,  216], // Porto    #1d4ed8
 };
 
 export const ACTIONS = {
