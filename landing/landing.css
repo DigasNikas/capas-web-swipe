@@ -32,6 +32,13 @@ body {
   margin-bottom: 6px;
 }
 
+/* This eyebrow's text length changes with the active filter ("· LENTE:
+   A BOLA" vs "· 1 CLUBE POR DIA"), so on very narrow screens one wraps
+   to 2 lines and the other doesn't — min-height reserves the 2nd line
+   unconditionally so the wrap decision itself can't shift anything
+   below it. */
+#cal-eyebrow { min-height: 28px; }
+
 .l-h2 {
   font-size: clamp(1.6rem, 5vw, 2.6rem);
   font-weight: 900;
