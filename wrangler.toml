@@ -9,6 +9,10 @@ crons = ["0 5-8 * * *"]   # 05:00–08:00 UTC daily, hourly (06:00–09:00 Lisbo
 pattern   = "capas.digasnikas.com/api/*"
 zone_name = "digasnikas.com"
 
+[[routes]]
+pattern   = "app.capas.digasnikas.com/api/*"
+zone_name = "digasnikas.com"
+
 [[r2_buckets]]
 binding     = "COVERS_BUCKET"
 bucket_name = "capas-storage"
