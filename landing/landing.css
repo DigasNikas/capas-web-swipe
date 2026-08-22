@@ -247,7 +247,12 @@ body {
 .l-latest-covers img:hover { transform: scale(1.03); }
 .l-latest-covers .lc-name { font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-muted); margin-top: 4px; text-transform: uppercase; }
 .l-latest-covers .lc-club { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-top: 1px; }
-.l-latest-right { padding: 24px 26px; border-left: 1px solid var(--l-panel2); display: flex; flex-direction: column; justify-content: center; }
+/* min-width:0 — this is itself a grid item of .l-latest-inner, and grid
+   items have the same min-width:auto-refuses-to-shrink default as flex
+   items. Without it, this column grows to fit #latest-winner's
+   unshrunk content width regardless of the min-width:0 set there,
+   pushing the whole card past the viewport edge. */
+.l-latest-right { min-width: 0; padding: 24px 26px; border-left: 1px solid var(--l-panel2); display: flex; flex-direction: column; justify-content: center; }
 /* min-width:0 overrides the flex item default of min-width:auto, which
    otherwise refuses to shrink below the text's natural width — without
    it, fitTextToContainer's scrollWidth/clientWidth comparison always
