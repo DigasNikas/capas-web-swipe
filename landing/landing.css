@@ -191,18 +191,14 @@ body {
 .p-bar-row .p-bar-val { font-family: 'JetBrains Mono', monospace; text-align: right; font-weight: 700; }
 
 /* Calendar */
-.l-cal-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 16px; }
-.l-cal-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-
-/* Below this, stack unconditionally rather than relying on flex-wrap —
-   the legend's width changes with the active filter ("Sem maioria" only
-   shows for "Todos"), so content-driven wrapping put the two filter
-   states on different sides of the wrap point and made the calendar
-   section jump vertically when switching between them. */
-@media (max-width: 1080px) {
-  .l-cal-head { flex-direction: column; align-items: flex-start; }
-  .l-cal-controls { align-items: flex-start; }
-}
+/* Legend lives on its own row below (see .l-legend) instead of next to
+   the title — its width changes with the active filter ("Sem maioria"
+   only shows for "Todos"), and sharing a row with the title meant that
+   width change shifted the title's own line-wrap point, making the
+   whole section jump vertically when switching filters. The filter
+   button group's width is constant regardless of filter state, so it's
+   safe to keep beside the title. */
+.l-cal-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 12px; }
 .l-filter-group { display: flex; border: 1px solid var(--l-panel2); }
 .l-filter-group button {
   background: transparent; color: var(--l-text); border: none; border-left: 1px solid var(--l-panel2);
@@ -211,12 +207,7 @@ body {
 }
 .l-filter-group button:first-child { border-left: none; }
 .l-filter-group button.active { background: var(--l-yellow); color: var(--l-bg); }
-/* Capped so its rendered width — and therefore how much horizontal
-   room is left for the title next to it — stays constant whether or
-   not the "Sem maioria" item is present (only shown for "Todos").
-   Without this, the title's own line-wrap point shifted by filter
-   state, which is what actually caused the section to jump. */
-.l-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 10px; max-width: 260px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
+.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
 .l-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .l-legend i { width: 10px; height: 10px; display: inline-block; }
 
