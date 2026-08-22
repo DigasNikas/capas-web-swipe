@@ -4,9 +4,10 @@
  * Bindings required (set in wrangler.toml):
  *   COVERS_BUCKET  — R2 bucket
  *   DB             — D1 database
+ *   IMAGES         — Cloudflare Images (thumbnail generation)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
- *   ADMIN_SECRET   — bearer token for the /scrape and /notify endpoints
+ *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
  */
@@ -20,6 +21,7 @@ import { handleLeaderboard } from "./handlers/leaderboard.js";
 import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
+import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
 
 export default {
   async scheduled(event, env, ctx) {
@@ -44,6 +46,7 @@ export default {
     if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env);
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
+    if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env, ctx);
 
     return new Response("Not found", { status: 404 });
   },

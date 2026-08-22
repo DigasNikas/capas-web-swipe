@@ -10,6 +10,20 @@ const FETCH_HEADERS = {
   "Referer": "https://sapo.pt/",
 };
 
+// Covers are only ever shown this small as thumbnails (calendar day panel,
+// "última classificação"); full res is still one click away via the modal.
+// 220px covers 2-3x retina at the ~58-90px CSS sizes they're actually shown at.
+export async function generateThumbnail(env, sourceStream, thumbKey) {
+  const thumb = (
+    await env.IMAGES.input(sourceStream)
+      .transform({ width: 220 })
+      .output({ format: "image/webp", quality: 45 })
+  ).response();
+  await env.COVERS_BUCKET.put(thumbKey, thumb.body, {
+    httpMetadata: { contentType: "image/webp" },
+  });
+}
+
 async function extractCoverImage(response) {
   let imageUrl = null;
 
@@ -65,14 +79,19 @@ export async function scrapeNewspaper(newspaper, date, env) {
   }
 
   const contentType = imgResponse.headers.get("content-type") || "image/jpeg";
+  const [fullBody, thumbSource] = imgResponse.body.tee();
 
-  await env.COVERS_BUCKET.put(r2Key, imgResponse.body, {
-    httpMetadata: { contentType },
-  });
+  const thumbKey = `thumb/${r2Key}`;
+  const thumbUrl = `${env.R2_PUBLIC_URL}/${thumbKey}`;
+
+  await Promise.all([
+    env.COVERS_BUCKET.put(r2Key, fullBody, { httpMetadata: { contentType } }),
+    generateThumbnail(env, thumbSource, thumbKey),
+  ]);
 
   await env.DB
-    .prepare("INSERT INTO covers (newspaper, date, r2_key, url) VALUES (?, ?, ?, ?)")
-    .bind(newspaper.slug, dateLabel, r2Key, publicUrl)
+    .prepare("INSERT INTO covers (newspaper, date, r2_key, url, thumb_url) VALUES (?, ?, ?, ?, ?)")
+    .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl)
     .run();
 
   console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);

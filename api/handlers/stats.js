@@ -9,7 +9,8 @@ const PAPER_NAMES = { abola: "A Bola", ojogo: "O Jogo", record: "Record" };
 export async function handleStats(env) {
   const { results: rows } = await env.DB
     .prepare(`
-      SELECT ac.cover_id, ac.newspaper, ac.date, ac.club, ac.votes_club, ac.votes_total, c.url
+      SELECT ac.cover_id, ac.newspaper, ac.date, ac.club, ac.votes_club, ac.votes_total,
+             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url
       FROM analytics_covers ac
       JOIN covers c ON c.id = ac.cover_id
       ORDER BY ac.date ASC
@@ -36,6 +37,7 @@ export async function handleStats(env) {
         votes_club: r.votes_club,
         votes_total: r.votes_total,
         url: r.url,
+        thumb_url: r.thumb_url,
       })),
     };
   }
