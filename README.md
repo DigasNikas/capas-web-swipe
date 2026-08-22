@@ -19,19 +19,25 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 ```
 capas-web-swipe/
-├── index.html            Public landing page (results, no login)
-├── landing.js            Landing page: fetches /api/stats + /api/matches, renders it
-├── landing.css           Landing page styles (separate visual language from the app)
-├── app/index.html        Swipe app (behind Cloudflare Access)
-├── account/index.html    Account page: stats, rank, Histórico (behind Cloudflare Access)
-├── account.js            Account page logic
+├── index.html            Public landing page (results, no login) — pinned at root by GitHub Pages
+├── landing/
+│   ├── landing.js        Fetches /api/stats + /api/matches, renders the landing page
+│   └── landing.css       Landing page styles (separate visual language from the app)
+│
+├── app/
+│   ├── index.html        Swipe app (behind Cloudflare Access)
+│   └── app.js            Swipe app entry (ES module): event listeners + init()
+│
+├── account/
+│   ├── index.html        Account page: stats, rank, Histórico (behind Cloudflare Access)
+│   └── account.js        Account page logic
+│
 ├── style.css             Styles shared by the app + account pages
-├── app.js                Swipe app entry (ES module): event listeners + init()
 ├── CNAME                 Custom domain for GitHub Pages
 ├── wrangler.toml         Cloudflare Worker configuration
 ├── package.json          Wrangler dev dependency
 │
-├── src/                  Frontend ES modules (imported by app.js / account.js)
+├── src/                  Frontend ES modules shared by app.js and account.js
 │   ├── state.js          Shared mutable state + all constants (ACTIONS, API_URL, …)
 │   ├── dom.js            DOM element references (app page)
 │   ├── dates.js          Date/time formatting and grouping helpers
@@ -42,7 +48,7 @@ capas-web-swipe/
 │   ├── leaderboard.js    Leaderboard modal (fetch + render)
 │   └── modals.js         animateModalClose, swipe-down-to-close, instrucoes modal
 │
-├── workers/              Cloudflare Worker (single bundle, split by responsibility)
+├── api/                  Cloudflare Worker (single bundle, split by responsibility)
 │   ├── index.js          Router + cron entry point
 │   ├── schema.sql        D1 database schema
 │   ├── lib/
@@ -71,7 +77,7 @@ capas-web-swipe/
     └── manifest.json
 ```
 
-The frontend uses native ES modules (`<script type="module">`) — no build step required. `app.js`/`src/*.js` stay at the repo root and are referenced by absolute path from `app/index.html`, so their relative imports keep working unchanged. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
+The frontend uses native ES modules (`<script type="module">`) — no build step required. Each page's HTML lives in its own folder next to its entry JS (`app/app.js`, `account/account.js`, `landing/landing.js`); `index.html` is the one exception, pinned at the repo root because GitHub Pages needs it there to serve `/`. Every cross-folder reference (`src/*.js`, `style.css`) uses an absolute path (`/src/state.js`) rather than a relative one, so it resolves the same regardless of which page imports it. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports.
 
 > **Note:** ES modules require a server context. Pages can't be opened via `file://` — use `wrangler dev` or any local HTTP server for local testing.
 
@@ -117,7 +123,7 @@ Authenticated endpoints require a valid Cloudflare Access session cookie.
 
 ### Worker
 
-Deploys automatically via GitHub Actions on push to `workers/**` or `wrangler.toml`.  
+Deploys automatically via GitHub Actions on push to `api/**` or `wrangler.toml`.  
 Manual deploy:
 
 ```bash

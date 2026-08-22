@@ -3,7 +3,7 @@ name: Deploy Worker
 on:
   push:
     paths:
-      - "workers/**"
+      - "api/**"
       - "wrangler.toml"
   workflow_dispatch:
 

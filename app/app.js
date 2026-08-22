@@ -1,17 +1,17 @@
-import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from './src/state.js';
+import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.js';
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
   leaderboardModal, instrucoesModal, modalOverlay,
-} from './src/dom.js';
-import { groupByDate } from './src/dates.js';
-import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from './src/calendar.js';
+} from '/src/dom.js';
+import { groupByDate } from '/src/dates.js';
+import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
 import {
   renderStack, advanceToNextPendingGroup, deactivateSwipeMode, activateSwipeMode,
   triggerAction, goToCalendarDate, clearSwipeFeedback, hidePill,
-} from './src/cards.js';
-import { updateProgress } from './src/ui.js';
-import { openInstrucoes, closeInstrucoes, addSwipeDownToClose } from './src/modals.js';
-import { openLeaderboard, closeLeaderboard } from './src/leaderboard.js';
+} from '/src/cards.js';
+import { updateProgress } from '/src/ui.js';
+import { openInstrucoes, closeInstrucoes, addSwipeDownToClose } from '/src/modals.js';
+import { openLeaderboard, closeLeaderboard } from '/src/leaderboard.js';
 
 // Wire calendar date click → navigate card stack
 setDateClickHandler(goToCalendarDate);
