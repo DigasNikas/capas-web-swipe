@@ -14,7 +14,7 @@ export const FEEDBACK_COLORS = {
 export const ACTIONS = {
   right: { name: 'keep',     icon: '🦁', label: 'SPORTING', decision: 'sporting' },
   left:  { name: 'reject',   icon: '🦅', label: 'BENFICA',  decision: 'benfica'  },
-  up:    { name: 'favorite', icon: '?',  label: 'OUTROS',   decision: 'others'   },
+  up:    { name: 'favorite', icon: '?',  label: 'RESTANTES', decision: 'others'   },
   down:  { name: 'skip',     icon: '🐉', label: 'PORTO',    decision: 'porto'    },
 };
 
