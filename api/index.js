@@ -46,7 +46,7 @@ export default {
     if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env);
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
-    if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env, ctx);
+    if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
 
     return new Response("Not found", { status: 404 });
   },
