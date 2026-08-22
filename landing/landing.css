@@ -65,13 +65,16 @@ body {
   letter-spacing: 0.14em;
   padding: 4px 8px;
 }
-/* Same card language as the calendar's hover tooltip: solid dark
+/* Custom dropdown — not a native <select>, whose open <option> list is
+   OS-rendered on Chrome/macOS and ignores CSS (blue highlight, system
+   font). Same card language as the calendar's hover tooltip: solid dark
    background, panel border, rounded corners, drifting shadow. Uses
    --l-panel rather than --l-bg (what the tooltip itself uses) because
    this control sits directly on the page background — which *is*
-   --l-bg — so matching it would (and did) render invisibly flat. The
-   tooltip gets away with --l-bg only because it floats over colorful
-   calendar cells, not the plain page. */
+   --l-bg — so matching it renders invisibly flat. The tooltip gets away
+   with --l-bg only because it floats over colorful calendar cells, not
+   the plain page. */
+.l-epoca-dropdown { position: relative; }
 .l-epoca-select {
   background-color: var(--l-panel);
   color: var(--l-yellow);
@@ -83,14 +86,8 @@ body {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 4px 22px 4px 8px;
+  padding: 4px 8px;
   cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23ffd60a' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 7px center;
-  color-scheme: dark;
   transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out;
 }
 .l-epoca-select:hover, .l-epoca-select:focus {
@@ -98,7 +95,37 @@ body {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
   outline: none;
 }
-.l-epoca-select option { background: var(--l-panel); color: var(--l-yellow); }
+.l-epoca-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: var(--l-panel);
+  border: 1px solid var(--l-panel2);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  z-index: 30;
+  animation: tip-in 0.1s ease-out;
+}
+.l-epoca-option {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--l-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: left;
+  white-space: nowrap;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.08s ease-out;
+}
+.l-epoca-option:hover { background: var(--l-panel2); }
+.l-epoca-option.active { color: var(--l-yellow); }
 .l-kicker {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
