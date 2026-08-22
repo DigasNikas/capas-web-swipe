@@ -309,9 +309,12 @@ body {
 .l-day-title { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; color: var(--l-muted); letter-spacing: 0.1em; text-transform: uppercase; }
 .l-day-winner { font-size: 1.3rem; font-weight: 900; font-style: italic; text-transform: uppercase; margin-top: 2px; }
 .l-day-papers { display: flex; gap: 8px; }
-.l-day-papers > div { background: var(--l-bg); padding: 6px 9px; font-family: 'JetBrains Mono', monospace; text-align: center; }
-.l-day-papers .dp-name { font-size: 0.55rem; color: var(--l-muted); letter-spacing: 0.08em; text-transform: uppercase; }
-.l-day-papers .dp-club { font-size: 0.75rem; font-weight: 700; margin-top: 2px; }
+.l-day-papers > div { width: 58px; text-align: center; }
+.l-day-papers img { width: 100%; aspect-ratio: 0.72; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,0.4); cursor: zoom-in; transition: transform 0.15s ease; }
+.l-day-papers img:hover { transform: scale(1.05); }
+.l-day-papers .dp-empty { width: 100%; aspect-ratio: 0.72; background: var(--l-bg); display: flex; align-items: center; justify-content: center; color: var(--l-muted); font-family: 'JetBrains Mono', monospace; }
+.l-day-papers .dp-name { font-size: 0.5rem; color: var(--l-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+.l-day-papers .dp-club { font-size: 0.68rem; font-weight: 700; margin-top: 1px; }
 .l-day-alert { margin-top: 6px; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--l-yellow); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-yellow); text-transform: uppercase; }
 
 /* Latest */
