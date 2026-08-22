@@ -54,13 +54,61 @@ async function init() {
   const todayEpoca = epocaLabelForDate(new Date().toISOString().slice(0, 10));
   const defaultEpoca = epocas.includes(todayEpoca) ? todayEpoca : epocas[0];
 
-  const select = document.getElementById('epoca-select');
-  select.innerHTML = epocas.map(e => `<option value="${e}">ÉPOCA ${e}</option>`).join('');
-  select.value = defaultEpoca;
-  select.addEventListener('change', () => renderEpoca(rows, select.value, matchesByDate));
+  setupEpocaDropdown(epocas, defaultEpoca, e => renderEpoca(rows, e, matchesByDate));
 
   renderEpoca(rows, defaultEpoca, matchesByDate);
   renderLatest(stats.latest);
+}
+
+// Custom dropdown, not a native <select> — the open <option> list is
+// OS-rendered on Chrome/macOS and mostly ignores CSS (blue highlight,
+// system font), so it can't be made to match the site's design.
+function setupEpocaDropdown(epocas, selected, onSelect) {
+  const trigger = document.getElementById('epoca-trigger');
+  const menu = document.getElementById('epoca-menu');
+
+  function renderTrigger() {
+    trigger.textContent = `ÉPOCA ${selected} ▾`;
+  }
+
+  function renderMenu() {
+    menu.innerHTML = epocas.map(e => `
+      <button type="button" class="l-epoca-option${e === selected ? ' active' : ''}" data-epoca="${e}" role="option" aria-selected="${e === selected}">
+        ${e === selected ? '✓' : ''} ÉPOCA ${e}
+      </button>
+    `).join('');
+    menu.querySelectorAll('.l-epoca-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selected = btn.dataset.epoca;
+        renderTrigger();
+        renderMenu();
+        closeMenu();
+        onSelect(selected);
+      });
+    });
+  }
+
+  function openMenu() {
+    menu.classList.remove('hidden');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu() {
+    menu.classList.add('hidden');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  trigger.addEventListener('click', () => {
+    menu.classList.contains('hidden') ? openMenu() : closeMenu();
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.l-epoca-dropdown')) closeMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMenu();
+  });
+
+  renderTrigger();
+  renderMenu();
 }
 
 function renderEpoca(rows, epoca, matchesByDate) {
