@@ -282,6 +282,8 @@ function renderLatest(latest) {
   const section = document.getElementById('latest');
   section.classList.remove('hidden');
 
+  fitTextToContainer(document.getElementById('latest-title'), 2.6, 1);
+
   const dateLabel = new Date(latest.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
   document.getElementById('latest-date').textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 

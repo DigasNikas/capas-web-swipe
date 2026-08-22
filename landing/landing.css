@@ -238,6 +238,7 @@ body {
   display: grid; grid-template-columns: 1fr 1.2fr; gap: 0;
 }
 .l-latest-left { padding: 24px 26px; }
+#latest-title { white-space: nowrap; overflow: hidden; }
 .l-latest-desc { font-size: 0.82rem; color: var(--l-muted); line-height: 1.5; margin-top: 6px; }
 .l-latest-date { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--l-muted); letter-spacing: 0.1em; margin-top: 14px; text-transform: uppercase; }
 .l-latest-covers { display: flex; gap: 8px; margin-top: 10px; }
