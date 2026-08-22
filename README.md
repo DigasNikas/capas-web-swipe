@@ -128,7 +128,7 @@ credentialed requests, no CORS/cookie complexity).
 | `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
 | `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
 | `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
-| `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generate `thumb_url` for covers scraped before thumbnails existed |
+| `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generates `thumb_url` for 25 covers per call (Workers execution limits rule out doing this in one shot for 1000+ covers) — returns `{done, remaining}`, call repeatedly until `remaining` is 0 |
 
 ---
 
@@ -194,8 +194,10 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 # Specific date range (max 7 days per call)
 curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
 
-# One-off: backfill thumb_url for covers that predate thumbnails
-curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/backfill-thumbs"
+# One-off: backfill thumb_url for covers that predate thumbnails.
+# Processes 25 per call — loop until "remaining" hits 0.
+until curl -s -X POST -H "Authorization: Bearer <secret>" \
+  "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
 
 ### Bulk backfill (full month)
