@@ -176,7 +176,7 @@ function renderCalendar(days, matchesByDate, epoca) {
 
   function legendMarkup() {
     const clubs = CLUB_KEYS.map(k => `<span><i style="background:${CLUB_META[k].color}"></i>${CLUB_META[k].name}</span>`).join('');
-    const noMajority = paperFilter ? '' : `<span><i style="background:var(--l-yellow)"></i>Sem maioria</span>`;
+    const noMajority = paperFilter ? '' : `<span><i style="background:var(--l-yellow)"></i>Inconclusivo</span>`;
     return `${clubs}${noMajority}<span>🚨 Atenção</span>`;
   }
 
@@ -189,6 +189,7 @@ function renderCalendar(days, matchesByDate, epoca) {
     }
     const { hasMajority } = dayStats(day);
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
+    const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
 
     const papersHtml = Object.keys(PAPERS_BY_ID).map(id => `
@@ -204,7 +205,7 @@ function renderCalendar(days, matchesByDate, epoca) {
       <div class="l-day-body">
         <div>
           <div class="l-day-title">${dateLabel}</div>
-          <div class="l-day-winner" style="color:${color}">${CLUB_META[focusClub].name}</div>
+          <div class="l-day-winner" style="color:${color}">${winnerLabel}</div>
           ${pulse ? `<div class="l-day-alert">🚨 ${pulse.map(m => CLUB_META[m].name).join(' e ')} jogou ontem e não foi mencionado por todos</div>` : ''}
         </div>
         <div class="l-day-papers">${papersHtml}</div>
@@ -260,7 +261,7 @@ function renderCalendar(days, matchesByDate, epoca) {
           const { unanimous, hasMajority } = dayStats(day);
           cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
           cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
-          cell.title = `${day.date} · ${CLUB_META[focusClub].name}`;
+          cell.title = `${day.date} · ${(paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo'}`;
           const pulse = pulseFor(day, matchesByDate);
           if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
         }
@@ -285,23 +286,56 @@ function renderLatest(latest) {
   document.getElementById('latest-date').textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 
   const coversEl = document.getElementById('latest-covers');
-  coversEl.innerHTML = latest.covers.map(c => `
-    <div>
+  coversEl.innerHTML = '';
+  latest.covers.forEach(c => {
+    const div = document.createElement('div');
+    div.innerHTML = `
       <img src="${c.url}" alt="${c.name}" loading="lazy" />
       <div class="lc-name">${c.name}</div>
       <div class="lc-club" style="color:${CLUB_META[c.club].color}">${CLUB_META[c.club].name}</div>
-    </div>
-  `).join('');
+    `;
+    div.querySelector('img').addEventListener('click', () => openCoverModal(c.url, c.name));
+    coversEl.appendChild(div);
+  });
 
-  const winnerMeta = CLUB_META[latest.winner];
   const winnerEl = document.getElementById('latest-winner');
-  winnerEl.textContent = winnerMeta.name;
-  winnerEl.style.color = winnerMeta.color;
+  const winnerColor = latest.hasMajority ? CLUB_META[latest.winner].color : 'var(--l-yellow)';
+  winnerEl.textContent = latest.hasMajority ? CLUB_META[latest.winner].name : 'Empate técnico';
+  winnerEl.style.color = winnerColor;
+  fitTextToContainer(winnerEl);
 
   const pct = Math.round(latest.confidence * 100);
   document.getElementById('latest-conf-fill').style.width = `${pct}%`;
-  document.getElementById('latest-conf-fill').style.background = winnerMeta.color;
+  document.getElementById('latest-conf-fill').style.background = winnerColor;
   document.getElementById('latest-conf-label').textContent = `${pct}% dos votos`;
 }
+
+// Shrinks font-size until the (single-line) text fits its container —
+// club names range from "Porto" to "Empate técnico", too wide a spread
+// for one fixed clamp() to keep on one line at every length.
+function fitTextToContainer(el, maxRem = 4.5, minRem = 1.6) {
+  let size = maxRem;
+  el.style.fontSize = `${size}rem`;
+  while (el.scrollWidth > el.clientWidth && size > minRem) {
+    size -= 0.15;
+    el.style.fontSize = `${size}rem`;
+  }
+}
+
+function openCoverModal(url, name) {
+  const modal = document.getElementById('cover-modal');
+  document.getElementById('cover-modal-img').src = url;
+  document.getElementById('cover-modal-img').alt = name;
+  modal.classList.remove('hidden');
+}
+
+function closeCoverModal() {
+  document.getElementById('cover-modal').classList.add('hidden');
+  document.getElementById('cover-modal-img').src = '';
+}
+
+document.getElementById('cover-modal').addEventListener('click', closeCoverModal);
+document.getElementById('cover-modal-close').addEventListener('click', closeCoverModal);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCoverModal(); });
 
 init();
