@@ -191,14 +191,7 @@ body {
 .p-bar-row .p-bar-val { font-family: 'JetBrains Mono', monospace; text-align: right; font-weight: 700; }
 
 /* Calendar */
-/* Legend lives on its own row below (see .l-legend) instead of next to
-   the title — its width changes with the active filter ("Sem maioria"
-   only shows for "Todos"), and sharing a row with the title meant that
-   width change shifted the title's own line-wrap point, making the
-   whole section jump vertically when switching filters. The filter
-   button group's width is constant regardless of filter state, so it's
-   safe to keep beside the title. */
-.l-cal-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 12px; }
+.l-cal-controls-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; margin-bottom: 16px; }
 .l-filter-group { display: flex; border: 1px solid var(--l-panel2); }
 .l-filter-group button {
   background: transparent; color: var(--l-text); border: none; border-left: 1px solid var(--l-panel2);
@@ -207,18 +200,66 @@ body {
 }
 .l-filter-group button:first-child { border-left: none; }
 .l-filter-group button.active { background: var(--l-yellow); color: var(--l-bg); }
-.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
+.l-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); }
 .l-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .l-legend i { width: 10px; height: 10px; display: inline-block; }
 
 .l-calendar { background: var(--l-panel); border: 1px solid var(--l-panel2); padding: 18px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
 .cal-month .cal-month-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; color: var(--l-muted); font-weight: 700; margin-bottom: 5px; }
 .cal-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.cal-day { aspect-ratio: 1; cursor: pointer; opacity: 0.65; position: relative; }
+.cal-day {
+  aspect-ratio: 1; cursor: pointer; opacity: 0.65; position: relative;
+  transition: transform 0.08s ease-out, opacity 0.08s ease-out, box-shadow 0.08s ease-out;
+}
 .cal-day.empty { visibility: hidden; }
 .cal-day.majority { opacity: 0.85; }
 .cal-day.unanimous { opacity: 1; }
+.cal-day:not(.empty):hover {
+  transform: scale(1.35);
+  opacity: 1;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
 .cal-day .pulse { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; pointer-events: none; }
+
+/* Custom tooltip (data-tip) instead of the native title attribute —
+   the browser default has a slow show delay and unstyled OS chrome. */
+.cal-day[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--l-bg);
+  border: 1px solid var(--l-panel2);
+  color: var(--l-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 20;
+  animation: tip-in 0.1s ease-out;
+}
+.cal-day[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--l-panel2);
+  margin-bottom: 3px;
+  z-index: 20;
+  animation: tip-in 0.1s ease-out;
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translate(-50%, 2px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
 
 .l-day-panel { margin-top: 14px; background: var(--l-panel); border-left: 4px solid var(--l-panel2); padding: 14px 18px; min-height: 60px; display: flex; align-items: center; }
 .l-day-hint { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--l-muted); text-align: center; width: 100%; }
