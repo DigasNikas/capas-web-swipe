@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { calMonthLabel, calGrid } from './dom.js';
+import { formatDate } from './dates.js';
 
 const CAL_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -54,7 +55,15 @@ export function renderCalendar() {
 
     if (allDates.has(ds)) {
       el.classList.add('has-data');
-      if (_onDateClick) el.addEventListener('click', () => _onDateClick(ds));
+      if (_onDateClick) {
+        el.tabIndex = 0;
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', formatDate(ds));
+        el.addEventListener('click', () => _onDateClick(ds));
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _onDateClick(ds); }
+        });
+      }
     }
     calGrid.appendChild(el);
   }

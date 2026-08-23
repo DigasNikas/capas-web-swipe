@@ -17,6 +17,18 @@ let drillMonth   = null;
 // the two concepts never collide in code.
 const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Restantes', starred: 'Favoritos' };
 
+// Makes a non-native element (div/img used as a tap target) keyboard-operable:
+// focusable, announced as a button, and Enter/Space-activatable.
+function makeClickable(el, label, onActivate) {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', label);
+  el.addEventListener('click', onActivate);
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(); }
+  });
+}
+
 export function renderCatalogue(items) {
   catalogue  = items;
   drillLevel = 0;
@@ -95,7 +107,7 @@ function buildBundle(items, onClick) {
   bundle.appendChild(stack);
   bundle.appendChild(label);
   bundle.appendChild(hint);
-  bundle.addEventListener('click', onClick);
+  makeClickable(bundle, `${items.length} ${items.length === 1 ? 'capa' : 'capas'}, tocar para ver`, onClick);
   return bundle;
 }
 
@@ -111,7 +123,7 @@ function buildMonthBundle(items, label, onClick) {
 
   div.appendChild(stack);
   div.appendChild(monthLabel);
-  div.addEventListener('click', onClick);
+  makeClickable(div, label, onClick);
   return div;
 }
 
@@ -148,11 +160,13 @@ function expandGrid(items) {
 
     const img = document.createElement('img');
     img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
-    img.addEventListener('click', () => openCoverModal(entry.full, entry.name));
+    makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverModal(entry.full, entry.name));
 
     const badge = document.createElement('div');
     badge.className = `catalogue-item-badge ${entry.action}`;
     badge.textContent = ACTIONS[actionToDir(entry.action)]?.icon ?? '?';
+    badge.setAttribute('role', 'img');
+    badge.setAttribute('aria-label', ACTIONS[actionToDir(entry.action)]?.label ?? entry.action);
 
     const star = document.createElement('button');
     star.className = `catalogue-item-star${entry.starred ? ' active' : ''}`;

@@ -49,7 +49,7 @@ export function renderStack() {
   state.queue.forEach(id => {
     if (!existingIds.has(id)) {
       const img = state.images.find(i => i.id === id);
-      if (img) cardStack.appendChild(buildCard(img));
+      if (img) cardStack.appendChild(buildCard(img, { interactive: true }));
     }
   });
 
@@ -60,16 +60,26 @@ export function renderStack() {
   swipeHints.classList.add('hidden');
   comecarPill.classList.toggle('hidden', !state.presentationMode || state.queue.length === 0);
 
-  if (state.presentationMode) {
-    cardStack.addEventListener('click', e => {
-      const card = e.target.closest('.card');
-      if (card) activateSwipeMode(card.dataset.id);
-    }, { once: true });
-  }
+  if (state.presentationMode) attachActivateListener();
 
   updateDateHeader();
   updateEmptyState();
   preloadNextGroup();
+}
+
+// Delegated tap-or-Enter/Space-to-activate on whichever card is on top of
+// the stack — re-attached with {once:true} every time the stack re-renders
+// or swipe mode exits, mirroring the single top card that's actually clickable.
+function attachActivateListener() {
+  cardStack.addEventListener('click', e => {
+    const card = e.target.closest('.card');
+    if (card) activateSwipeMode(card.dataset.id);
+  }, { once: true });
+  cardStack.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.card');
+    if (card) { e.preventDefault(); activateSwipeMode(card.dataset.id); }
+  }, { once: true });
 }
 
 export function deactivateSwipeMode() {
@@ -87,10 +97,7 @@ export function deactivateSwipeMode() {
   voteBar.classList.add('hidden');
   renderCalendar();
   comecarPill.classList.toggle('hidden', state.queue.length === 0);
-  cardStack.addEventListener('click', e => {
-    const card = e.target.closest('.card');
-    if (card) activateSwipeMode(card.dataset.id);
-  }, { once: true });
+  attachActivateListener();
 }
 
 export function activateSwipeMode(clickedId) {
@@ -121,10 +128,16 @@ function showActiveCard() {
   attachSwipeListeners(card);
 }
 
-export function buildCard(img) {
+export function buildCard(img, { interactive = false } = {}) {
   const div = document.createElement('div');
   div.className = 'card';
   div.dataset.id = img.id;
+
+  if (interactive) {
+    div.tabIndex = 0;
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-label', `${img.newspaper}, tocar para começar a votar`);
+  }
 
   const image = document.createElement('img');
   image.src = img.src;

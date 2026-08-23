@@ -20,11 +20,9 @@ export function formatMonth(key) {
   return new Date(+y, +m - 1, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 }
 
-export const SHORT_MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-
 export function formatShortDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
-  return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+  return `${d.getDate()} ${new Intl.DateTimeFormat('pt-PT', { month: 'short' }).format(d)}`;
 }
 
 export function groupByMonth(items) {

@@ -9,7 +9,9 @@ function saveSettings() {
 }
 
 export function applyTheme() {
-  document.body.classList.toggle('theme-light', state.settings.theme === 'light');
+  const light = state.settings.theme === 'light';
+  document.body.classList.toggle('theme-light', light);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#ffffff' : '#13131a');
 }
 
 function updateWarning() {
