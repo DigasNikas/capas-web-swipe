@@ -102,11 +102,20 @@ header h1 {
 }
 
 
+/* Breaks out of #app's 600px column and re-centers on the full viewport
+   (same center point as #comecar-pill), so the button row isn't squeezed
+   into that narrow column on wide screens. Standard full-bleed trick:
+   margin-left resolves "% of container" then subtracts "% of viewport",
+   which nets out to viewport-span regardless of the parent's own width. */
 .header-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 .btn-secondary {
