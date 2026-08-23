@@ -64,10 +64,6 @@ capas-web-swipe/
 │       └── scrape.js     GET  /scrape  (admin, bearer-protected)
 │
 ├── scripts/              Local tooling (not deployed)
-│   ├── scrape_all.py     Run all three newspaper scrapers locally
-│   ├── scrape_record.py  Scrape Record covers from sapo.pt
-│   ├── scrape_abola.py   Scrape A Bola covers from sapo.pt
-│   ├── scrape_ojogo.py   Scrape O Jogo covers from sapo.pt
 │   ├── scrape_month.sh   Trigger the /scrape API for a full calendar month
 │   └── import_matches.py Import match dates into D1 (football-data.org + api-sports.io)
 │
