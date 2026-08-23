@@ -1247,21 +1247,10 @@ header h1 {
   text-align: center;
 }
 
-.kbd-list { display: flex; flex-direction: column; gap: 6px; }
+.kbd-list { display: flex; flex-direction: column; gap: 10px; }
 .kbd-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text); }
-.kbd-row kbd {
-  flex-shrink: 0;
-  min-width: 34px;
-  text-align: center;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  padding: 3px 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent);
-}
+.kbd-row .kbd-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.kbd-row .kbd-icon-space { width: 48px; height: 24px; }
 
 /* ─── Account modal ──────────────────────────────────────────────────────── */
 .acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
