@@ -32,3 +32,5 @@ export const comecarPill       = document.getElementById('comecar-pill');
 export const calendarBackBtn   = document.getElementById('btn-calendar-back');
 export const appTitle          = document.getElementById('app-title');
 export const voteBar           = document.getElementById('vote-bar');
+export const definicoesModal   = document.getElementById('definicoes-modal');
+export const definicoesWarning = document.getElementById('definicoes-warning');

@@ -24,6 +24,24 @@ export const DECISION_TO_ACTION = Object.fromEntries(
   Object.values(ACTIONS).map(a => [a.decision, a.name])
 );
 
+export const SETTINGS_KEY = 'capas-settings';
+
+const defaultSettings = {
+  voteSwipe:    true,
+  voteButtons:  false,
+  voteKeyboard: true,
+  keepVoting:   false,
+  theme:        'dark',
+};
+
+function loadSettings() {
+  try {
+    return { ...defaultSettings, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
+  } catch {
+    return { ...defaultSettings };
+  }
+}
+
 export const state = {
   images:           [],
   dateGroups:       [],
@@ -31,4 +49,5 @@ export const state = {
   queue:            [],
   catalogue:        [],
   presentationMode: true,
+  settings:         loadSettings(),
 };

@@ -2,7 +2,7 @@ import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
   leaderboardModal, instrucoesModal, accountModal, modalOverlay,
-  coverModal,
+  coverModal, definicoesModal,
 } from '/src/dom.js';
 import { groupByDate } from '/src/dates.js';
 import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
@@ -14,6 +14,9 @@ import { updateProgress } from '/src/ui.js';
 import { openInstrucoes, closeInstrucoes, addSwipeDownToClose, closeCoverModal } from '/src/modals.js';
 import { openLeaderboard, closeLeaderboard } from '/src/leaderboard.js';
 import { openAccount, closeAccount } from '/src/account.js';
+import { openDefinicoes, closeDefinicoes, handleSettingChange, applyTheme } from '/src/settings.js';
+
+applyTheme();
 
 // Wire calendar date click → navigate card stack
 setDateClickHandler(goToCalendarDate);
@@ -22,6 +25,7 @@ setDateClickHandler(goToCalendarDate);
 addSwipeDownToClose(instrucoesModal,   closeInstrucoes);
 addSwipeDownToClose(leaderboardModal,  closeLeaderboard);
 addSwipeDownToClose(accountModal,      closeAccount);
+addSwipeDownToClose(definicoesModal,   closeDefinicoes);
 
 // ── Event Listeners ────────────────────────────────────────────────────────
 comecarPill.addEventListener('click', () => {
@@ -47,6 +51,12 @@ leaderboardModal.addEventListener('click', e => { if (e.target === leaderboardMo
 document.getElementById('btn-conta').addEventListener('click', openAccount);
 accountModal.addEventListener('click', e => { if (e.target === accountModal) closeAccount(); });
 
+document.getElementById('btn-definicoes').addEventListener('click', openDefinicoes);
+definicoesModal.addEventListener('click', e => { if (e.target === definicoesModal) closeDefinicoes(); });
+definicoesModal.querySelectorAll('.switch').forEach(input =>
+  input.addEventListener('change', () => handleSettingChange(input))
+);
+
 coverModal.addEventListener('click', closeCoverModal);
 document.getElementById('cover-modal-close').addEventListener('click', closeCoverModal);
 
@@ -54,6 +64,7 @@ modalOverlay.addEventListener('click', () => {
   if (!leaderboardModal.classList.contains('hidden')) closeLeaderboard();
   if (!instrucoesModal.classList.contains('hidden'))  closeInstrucoes();
   if (!accountModal.classList.contains('hidden'))     closeAccount();
+  if (!definicoesModal.classList.contains('hidden'))  closeDefinicoes();
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
@@ -78,6 +89,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 function openModal() {
   if (!coverModal.classList.contains('hidden'))      return { close: closeCoverModal };
   if (!accountModal.classList.contains('hidden'))     return { close: closeAccount };
+  if (!definicoesModal.classList.contains('hidden'))  return { close: closeDefinicoes };
   if (!leaderboardModal.classList.contains('hidden')) return { close: closeLeaderboard };
   if (!instrucoesModal.classList.contains('hidden'))  return { close: closeInstrucoes };
   return null;
@@ -95,6 +107,8 @@ document.addEventListener('keydown', e => {
   // Don't let space/arrows reach the calendar or the voting card while a
   // modal is open on top of it.
   if (modal) return;
+
+  if (!state.settings.voteKeyboard) return;
 
   if (e.key === ' ' && state.presentationMode && state.queue.length > 0) {
     e.preventDefault(); // stop it from also activating whatever button has focus
