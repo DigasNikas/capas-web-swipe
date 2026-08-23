@@ -1,5 +1,6 @@
-import { ACTIONS } from './state.js';
+import { ACTIONS, API_URL } from './state.js';
 import { formatMonth, formatShortDate, groupByMonth } from './dates.js';
+import { openCoverModal } from './modals.js';
 
 const catalogueGrid  = document.getElementById('catalogue-grid');
 const catalogueEmpty = document.getElementById('catalogue-empty');
@@ -11,7 +12,10 @@ let activeFilter = 'all';
 let drillLevel   = 0;
 let drillMonth   = null;
 
-const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Restantes' };
+// 'starred' is a personal bookmark, unrelated to ACTIONS.up.name === 'favorite'
+// (that's the "Restantes" swipe decision) — deliberately different words so
+// the two concepts never collide in code.
+const FILTER_LABELS = { all: 'Tudo', keep: 'Sporting', reject: 'Benfica', skip: 'Porto', favorite: 'Restantes', starred: 'Favoritos' };
 
 export function renderCatalogue(items) {
   catalogue  = items;
@@ -44,7 +48,9 @@ function renderCatalogueView() {
 
   const items = activeFilter === 'all'
     ? catalogue
-    : catalogue.filter(e => e.action === activeFilter);
+    : activeFilter === 'starred'
+      ? catalogue.filter(e => e.starred)
+      : catalogue.filter(e => e.action === activeFilter);
 
   catalogueEmpty.classList.toggle('hidden', items.length > 0);
   if (items.length === 0) return;
@@ -142,10 +148,20 @@ function expandGrid(items) {
 
     const img = document.createElement('img');
     img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
+    img.addEventListener('click', () => openCoverModal(entry.full, entry.name));
 
     const badge = document.createElement('div');
     badge.className = `catalogue-item-badge ${entry.action}`;
     badge.textContent = ACTIONS[actionToDir(entry.action)]?.icon ?? '?';
+
+    const star = document.createElement('button');
+    star.className = `catalogue-item-star${entry.starred ? ' active' : ''}`;
+    star.textContent = entry.starred ? '★' : '☆';
+    star.setAttribute('aria-label', 'Favorito');
+    star.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleFavorite(entry, star);
+    });
 
     const footer = document.createElement('div');
     footer.className = 'catalogue-item-footer';
@@ -159,9 +175,30 @@ function expandGrid(items) {
     name.textContent = entry.name;
 
     footer.append(date, name);
-    div.append(img, badge, footer);
+    div.append(img, badge, star, footer);
     catalogueGrid.appendChild(div);
   });
+}
+
+// Optimistic toggle — flips immediately, rolls back on request failure.
+async function toggleFavorite(entry, star) {
+  const next = !entry.starred;
+  entry.starred = next;
+  star.classList.toggle('active', next);
+  star.textContent = next ? '★' : '☆';
+
+  try {
+    const res = await fetch(`${API_URL}/favorites`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cover_id: entry.id, favorite: next }),
+    });
+    if (!res.ok) throw new Error('request failed');
+  } catch {
+    entry.starred = !next;
+    star.classList.toggle('active', !next);
+    star.textContent = !next ? '★' : '☆';
+  }
 }
 
 function actionToDir(action) {

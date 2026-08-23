@@ -124,6 +124,7 @@ credentialed requests, no CORS/cookie complexity).
 | `GET` | `/api/stats` | `capas.` | — | Public aggregate results (per-paper breakdown, per-day winners, latest classified day) — reads only `analytics_covers` |
 | `GET` | `/api/swipes` | `app.` | Access | Authenticated user's swipe history |
 | `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
+| `POST` | `/api/favorites` | `app.` | Access | Toggle a personal bookmark on an already-swiped cover `{ cover_id, favorite }` — unrelated to `decision` |
 | `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
 | `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
 | `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generates `thumb_url` for 25 covers per call (Workers execution limits rule out doing this in one shot for 1000+ covers) — returns `{done, remaining}`, call repeatedly until `remaining` is 0 |

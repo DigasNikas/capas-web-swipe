@@ -1,9 +1,20 @@
 import { API_URL } from './state.js';
-import { leaderboardModal, leaderboardList, modalOverlay } from './dom.js';
+import { leaderboardModal, leaderboardList, leaderboardMe, modalOverlay } from './dom.js';
 import { animateModalClose } from './modals.js';
+
+const medals = ['🥇', '🥈', '🥉'];
+
+function rowHtml({ user_email, swipes, rank }, isMe) {
+  const rankClass = rank <= 3 ? ` lb-rank-${rank}` : '';
+  const rankLabel = medals[rank - 1] ?? `${rank}.`;
+  const name = user_email.split('@')[0];
+  const you = isMe ? ' <span class="lb-you">tu</span>' : '';
+  return `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name}${you}</span><span class="lb-count">${swipes}</span>`;
+}
 
 export async function openLeaderboard() {
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
+  leaderboardMe.innerHTML = '';
   leaderboardModal.classList.remove('hidden');
   modalOverlay.classList.remove('hidden');
 
@@ -11,34 +22,25 @@ export async function openLeaderboard() {
     const res  = await fetch(`${API_URL}/leaderboard`);
     const data = res.ok ? await res.json() : [];
     leaderboardList.innerHTML = '';
-    const medals  = ['🥇', '🥈', '🥉'];
-    const meEntry = data.find(e => e.is_me);
-    const others  = data.filter(e => !e.is_me);
 
-    others.forEach(({ user_email, swipes, rank }) => {
+    // "Me" stays in natural rank position in the scrollable list (so
+    // neighbors give context), but the list can be long enough that
+    // finding yourself needs scrolling — so it's *also* pinned above
+    // the list, always visible regardless of scroll position or rank.
+    const meEntry = data.find(e => e.is_me);
+    if (meEntry) {
+      const pinned = document.createElement('div');
+      pinned.className = 'lb-row lb-me lb-pinned-row';
+      pinned.innerHTML = rowHtml(meEntry, true);
+      leaderboardMe.appendChild(pinned);
+    }
+
+    data.forEach(entry => {
       const li = document.createElement('li');
-      const rankClass = rank <= 3 ? ` lb-rank-${rank}` : '';
-      li.className = `lb-row${rankClass}`;
-      const rankLabel = medals[rank - 1] ?? `${rank}.`;
-      const name = user_email.split('@')[0];
-      li.innerHTML = `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name}</span><span class="lb-count">${swipes}</span>`;
+      li.className = `lb-row${entry.rank <= 3 ? ` lb-rank-${entry.rank}` : ''}${entry.is_me ? ' lb-me' : ''}`;
+      li.innerHTML = rowHtml(entry, entry.is_me);
       leaderboardList.appendChild(li);
     });
-
-    if (meEntry) {
-      if (others.length > 0) {
-        const sep = document.createElement('li');
-        sep.className = 'lb-sep';
-        leaderboardList.appendChild(sep);
-      }
-      const li = document.createElement('li');
-      const rankClass = meEntry.rank <= 3 ? ` lb-rank-${meEntry.rank}` : '';
-      li.className = `lb-row lb-me${rankClass}`;
-      const rankLabel = medals[meEntry.rank - 1] ?? `${meEntry.rank}.`;
-      const name = meEntry.user_email.split('@')[0];
-      li.innerHTML = `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name} <span class="lb-you">tu</span></span><span class="lb-count">${meEntry.swipes}</span>`;
-      leaderboardList.appendChild(li);
-    }
 
     if (data.length === 0) leaderboardList.innerHTML = '<li class="lb-loading">Sem votos ainda.</li>';
   } catch {

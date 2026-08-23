@@ -16,7 +16,7 @@ import { CORS } from "./lib/http.js";
 import { NEWSPAPERS, scrapeNewspaper } from "./lib/scraper.js";
 import { handleCovers } from "./handlers/covers.js";
 import { handleGetMatches } from "./handlers/matches.js";
-import { handleGetSwipes, handleSwipe } from "./handlers/swipes.js";
+import { handleGetSwipes, handleSwipe, handleToggleFavorite } from "./handlers/swipes.js";
 import { handleLeaderboard } from "./handlers/leaderboard.js";
 import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
@@ -44,6 +44,7 @@ export default {
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);
     if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env);
+    if (method === "POST" && pathname === "/favorites")   return handleToggleFavorite(request, env);
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
