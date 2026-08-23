@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=7" />
+  <link rel="stylesheet" href="/style.css?v=8" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 </head>
 <body>
@@ -26,6 +26,7 @@
     <!-- Date header -->
     <div id="date-header" class="hidden">
       <span id="date-label"></span>
+      <button id="btn-calendar-back" class="cal-nav-btn" aria-label="Voltar ao calendário">📅</button>
       <span id="date-progress"></span>
     </div>
 
@@ -86,7 +87,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>A minha conta</h2>
-          <a href="/cdn-cgi/access/logout" class="btn-secondary">Sair</a>
+          <a href="/cdn-cgi/access/logout" class="btn-secondary">Logout</a>
         </div>
         <div class="acc-stats">
           <div class="acc-stat"><div id="acc-total" class="acc-stat-value">–</div><div class="acc-stat-label">Votos</div></div>
@@ -173,6 +174,6 @@
     <img id="cover-modal-img" src="" alt="" />
   </div>
 
-  <script type="module" src="/app.js?v=7"></script>
+  <script type="module" src="/app.js?v=8"></script>
 </body>
 </html>

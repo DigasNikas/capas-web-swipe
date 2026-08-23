@@ -62,7 +62,6 @@ header {
 header h1 {
   font-size: 1.1rem;
   font-weight: 900;
-  font-style: italic;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   margin-right: auto;
@@ -71,6 +70,7 @@ header h1 {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -98,7 +98,9 @@ header h1 {
 
 /* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
 .btn-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   color: var(--bg);
   font-weight: 800;
@@ -236,38 +238,19 @@ header h1 {
 .dir-hint.up::after    { content: '↑'; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
 .dir-hint.down::after  { content: '↓'; top: calc(100% + 6px);   left: 50%; transform: translateX(-50%); }
 
-/* Half-ovals at card-area edges — stretch full height/width of the area */
+/* Flat edge indicators at card-area edges during drag — was a blurred
+   radial-glow oval, which was the odd one out against landing's flat,
+   zero-blur, zero-gradient system everywhere else. Solid color bar
+   instead, same club-color mapping. */
 .edge-oval {
   position: absolute;
-  border-radius: 50%;
   pointer-events: none;
-  filter: blur(30px);
 }
 
-.edge-oval.oval-left {
-  left: 0; top: 45px; bottom: 45px;
-  width: 90px;
-  transform: translateX(-50%);
-  background: rgba(220, 38, 38, 0.5);
-}
-.edge-oval.oval-right {
-  right: 0; top: 45px; bottom: 45px;
-  width: 90px;
-  transform: translateX(50%);
-  background: rgba(22, 163, 74, 0.5);
-}
-.edge-oval.oval-up {
-  top: 0; left: 45px; right: 45px;
-  height: 90px;
-  transform: translateY(-50%);
-  background: rgba(82, 82, 91, 0.5);
-}
-.edge-oval.oval-down {
-  bottom: 0; left: 45px; right: 45px;
-  height: 90px;
-  transform: translateY(50%);
-  background: rgba(29, 78, 216, 0.5);
-}
+.edge-oval.oval-left  { left: 0;   top: 45px; bottom: 45px; width: 5px;  background: var(--reject); }
+.edge-oval.oval-right { right: 0;  top: 45px; bottom: 45px; width: 5px;  background: var(--keep); }
+.edge-oval.oval-up    { top: 0;    left: 45px; right: 45px; height: 5px; background: var(--favorite); }
+.edge-oval.oval-down  { bottom: 0; left: 45px; right: 45px; height: 5px; background: var(--skip); }
 
 @media (max-width: 480px) {
   .dir-hint {
@@ -285,11 +268,6 @@ header h1 {
   .dir-hint.right { left: calc(50% + var(--card-w)/2 - 3.8rem); }
   .dir-hint.up    { top: calc(50% - var(--card-h)/2 - 1rem); font-weight: 700; }
   .dir-hint.down  { top: calc(50% + var(--card-h)/2 - 1.8rem); }
-
-  .edge-oval.oval-left  { width: 130px; transform: translateX(-35%); }
-  .edge-oval.oval-right { width: 130px; transform: translateX(35%); }
-  .edge-oval.oval-up    { height: 130px; transform: translateY(-35%); }
-  .edge-oval.oval-down  { height: 130px; transform: translateY(35%); }
 }
 
 /* ─── Começar Pill ───────────────────────────────────────────────────────── */
@@ -691,7 +669,14 @@ header h1 {
   z-index: 60;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   pointer-events: none;
+}
+
+/* #app is capped at 600px too — past that width this was rendering
+   4-column grids of ~450px thumbnails edge to edge. */
+@media (min-width: 640px) {
+  .modal-content { max-width: 600px; }
 }
 
 .modal:not(.hidden) { pointer-events: all; }
@@ -740,6 +725,7 @@ header h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -770,6 +756,7 @@ header h1 {
 
 .modal-filters {
   display: flex;
+  flex-shrink: 0;
   border: 1px solid var(--border);
   width: fit-content;
   max-width: 100%;
@@ -818,6 +805,7 @@ header h1 {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .btn-back {
@@ -1208,15 +1196,15 @@ header h1 {
 .instrucoes-tip p { margin: 0; }
 
 /* ─── Account modal ──────────────────────────────────────────────────────── */
-.acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
 .acc-stat { background: var(--surface); border: 1px solid var(--border); padding: 14px; text-align: center; }
 .acc-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 900; color: var(--accent); }
 .acc-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
-.acc-breakdown { display: flex; flex-direction: column; gap: 8px; }
+.acc-breakdown { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 .acc-bar-row { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .acc-bar-track { height: 8px; background: var(--surface2); overflow: hidden; }
 .acc-bar-fill { height: 100%; }
-.acc-section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.05rem; font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 4px; }
+.acc-section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.05rem; font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 4px; flex-shrink: 0; }
 
 /* ─── Leaderboard ────────────────────────────────────────────────────────── */
 .leaderboard-list {
