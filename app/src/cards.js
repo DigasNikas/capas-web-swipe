@@ -4,7 +4,7 @@ import {
 } from './state.js';
 import {
   cardStack, activeCardArea, swipeHints, calSection,
-  comecarPill, swipeBg, swipePill, pillIcon, pillLabel,
+  comecarPill, swipeBg, swipePill, pillIcon, pillLabel, calendarBackBtn,
 } from './dom.js';
 import { updateDateHeader, updateEmptyState, updateProgress } from './ui.js';
 import { syncCalToActiveDate, renderCalendar } from './calendar.js';
@@ -80,6 +80,7 @@ export function deactivateSwipeMode() {
   cardStack.classList.add('presentation-mode');
   cardStack.classList.remove('dimmed');
   calSection.classList.remove('hidden');
+  calendarBackBtn.classList.add('hidden');
   renderCalendar();
   comecarPill.classList.toggle('hidden', state.queue.length === 0);
   cardStack.addEventListener('click', e => {
@@ -96,6 +97,7 @@ export function activateSwipeMode(clickedId) {
   cardStack.classList.add('dimmed');
   swipeHints.classList.remove('hidden');
   calSection.classList.add('hidden');
+  calendarBackBtn.classList.remove('hidden');
   showActiveCard();
   updateDateHeader();
 }
