@@ -226,12 +226,6 @@ header h1 {
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
-#date-progress.hint {
-  color: var(--text-muted);
-  border-color: transparent;
-  font-style: italic;
-}
-
 /* ─── Card Area ─────────────────────────────────────────────────────────── */
 #card-area {
   flex: 1;
@@ -537,11 +531,6 @@ header h1 {
 #empty-state p {
   color: var(--text-muted);
   font-size: 1rem;
-}
-
-.hint {
-  font-size: 0.8rem !important;
-  color: var(--border) !important;
 }
 
 #card-stack:not(:empty) ~ #empty-state {
