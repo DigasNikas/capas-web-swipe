@@ -154,6 +154,12 @@ header h1 {
   flex-shrink: 0;
 }
 
+.date-progress-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 #date-label {
   font-size: 0.9rem;
   font-weight: 700;
