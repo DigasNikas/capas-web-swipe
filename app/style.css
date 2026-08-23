@@ -77,7 +77,6 @@ header h1 {
   color: var(--text);
 }
 
-.title-icon { width: 18px; height: 18px; vertical-align: -3px; margin-left: 2px; }
 
 .header-actions {
   display: flex;
@@ -107,6 +106,8 @@ header h1 {
 .btn-secondary:hover { border-color: var(--accent); }
 .btn-secondary:active { transform: scale(0.96); }
 
+.header-actions .btn-icon { display: none; color: var(--accent); }
+
 /* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
 .btn-cta {
   display: inline-flex;
@@ -123,7 +124,7 @@ header h1 {
   transition: transform 0.15s ease;
 }
 .btn-cta:hover { transform: scale(1.04); }
-.btn-cta-small { padding: 5px 12px; font-size: 0.7rem; }
+.btn-cta-small { padding: 5px 12px; font-size: 0.7rem; gap: 5px; }
 
 .btn-primary {
   background: var(--accent);
@@ -285,6 +286,26 @@ header h1 {
   .dir-hint.right { left: calc(50% + var(--card-w)/2 - 3.8rem); }
   .dir-hint.up    { top: calc(50% - var(--card-h)/2 - 1rem); font-weight: 700; }
   .dir-hint.down  { top: calc(50% + var(--card-h)/2 - 1.8rem); }
+
+  /* Voltar is the least useful header action on mobile — shrink it to
+     just the arrow so it stops eating a whole row's worth of width. */
+  .voltar-text { display: none; }
+  #btn-voltar {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Icon-only header buttons on mobile — text labels for Instruções /
+     Definições / Conta / Rank take too much width to fit one row. */
+  .header-actions .btn-secondary {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+  .header-actions .btn-secondary .btn-label { display: none; }
+  .header-actions .btn-secondary .btn-icon { display: inline-flex; }
 }
 
 /* ─── Começar Pill ───────────────────────────────────────────────────────── */
@@ -825,9 +846,6 @@ header h1 {
   font-style: italic;
   letter-spacing: -0.01em;
   text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .btn-icon {
