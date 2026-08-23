@@ -21,15 +21,9 @@ export function updateDateHeader() {
   const group = state.dateGroups[state.groupIndex];
   if (!group) return;
   dateLabel.textContent = formatDate(group.date);
-  if (state.presentationMode) {
-    dateProgress.textContent = 'tap to start';
-    dateProgress.classList.add('hint');
-  } else {
-    const total   = group.ids.length;
-    const current = total - state.queue.length + 1;
-    dateProgress.textContent = `${current} / ${total}`;
-    dateProgress.classList.remove('hint');
-  }
+  const total   = group.ids.length;
+  const current = total - state.queue.length + 1;
+  dateProgress.textContent = `${current} / ${total}`;
 }
 
 export function updateProgress() {
