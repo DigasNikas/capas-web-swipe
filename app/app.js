@@ -32,6 +32,8 @@ activeCardArea.addEventListener('click', e => {
   if (!e.target.closest('.card')) deactivateSwipeMode();
 });
 
+document.getElementById('btn-calendar-back').addEventListener('click', deactivateSwipeMode);
+
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
 instrucoesModal.addEventListener('click', e => { if (e.target === instrucoesModal) closeInstrucoes(); });
 
