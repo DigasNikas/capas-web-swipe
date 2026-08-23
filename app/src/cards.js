@@ -104,7 +104,7 @@ export function activateSwipeMode(clickedId) {
   calendarBackBtn.classList.remove('hidden');
   progressContainer.classList.add('hidden');
   appTitle.classList.add('hidden');
-  voteBar.classList.remove('hidden');
+  voteBar.classList.toggle('hidden', !state.settings.voteButtons);
   showActiveCard();
   updateDateHeader();
 }
@@ -153,6 +153,7 @@ function attachSwipeListeners(card) {
   let startX = 0, startY = 0, isDragging = false;
 
   function onStart(x, y) {
+    if (!state.settings.voteSwipe) return;
     startX = x; startY = y; isDragging = true;
     card.style.transition = 'none';
     card.style.animation  = 'none';
@@ -279,8 +280,13 @@ function commitSwipe(card, direction) {
       advanceToNextPendingGroup();
       localStorage.setItem(ACTIVE_DATE_KEY, state.dateGroups[state.groupIndex]?.date ?? '');
       syncCalToActiveDate();
-      state.presentationMode = true;
-      renderStack();
+      if (state.settings.keepVoting && state.queue.length > 0) {
+        renderStack();
+        activateSwipeMode(state.queue[0]);
+      } else {
+        state.presentationMode = true;
+        renderStack();
+      }
     } else {
       showActiveCard();
       updateDateHeader();

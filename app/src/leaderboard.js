@@ -2,11 +2,18 @@ import { API_URL } from './state.js';
 import { leaderboardModal, leaderboardList, leaderboardMe, modalOverlay } from './dom.js';
 import { animateModalClose } from './modals.js';
 
-const medals = ['🥇', '🥈', '🥉'];
+const MEDAL_COLORS = { 1: '#f5b042', 2: '#cbd5e1', 3: '#d97706' };
+
+function medalSvg(rank) {
+  return `<svg class="lb-medal" viewBox="0 0 24 24" width="18" height="18">
+    <circle cx="12" cy="12" r="10" fill="${MEDAL_COLORS[rank]}"/>
+    <text x="12" y="16.5" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#0a0a0f">${rank}</text>
+  </svg>`;
+}
 
 function rowHtml({ user_email, swipes, rank }, isMe) {
   const rankClass = rank <= 3 ? ` lb-rank-${rank}` : '';
-  const rankLabel = medals[rank - 1] ?? `${rank}.`;
+  const rankLabel = rank <= 3 ? medalSvg(rank) : `${rank}.`;
   const name = user_email.split('@')[0];
   const you = isMe ? ' <span class="lb-you">tu</span>' : '';
   return `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name}${you}</span><span class="lb-count">${swipes}</span>`;
