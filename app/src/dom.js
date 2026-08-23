@@ -29,3 +29,4 @@ export const swipePill         = document.getElementById('swipe-pill');
 export const pillIcon          = document.getElementById('pill-icon');
 export const pillLabel         = document.getElementById('pill-label');
 export const comecarPill       = document.getElementById('comecar-pill');
+export const calendarBackBtn   = document.getElementById('btn-calendar-back');
