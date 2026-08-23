@@ -1142,6 +1142,17 @@ header h1 {
 .instrucoes-tip-icon { font-size: 1.1rem; flex-shrink: 0; }
 .instrucoes-tip p { margin: 0; }
 
+/* ─── Account modal ──────────────────────────────────────────────────────── */
+.acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.acc-stat { background: var(--surface); border: 1px solid var(--border); padding: 14px; text-align: center; }
+.acc-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 900; color: var(--accent); }
+.acc-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+.acc-breakdown { display: flex; flex-direction: column; gap: 8px; }
+.acc-bar-row { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.acc-bar-track { height: 8px; background: var(--surface2); overflow: hidden; }
+.acc-bar-fill { height: 100%; }
+.acc-section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.05rem; font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 4px; }
+
 /* ─── Leaderboard ────────────────────────────────────────────────────────── */
 .leaderboard-list {
   list-style: none;

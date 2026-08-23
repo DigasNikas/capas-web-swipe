@@ -1,7 +1,7 @@
 import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.js';
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
-  leaderboardModal, instrucoesModal, modalOverlay,
+  leaderboardModal, instrucoesModal, accountModal, modalOverlay,
 } from '/src/dom.js';
 import { groupByDate } from '/src/dates.js';
 import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
@@ -12,6 +12,7 @@ import {
 import { updateProgress } from '/src/ui.js';
 import { openInstrucoes, closeInstrucoes, addSwipeDownToClose } from '/src/modals.js';
 import { openLeaderboard, closeLeaderboard } from '/src/leaderboard.js';
+import { openAccount, closeAccount } from '/src/account.js';
 
 // Wire calendar date click → navigate card stack
 setDateClickHandler(goToCalendarDate);
@@ -19,6 +20,7 @@ setDateClickHandler(goToCalendarDate);
 // Wire swipe-down-to-close for all modals
 addSwipeDownToClose(instrucoesModal,   closeInstrucoes);
 addSwipeDownToClose(leaderboardModal,  closeLeaderboard);
+addSwipeDownToClose(accountModal,      closeAccount);
 
 // ── Event Listeners ────────────────────────────────────────────────────────
 comecarPill.addEventListener('click', () => {
@@ -35,9 +37,13 @@ instrucoesModal.addEventListener('click', e => { if (e.target === instrucoesModa
 document.getElementById('btn-leaderboard').addEventListener('click', openLeaderboard);
 leaderboardModal.addEventListener('click', e => { if (e.target === leaderboardModal) closeLeaderboard(); });
 
+document.getElementById('btn-conta').addEventListener('click', openAccount);
+accountModal.addEventListener('click', e => { if (e.target === accountModal) closeAccount(); });
+
 modalOverlay.addEventListener('click', () => {
   if (!leaderboardModal.classList.contains('hidden')) closeLeaderboard();
   if (!instrucoesModal.classList.contains('hidden'))  closeInstrucoes();
+  if (!accountModal.classList.contains('hidden'))     closeAccount();
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
@@ -105,6 +111,7 @@ async function init() {
     id:        String(c.id),
     name:      c.newspaper,
     src:       c.url,
+    thumb:     c.thumb_url,
     newspaper: c.newspaper,
     date:      c.date,
   }));
@@ -122,7 +129,9 @@ async function init() {
       const img    = state.images.find(i => i.id === String(s.cover_id));
       const action = DECISION_TO_ACTION[s.decision];
       if (!img || !action) return null;
-      return { ...img, action, timestamp: s.swiped_at };
+      // Catalogue/account grids only ever show these at thumbnail size —
+      // use the thumbnail here, keep the swipe card itself (state.images[].src) full-res.
+      return { ...img, src: img.thumb, action, timestamp: s.swiped_at };
     })
     .filter(Boolean);
 
