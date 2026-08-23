@@ -96,6 +96,22 @@ header h1 {
 .btn-secondary:hover { border-color: var(--accent); }
 .btn-secondary:active { transform: scale(0.96); }
 
+/* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
+.btn-cta {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 800;
+  text-decoration: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.btn-cta:hover { transform: scale(1.04); }
+.btn-cta-small { padding: 5px 12px; font-size: 0.7rem; }
+
 .btn-primary {
   background: var(--accent);
   color: var(--bg);
@@ -662,9 +678,14 @@ header h1 {
   z-index: 50;
 }
 
-#catalogue-modal,
-#leaderboard-modal,
-#instrucoes-modal {
+/* Shared by every bottom-sheet modal (leaderboard, instruções, account, …) —
+   was a hand-maintained per-ID list that had gone stale (still listed a
+   #catalogue-modal id nothing uses, and silently missed #account-modal
+   entirely — it rendered as a normal in-flow block instead of a fixed
+   overlay, which is also why it read as not fully opaque: no overlay
+   positioning meant nothing was really covering the page behind it). Every
+   modal already carries class="modal", so key off that instead. */
+.modal {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -673,13 +694,9 @@ header h1 {
   pointer-events: none;
 }
 
-#catalogue-modal:not(.hidden),
-#leaderboard-modal:not(.hidden),
-#instrucoes-modal:not(.hidden) { pointer-events: all; }
+.modal:not(.hidden) { pointer-events: all; }
 
-#catalogue-modal:not(.hidden) .modal-content,
-#leaderboard-modal:not(.hidden) .modal-content,
-#instrucoes-modal:not(.hidden) .modal-content {
+.modal:not(.hidden) .modal-content {
   animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
