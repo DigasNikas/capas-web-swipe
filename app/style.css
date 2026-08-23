@@ -31,6 +31,7 @@ body.theme-light {
   --border: #dcdce3;
   --text: #0a0a0f;
   --text-muted: #6b6b7a;
+  color-scheme: light;
 }
 
 body {
@@ -39,6 +40,7 @@ body {
   background-image: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,255,255,0.05), transparent 60%);
   background-attachment: fixed;
   color: var(--text);
+  color-scheme: dark;
   min-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
@@ -46,6 +48,28 @@ body {
   width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Accessibility ──────────────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 8px;
+  z-index: 100;
+  background: var(--accent);
+  color: #0a0a0f;
+  padding: 10px 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-link:focus { top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 #app {
@@ -673,6 +697,7 @@ header h1 {
   padding: 12px 0;
   cursor: pointer;
 }
+.vote-bar-btn:hover  { background: var(--surface2); border-color: var(--vote-color); }
 .vote-bar-btn:active { background: var(--surface2); transform: scale(0.96); }
 
 /* ─── Definições ─────────────────────────────────────────────────────────── */
@@ -716,6 +741,7 @@ header h1 {
 }
 .switch:checked { background: rgba(255, 214, 10, 0.25); border-color: var(--accent); }
 .switch:checked::before { transform: translateX(18px); background: var(--accent); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .definicoes-warning {
   font-size: 0.78rem;
@@ -945,6 +971,7 @@ header h1 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* ─── Month bundle grid ──────────────────────────────────────────────────── */
@@ -1397,6 +1424,7 @@ header h1 {
 
 .lb-name {
   flex: 1;
+  min-width: 0;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
