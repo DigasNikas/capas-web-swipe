@@ -76,7 +76,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  max-width: 600px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -560,6 +560,8 @@ header h1 {
 
 /* ─── Calendar ───────────────────────────────────────────────────────────── */
 #calendar-section {
+  max-width: 420px;
+  margin: 0 auto;
   padding: 0 16px 14px;
   flex-shrink: 0;
 }
