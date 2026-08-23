@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=11" />
+  <link rel="stylesheet" href="/style.css?v=12" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 </head>
 <body>
@@ -17,8 +17,8 @@
       <h1>Avaliador de capas desportivas <span class="title-emoji">⚽</span></h1>
       <div class="header-actions">
         <a href="https://capas.digasnikas.com/" class="btn-cta btn-cta-small">← Voltar</a>
-        <button id="btn-conta" class="btn-secondary">Conta</button>
         <button id="btn-instrucoes" class="btn-secondary">Instruções</button>
+        <button id="btn-conta" class="btn-secondary">Conta</button>
         <button id="btn-leaderboard" class="btn-secondary">🏆</button>
       </div>
     </header>
@@ -150,6 +150,15 @@
             <span class="instrucoes-tip-icon">💡</span>
             <p>O objectivo é detectar quando um jornal dá mais ênfase a um clube em detrimento de outros. Isto acontece quando a maioria do espaço visível na capa é dominada por um clube, empurrando o restante conteúdo para áreas menos visíveis da capa.</p>
           </div>
+          <div class="instrucoes-label">Atalhos de teclado</div>
+          <div class="kbd-list">
+            <div class="kbd-row"><kbd>Espaço</kbd><span>Começar a votar</span></div>
+            <div class="kbd-row"><kbd>←</kbd><span>Benfica</span></div>
+            <div class="kbd-row"><kbd>→</kbd><span>Sporting</span></div>
+            <div class="kbd-row"><kbd>↑</kbd><span>Restantes</span></div>
+            <div class="kbd-row"><kbd>↓</kbd><span>Porto</span></div>
+            <div class="kbd-row"><kbd>Esc</kbd><span>Fechar / sair da votação</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -176,6 +185,6 @@
     <img id="cover-modal-img" src="" alt="" />
   </div>
 
-  <script type="module" src="/app.js?v=8"></script>
+  <script type="module" src="/app.js?v=9"></script>
 </body>
 </html>

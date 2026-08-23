@@ -1203,6 +1203,22 @@ header h1 {
 .instrucoes-tip-icon { font-size: 1.1rem; flex-shrink: 0; }
 .instrucoes-tip p { margin: 0; }
 
+.kbd-list { display: flex; flex-direction: column; gap: 6px; }
+.kbd-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text); }
+.kbd-row kbd {
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  padding: 3px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 /* ─── Account modal ──────────────────────────────────────────────────────── */
 .acc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
 .acc-stat { background: var(--surface); border: 1px solid var(--border); padding: 14px; text-align: center; }
