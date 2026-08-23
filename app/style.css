@@ -342,6 +342,8 @@ header h1 {
   border: none;
   font-family: inherit;
   cursor: pointer;
+  padding: 14px 40px;
+  font-size: 1rem;
 }
 #comecar-pill:hover  { transform: translate(-50%, -50%) scale(1.04); }
 #comecar-pill:active { transform: translate(-50%, -50%) scale(0.97); }
