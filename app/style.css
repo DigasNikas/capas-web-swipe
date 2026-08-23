@@ -77,7 +77,6 @@ header h1 {
   color: var(--text);
 }
 
-.title-icon { width: 22px; height: 22px; vertical-align: -5px; margin-left: 2px; }
 
 .header-actions {
   display: flex;
@@ -825,9 +824,6 @@ header h1 {
   font-style: italic;
   letter-spacing: -0.01em;
   text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .btn-icon {
