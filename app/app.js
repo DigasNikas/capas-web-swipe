@@ -34,6 +34,10 @@ activeCardArea.addEventListener('click', e => {
 
 document.getElementById('btn-calendar-back').addEventListener('click', deactivateSwipeMode);
 
+document.querySelectorAll('.vote-bar-btn').forEach(btn =>
+  btn.addEventListener('click', () => triggerAction(btn.dataset.dir))
+);
+
 document.getElementById('btn-instrucoes').addEventListener('click', openInstrucoes);
 instrucoesModal.addEventListener('click', e => { if (e.target === instrucoesModal) closeInstrucoes(); });
 

@@ -621,6 +621,31 @@ header h1 {
 }
 
 /* ─── Progress Bar ───────────────────────────────────────────────────────── */
+/* ─── Mobile tap-to-vote bar ─────────────────────────────────────────────── */
+#vote-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+}
+/* Desktop already has swipe-by-drag, arrow keys, and the direction hints —
+   this bar is specifically the tap alternative for touch/mobile. */
+@media (min-width: 761px) {
+  #vote-bar { display: none !important; }
+}
+.vote-bar-btn {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--vote-color);
+  color: var(--text);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.vote-bar-btn:active { background: var(--surface2); transform: scale(0.96); }
+
 #progress-bar-container {
   display: flex;
   align-items: center;
@@ -1202,6 +1227,25 @@ header h1 {
 
 .instrucoes-tip-icon { font-size: 1.1rem; flex-shrink: 0; }
 .instrucoes-tip p { margin: 0; }
+
+.kbd-arrows {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-areas: ". up ." "left down right";
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0 14px;
+}
+.kbd-key { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.kbd-icon { width: 40px; height: 40px; fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.kbd-key span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
 
 .kbd-list { display: flex; flex-direction: column; gap: 6px; }
 .kbd-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text); }
