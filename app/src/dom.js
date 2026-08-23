@@ -30,3 +30,5 @@ export const pillIcon          = document.getElementById('pill-icon');
 export const pillLabel         = document.getElementById('pill-label');
 export const comecarPill       = document.getElementById('comecar-pill');
 export const calendarBackBtn   = document.getElementById('btn-calendar-back');
+export const appTitle          = document.getElementById('app-title');
+export const voteBar           = document.getElementById('vote-bar');

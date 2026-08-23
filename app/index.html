@@ -7,14 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=12" />
+  <link rel="stylesheet" href="/style.css?v=13" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 </head>
 <body>
   <div id="app">
     <!-- Header -->
     <header>
-      <h1>Avaliador de capas desportivas <span class="title-emoji">⚽</span></h1>
+      <h1 id="app-title">Avaliador de capas desportivas <span class="title-emoji">⚽</span></h1>
       <div class="header-actions">
         <a href="https://capas.digasnikas.com/" class="btn-cta btn-cta-small">← Voltar</a>
         <button id="btn-instrucoes" class="btn-secondary">Instruções</button>
@@ -63,6 +63,15 @@
         <p>Loading images…</p>
       </div>
     </main>
+
+    <!-- Mobile-only tap-to-vote bar, shown during active swipe mode as an
+         alternative to swiping -->
+    <div id="vote-bar" class="hidden">
+      <button class="vote-bar-btn" data-dir="left" style="--vote-color: var(--reject)" aria-label="Benfica">🦅</button>
+      <button class="vote-bar-btn" data-dir="right" style="--vote-color: var(--keep)" aria-label="Sporting">🦁</button>
+      <button class="vote-bar-btn" data-dir="down" style="--vote-color: var(--skip)" aria-label="Porto">🐉</button>
+      <button class="vote-bar-btn" data-dir="up" style="--vote-color: var(--favorite)" aria-label="Restantes">?</button>
+    </div>
 
     <!-- Full-app swipe feedback background -->
     <div id="swipe-bg"></div>
@@ -151,12 +160,26 @@
             <p>O objectivo é detectar quando um jornal dá mais ênfase a um clube em detrimento de outros. Isto acontece quando a maioria do espaço visível na capa é dominada por um clube, empurrando o restante conteúdo para áreas menos visíveis da capa.</p>
           </div>
           <div class="instrucoes-label">Atalhos de teclado</div>
+          <div class="kbd-arrows">
+            <div class="kbd-key" style="grid-area: up">
+              <svg class="kbd-icon" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4"/><path d="M12 17V7M8 11l4-4 4 4"/></svg>
+              <span>Restantes</span>
+            </div>
+            <div class="kbd-key" style="grid-area: left">
+              <svg class="kbd-icon" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4"/><path d="M17 12H7M11 8l-4 4 4 4"/></svg>
+              <span>Benfica</span>
+            </div>
+            <div class="kbd-key" style="grid-area: down">
+              <svg class="kbd-icon" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4"/><path d="M12 7v10M8 13l4 4 4-4"/></svg>
+              <span>Porto</span>
+            </div>
+            <div class="kbd-key" style="grid-area: right">
+              <svg class="kbd-icon" viewBox="0 0 24 24"><rect x="1.5" y="1.5" width="21" height="21" rx="4"/><path d="M7 12h10M13 8l4 4-4 4"/></svg>
+              <span>Sporting</span>
+            </div>
+          </div>
           <div class="kbd-list">
             <div class="kbd-row"><kbd>Espaço</kbd><span>Começar a votar</span></div>
-            <div class="kbd-row"><kbd>←</kbd><span>Benfica</span></div>
-            <div class="kbd-row"><kbd>→</kbd><span>Sporting</span></div>
-            <div class="kbd-row"><kbd>↑</kbd><span>Restantes</span></div>
-            <div class="kbd-row"><kbd>↓</kbd><span>Porto</span></div>
             <div class="kbd-row"><kbd>Esc</kbd><span>Fechar / sair da votação</span></div>
           </div>
         </div>
@@ -185,6 +208,6 @@
     <img id="cover-modal-img" src="" alt="" />
   </div>
 
-  <script type="module" src="/app.js?v=9"></script>
+  <script type="module" src="/app.js?v=10"></script>
 </body>
 </html>
