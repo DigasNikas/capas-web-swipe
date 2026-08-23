@@ -106,6 +106,8 @@ header h1 {
 .btn-secondary:hover { border-color: var(--accent); }
 .btn-secondary:active { transform: scale(0.96); }
 
+.header-actions .btn-icon { display: none; }
+
 /* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
 .btn-cta {
   display: inline-flex;
@@ -292,6 +294,18 @@ header h1 {
     padding: 5px 10px;
     font-size: 0.85rem;
   }
+
+  /* Icon-only header buttons on mobile — text labels for Instruções /
+     Definições / Conta / Rank take too much width to fit one row. */
+  .header-actions .btn-secondary {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+  .header-actions .btn-secondary .btn-label { display: none; }
+  .header-actions .btn-secondary .btn-icon { display: inline-flex; }
 }
 
 /* ─── Começar Pill ───────────────────────────────────────────────────────── */

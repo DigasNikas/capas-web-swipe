@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=18" />
+  <link rel="stylesheet" href="/style.css?v=19" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%23ffd60a'/><path d='M16 9l5 3.6-2 6.4h-6l-2-6.4Z' fill='%230a0a0f'/></svg>">
 </head>
 <body>
@@ -20,10 +20,38 @@
           <span class="voltar-arrow" aria-hidden="true">←</span>
           <span class="voltar-text">Voltar</span>
         </a>
-        <button id="btn-instrucoes" class="btn-secondary">Instruções</button>
-        <button id="btn-definicoes" class="btn-secondary">Definições</button>
-        <button id="btn-conta" class="btn-secondary">Conta</button>
-        <button id="btn-leaderboard" class="btn-secondary">Rank</button>
+        <button id="btn-instrucoes" class="btn-secondary" aria-label="Instruções">
+          <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9.5"/>
+            <line x1="12" y1="11" x2="12" y2="16.5"/>
+            <circle cx="12" cy="7.3" r="0.75" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="btn-label">Instruções</span>
+        </button>
+        <button id="btn-definicoes" class="btn-secondary" aria-label="Definições">
+          <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="8" x2="20" y2="8"/>
+            <circle cx="15" cy="8" r="2.2" fill="currentColor" stroke="none"/>
+            <line x1="4" y1="16" x2="20" y2="16"/>
+            <circle cx="9" cy="16" r="2.2" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="btn-label">Definições</span>
+        </button>
+        <button id="btn-conta" class="btn-secondary" aria-label="Conta">
+          <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="3.6"/>
+            <path d="M5 19c0-3.8 3.1-6 7-6s7 2.2 7 6"/>
+          </svg>
+          <span class="btn-label">Conta</span>
+        </button>
+        <button id="btn-leaderboard" class="btn-secondary" aria-label="Rank">
+          <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <rect x="4" y="14" width="4" height="6" rx="1"/>
+            <rect x="10" y="9" width="4" height="11" rx="1"/>
+            <rect x="16" y="4" width="4" height="16" rx="1"/>
+          </svg>
+          <span class="btn-label">Rank</span>
+        </button>
       </div>
     </header>
 
