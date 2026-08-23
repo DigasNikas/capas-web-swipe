@@ -77,7 +77,7 @@ header h1 {
   color: var(--text);
 }
 
-.title-icon { width: 18px; height: 18px; vertical-align: -3px; margin-left: 2px; }
+.title-icon { width: 22px; height: 22px; vertical-align: -5px; margin-left: 2px; }
 
 .header-actions {
   display: flex;
