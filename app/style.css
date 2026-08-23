@@ -95,11 +95,14 @@ header {
 header h1 {
   font-size: 1.1rem;
   font-weight: 900;
+  font-style: italic;
   letter-spacing: -0.02em;
-  text-transform: uppercase;
+  line-height: 1;
   margin-right: auto;
   color: var(--text);
 }
+
+.title-accent { color: var(--accent); }
 
 
 /* Breaks out of #app's 600px column and re-centers on the full viewport
