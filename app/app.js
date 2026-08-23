@@ -69,7 +69,35 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   updateProgress();
 });
 
+// Whichever modal is on top, if any — cover-modal sits above the bottom
+// sheets (z-index 200 vs 60), so it takes priority when both are open.
+function openModal() {
+  if (!coverModal.classList.contains('hidden'))      return { close: closeCoverModal };
+  if (!accountModal.classList.contains('hidden'))     return { close: closeAccount };
+  if (!leaderboardModal.classList.contains('hidden')) return { close: closeLeaderboard };
+  if (!instrucoesModal.classList.contains('hidden'))  return { close: closeInstrucoes };
+  return null;
+}
+
 document.addEventListener('keydown', e => {
+  const modal = openModal();
+
+  if (e.key === 'Escape') {
+    if (modal) { modal.close(); return; }
+    if (!state.presentationMode) deactivateSwipeMode();
+    return;
+  }
+
+  // Don't let space/arrows reach the calendar or the voting card while a
+  // modal is open on top of it.
+  if (modal) return;
+
+  if (e.key === ' ' && state.presentationMode && state.queue.length > 0) {
+    e.preventDefault(); // stop it from also activating whatever button has focus
+    activateSwipeMode(state.queue[0]);
+    return;
+  }
+
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   if (map[e.key]) triggerAction(map[e.key]);
 });
