@@ -142,7 +142,7 @@ header h1 {
 .btn-secondary:hover { border-color: var(--accent); }
 .btn-secondary:active { transform: scale(0.96); }
 
-.header-actions .btn-icon { display: none; color: var(--accent); }
+.header-actions .btn-icon { display: none; color: var(--text); }
 
 /* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
 .btn-cta {
