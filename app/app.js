@@ -2,6 +2,7 @@ import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
   leaderboardModal, instrucoesModal, accountModal, modalOverlay,
+  coverModal,
 } from '/src/dom.js';
 import { groupByDate } from '/src/dates.js';
 import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
@@ -10,7 +11,7 @@ import {
   triggerAction, goToCalendarDate, clearSwipeFeedback, hidePill,
 } from '/src/cards.js';
 import { updateProgress } from '/src/ui.js';
-import { openInstrucoes, closeInstrucoes, addSwipeDownToClose } from '/src/modals.js';
+import { openInstrucoes, closeInstrucoes, addSwipeDownToClose, closeCoverModal } from '/src/modals.js';
 import { openLeaderboard, closeLeaderboard } from '/src/leaderboard.js';
 import { openAccount, closeAccount } from '/src/account.js';
 
@@ -39,6 +40,9 @@ leaderboardModal.addEventListener('click', e => { if (e.target === leaderboardMo
 
 document.getElementById('btn-conta').addEventListener('click', openAccount);
 accountModal.addEventListener('click', e => { if (e.target === accountModal) closeAccount(); });
+
+coverModal.addEventListener('click', closeCoverModal);
+document.getElementById('cover-modal-close').addEventListener('click', closeCoverModal);
 
 modalOverlay.addEventListener('click', () => {
   if (!leaderboardModal.classList.contains('hidden')) closeLeaderboard();
@@ -131,7 +135,8 @@ async function init() {
       if (!img || !action) return null;
       // Catalogue/account grids only ever show these at thumbnail size —
       // use the thumbnail here, keep the swipe card itself (state.images[].src) full-res.
-      return { ...img, src: img.thumb, action, timestamp: s.swiped_at };
+      // `full` keeps the original URL around for the fullscreen cover viewer.
+      return { ...img, src: img.thumb, full: img.src, action, starred: !!s.is_favorite, timestamp: s.swiped_at };
     })
     .filter(Boolean);
 

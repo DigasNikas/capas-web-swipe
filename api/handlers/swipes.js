@@ -5,10 +5,28 @@ export async function handleGetSwipes(request, env) {
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   const { results } = await env.DB
-    .prepare("SELECT cover_id, decision, swiped_at FROM swipes WHERE user_email = ?")
+    .prepare("SELECT cover_id, decision, is_favorite, swiped_at FROM swipes WHERE user_email = ?")
     .bind(userEmail)
     .all();
   return json(results);
+}
+
+export async function handleToggleFavorite(request, env) {
+  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (!userEmail) return json({ error: "Unauthorized" }, 401);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+
+  const { cover_id, favorite } = body;
+  if (!cover_id || typeof favorite !== "boolean") return json({ error: "Missing cover_id or favorite" }, 400);
+
+  await env.DB
+    .prepare("UPDATE swipes SET is_favorite = ? WHERE user_email = ? AND cover_id = ?")
+    .bind(favorite ? 1 : 0, userEmail, cover_id)
+    .run();
+
+  return json({ ok: true });
 }
 
 export async function handleSwipe(request, env) {
