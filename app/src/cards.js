@@ -49,7 +49,7 @@ export function renderStack() {
   state.queue.forEach(id => {
     if (!existingIds.has(id)) {
       const img = state.images.find(i => i.id === id);
-      if (img) cardStack.appendChild(buildCard(img, { interactive: true }));
+      if (img) cardStack.appendChild(buildCard(img, true));
     }
   });
 
@@ -128,7 +128,7 @@ function showActiveCard() {
   attachSwipeListeners(card);
 }
 
-export function buildCard(img, { interactive = false } = {}) {
+export function buildCard(img, interactive = false) {
   const div = document.createElement('div');
   div.className = 'card';
   div.dataset.id = img.id;
