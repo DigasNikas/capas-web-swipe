@@ -14,8 +14,13 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
+      # See scrape.yml for why -f is gone and why this may still 403.
       - name: Trigger scraper
         run: |
-          curl -f \
+          code=$(curl -sS -o response.txt -w '%{http_code}' \
+            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
-            "https://capas.digasnikas.com/api/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}"
+            "https://capas.digasnikas.com/api/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}")
+          echo "HTTP $code"
+          head -c 2000 response.txt
+          test "$code" = "200"
