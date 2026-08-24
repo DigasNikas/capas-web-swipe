@@ -469,7 +469,7 @@ body {
   margin-top: 10px;
   min-height: 34px;
 }
-.l-comments-auth { display: flex; align-items: center; gap: 10px; }
+.l-comments-auth { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .l-comments-auth .l-cta-small {
   margin-bottom: 0;
   border: none;
@@ -477,6 +477,7 @@ body {
   font-family: inherit;
 }
 .l-comments-hint {
+  flex: 0 0 100%;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   letter-spacing: 0.08em;
