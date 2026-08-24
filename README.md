@@ -280,10 +280,12 @@ counted as misses, so an in-progress backfill can't skew it.
 
 ### Where they disagree
 
-Under the card, a button opens a grid of every cover the model and the crowd
-read differently, newest first, each showing both labels. No extra endpoint:
-`/api/stats` already returns `club` and `ai_club` per cover for the calendar,
-so it is a filter over rows already in memory, built on first open.
+Under the card, a button opens every cover the model and the crowd read
+differently. It navigates like the app's Histórico — a month picker first,
+then that month's covers as portrait cards, each carrying both verdicts as
+colour blocks so the disagreement is legible at thumbnail size. No extra
+endpoint: `/api/stats` already returns `club` and `ai_club` per cover for the
+calendar, so it is a filter over rows already in memory, built on first open.
 
 The section sits between the community verdict and the comments — the
 conversation is about both readings, so it comes last.

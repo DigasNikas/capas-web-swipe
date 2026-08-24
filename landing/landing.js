@@ -507,17 +507,32 @@ function renderAi(latestAi, latest, rows) {
   renderAiDiffs(rows);
 }
 
-// The other 13%: every cover the model and the crowd read differently, newest
-// first. No extra request — /api/stats already returns both labels per cover
-// for the calendar, so this is a filter over rows already in memory, and the
-// grid is only built the first time it's opened.
+// The other 13%: every cover the model and the crowd read differently. Same
+// navigation as the app's Histórico — pick a month, then see its covers —
+// because the full list is a few hundred cards and nobody scrolls that.
+// No extra request: /api/stats already returns both labels per cover for the
+// calendar, so this is a filter over rows already in memory.
 function renderAiDiffs(rows) {
   const diffs = rows.filter(r => r.ai_club && r.ai_club !== r.club).reverse();
   if (diffs.length === 0) return;
 
   const btn = document.getElementById('btn-ai-diffs');
-  const grid = document.getElementById('ai-diffs');
-  const label = () => grid.classList.contains('hidden')
+  const panel = document.getElementById('ai-diffs');
+  const months = groupDiffsByMonth(diffs);
+  let openMonth = null;
+
+  const draw = () => {
+    if (!openMonth) {
+      panel.innerHTML = `<div class="l-ai-months">${months.map(aiMonthCard).join('')}</div>`;
+      return;
+    }
+    const m = months.find(x => x.key === openMonth);
+    panel.innerHTML = `
+      <button class="l-ai-back" type="button">← ${m.label} · ${m.items.length} capas</button>
+      <div class="l-ai-grid">${m.items.map(aiDiffCard).join('')}</div>`;
+  };
+
+  const label = () => panel.classList.contains('hidden')
     ? `Onde discordam · ${diffs.length} capas →`
     : 'Esconder ↑';
 
@@ -525,16 +540,48 @@ function renderAiDiffs(rows) {
   btn.textContent = label();
 
   btn.addEventListener('click', () => {
-    if (grid.childElementCount === 0) grid.innerHTML = diffs.map(aiDiffCard).join('');
-    grid.classList.toggle('hidden');
+    if (panel.childElementCount === 0) draw();
+    panel.classList.toggle('hidden');
     btn.textContent = label();
   });
 
-  // One listener for the whole grid — it can hold a few hundred covers.
-  grid.addEventListener('click', e => {
-    const img = e.target.closest('img');
-    if (img) openCoverModal(img.dataset.url, img.alt);
+  // One listener for the whole panel — it can hold a few hundred covers.
+  panel.addEventListener('click', e => {
+    if (e.target.closest('.l-ai-back')) { openMonth = null; draw(); return; }
+    const month = e.target.closest('.l-ai-month');
+    if (month) { openMonth = month.dataset.key; draw(); return; }
+    // The whole card is the target, caption included — half a card that opens
+    // the cover and half that does nothing is just a broken-feeling card.
+    const card = e.target.closest('.l-ai-diff');
+    if (card) openCoverModal(card.dataset.url, card.dataset.paper);
   });
+}
+
+function groupDiffsByMonth(diffs) {
+  const map = new Map();
+  for (const r of diffs) {
+    const key = r.date.slice(0, 7);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(r);
+  }
+  return [...map.entries()].map(([key, items]) => ({
+    key,
+    label: new Date(key + '-01T00:00:00')
+      .toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }),
+    items,
+  }));
+}
+
+// The fanned three-cover stack from Histórico's month picker.
+function aiMonthCard({ key, label, items }) {
+  const stack = items.slice(0, 3)
+    .map((r, i) => `<span class="l-ai-bc bc-${i}"><img src="${r.thumb_url}" alt="" loading="lazy" /></span>`)
+    .join('');
+  return `
+    <button class="l-ai-month" type="button" data-key="${key}">
+      <span class="l-ai-stack">${stack}<span class="l-ai-count">${items.length}</span></span>
+      <span class="l-ai-mlabel">${label}</span>
+    </button>`;
 }
 
 // Same shape as the app's Histórico grid: small portrait card, caption laid
@@ -547,8 +594,8 @@ function aiDiffCard(r) {
   const side = (tag, k) =>
     `<span class="ad-v" style="background:${CLUB_META[k].color}"><i>${tag}</i>${CLUB_META[k].short}</span>`;
   return `
-    <figure class="l-ai-diff">
-      <img src="${r.thumb_url}" alt="${paper}" loading="lazy" data-url="${r.url}" />
+    <figure class="l-ai-diff" data-url="${r.url}" data-paper="${paper}">
+      <img src="${r.thumb_url}" alt="${paper}" loading="lazy" />
       <figcaption>
         <div class="ad-date">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]}</div>
         <div class="ad-vs">${side('AI', r.ai_club)}${side('VOTO', r.club)}</div>
