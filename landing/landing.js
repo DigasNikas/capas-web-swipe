@@ -67,7 +67,7 @@ async function init() {
 
   renderEpoca(rows, defaultEpoca, matchesByDate);
   renderVerdict('latest', stats.latest, 'dos votos');
-  renderAi(stats.latestAi, stats.latest);
+  renderAi(stats.latestAi, stats.latest, stats.rows);
   if (stats.latest) initComments();
 }
 
@@ -491,7 +491,7 @@ function renderVerdict(id, data, unit) {
   document.getElementById(`${id}-conf-label`).textContent = `${pct}% ${unit}`;
 }
 
-function renderAi(latestAi, latest) {
+function renderAi(latestAi, latest, rows) {
   renderVerdict('ai', latestAi, 'dos jornais');
   if (!latestAi) return;
 
@@ -503,6 +503,53 @@ function renderAi(latestAi, latest) {
   const verdictEl = document.getElementById('ai-vs-human');
   verdictEl.textContent = same ? 'HOJE · CONCORDA COM A COMUNIDADE' : 'HOJE · DISCORDA DA COMUNIDADE';
   verdictEl.classList.toggle('disagrees', !same);
+
+  renderAiDiffs(rows);
+}
+
+// The other 13%: every cover the model and the crowd read differently, newest
+// first. No extra request — /api/stats already returns both labels per cover
+// for the calendar, so this is a filter over rows already in memory, and the
+// grid is only built the first time it's opened.
+function renderAiDiffs(rows) {
+  const diffs = rows.filter(r => r.ai_club && r.ai_club !== r.club).reverse();
+  if (diffs.length === 0) return;
+
+  const btn = document.getElementById('btn-ai-diffs');
+  const grid = document.getElementById('ai-diffs');
+  const label = () => grid.classList.contains('hidden')
+    ? `Onde discordam · ${diffs.length} capas →`
+    : 'Esconder ↑';
+
+  btn.classList.remove('hidden');
+  btn.textContent = label();
+
+  btn.addEventListener('click', () => {
+    if (grid.childElementCount === 0) grid.innerHTML = diffs.map(aiDiffCard).join('');
+    grid.classList.toggle('hidden');
+    btn.textContent = label();
+  });
+
+  // One listener for the whole grid — it can hold a few hundred covers.
+  grid.addEventListener('click', e => {
+    const img = e.target.closest('img');
+    if (img) openCoverModal(img.dataset.url, img.alt);
+  });
+}
+
+function aiDiffCard(r) {
+  const d = new Date(r.date + 'T00:00:00');
+  const paper = PAPERS_BY_ID[r.newspaper];
+  const club = k => `<b style="color:${CLUB_META[k].color}">${CLUB_META[k].name}</b>`;
+  return `
+    <figure class="l-ai-diff">
+      <img src="${r.thumb_url}" alt="${paper}" loading="lazy" data-url="${r.url}" />
+      <figcaption>
+        <div class="ad-meta">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}</div>
+        <div class="ad-row"><span class="ad-tag ad-tag-ai">AI</span>${club(r.ai_club)}</div>
+        <div class="ad-row"><span class="ad-tag">VOTO</span>${club(r.club)}</div>
+      </figcaption>
+    </figure>`;
 }
 
 // Shrinks font-size until the (single-line) text fits its container —
@@ -547,6 +594,10 @@ const SESSION_KEY = 'capas_gid';
 let session = sessionStorage.getItem(SESSION_KEY);
 
 async function initComments() {
+  // Its own section since the AI card moved in between — used to be nested
+  // inside #latest, which is what hid it until there was a day to talk about.
+  document.getElementById('conversa').classList.remove('hidden');
+
   const res = await fetch(`${API_URL}/comments`);
   if (!res.ok) return;
   const { comments } = await res.json();

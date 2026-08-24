@@ -418,6 +418,28 @@ body {
 .l-ai-vs { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--l-yellow); color: var(--l-yellow); }
 .l-ai-vs.disagrees { background: rgba(255,255,255,0.05); border-left-color: var(--l-muted); color: var(--l-muted); }
 
+/* Terminal readout instead of a plain eyebrow — the one green thing on the
+   page, so the machine's card doesn't read as another community section. */
+.l-ai-live { display: inline-flex; align-items: center; gap: 7px; color: #3ddc84; }
+.l-ai-live::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; box-shadow: 0 0 6px currentColor;
+  animation: ai-blink 2.4s ease-in-out infinite;
+}
+@keyframes ai-blink { 50% { opacity: 0.2; } }
+
+.l-ai-diffs-btn { margin-top: 16px; }
+.l-ai-diffs { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+.l-ai-diff { margin: 0; }
+.l-ai-diff img { width: 100%; aspect-ratio: 0.72; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,0.4); cursor: zoom-in; transition: transform 0.15s ease; }
+.l-ai-diff .ad-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); margin-top: 5px; }
+.l-ai-diff .ad-row { display: flex; align-items: baseline; gap: 6px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+.l-ai-diff .ad-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--l-muted); width: 26px; flex: none; }
+.l-ai-diff .ad-tag-ai { color: #3ddc84; }
+@media (hover: hover) {
+  .l-ai-diff img:hover { transform: scale(1.04); }
+}
+
 .l-footer { text-align: center; padding: 30px 0 50px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--l-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 
 .hidden { display: none !important; }
@@ -574,6 +596,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .l-cta { transition: none; }
   .l-cta:hover { transform: none; }
+  .l-ai-live::before { animation: none; }
 }
 
 @media (max-width: 760px) {

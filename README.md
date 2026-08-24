@@ -278,6 +278,16 @@ from the AI section until a backfill picks it up.
 backfill hasn't reached yet are *excluded* from the day's verdict rather than
 counted as misses, so an in-progress backfill can't skew it.
 
+### Where they disagree
+
+Under the card, a button opens a grid of every cover the model and the crowd
+read differently, newest first, each showing both labels. No extra endpoint:
+`/api/stats` already returns `club` and `ai_club` per cover for the calendar,
+so it is a filter over rows already in memory, built on first open.
+
+The section sits between the community verdict and the comments — the
+conversation is about both readings, so it comes last.
+
 ### Cost
 
 ~$0.0006 per cover ($0.27/M input + $0.85/M output tokens). Three covers a day
