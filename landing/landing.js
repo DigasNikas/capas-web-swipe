@@ -150,8 +150,8 @@ function renderEpoca(rows, epoca, matchesByDate) {
   });
 
   renderSuspeito(computeSuspeito(days, matchesByDate), epoca);
-  renderCalendar(days, matchesByDate, epoca);
-  renderBarcode(days);
+  const highlightBarcodeDay = renderBarcode(days);
+  renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay);
 }
 
 function renderPapers(rows) {
@@ -315,7 +315,7 @@ function renderSuspeito(stats, epoca) {
   };
 }
 
-function renderCalendar(days, matchesByDate, epoca) {
+function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
   let paperFilter = null;
   let selectedCell = null;
   const calEl = document.getElementById('calendar');
@@ -444,6 +444,7 @@ function renderCalendar(days, matchesByDate, epoca) {
           cell.classList.add('selected');
           selectedCell = cell;
           showDay(day);
+          if (highlightBarcodeDay) highlightBarcodeDay(day.date);
         });
         grid.appendChild(cell);
       });
@@ -475,6 +476,7 @@ function renderBarcode(days) {
       const club = day.covers[paper];
       const stripe = document.createElement('i');
       stripe.className = 'bc-day';
+      stripe.dataset.date = day.date;
       stripe.style.background = club ? CLUB_META[club].color : 'var(--l-panel2)';
       stripe.dataset.tip = `${day.date} \u00b7 ${club ? CLUB_META[club].name : 'sem capa'}`;
       strip.appendChild(stripe);
@@ -487,6 +489,12 @@ function renderBarcode(days) {
   document.getElementById('barcode-range').textContent = sorted.length
     ? `${sorted[0].date} \u2192 ${sorted[sorted.length - 1].date} \u00b7 ${sorted.length} dias`
     : '';
+
+  // Lets the calendar mirror its selected day here, across all three rows.
+  return function highlightBarcodeDay(date) {
+    el.querySelectorAll('.bc-day.selected').forEach(s => s.classList.remove('selected'));
+    el.querySelectorAll(`.bc-day[data-date="${date}"]`).forEach(s => s.classList.add('selected'));
+  };
 }
 
 // Renders one verdict card — the crowd's ("latest") or the model's ("ai").
@@ -667,30 +675,32 @@ async function renderAvgCovers() {
       <figcaption>${label}<span>m\u00e9dia de ${counts[key]} capas</span></figcaption>
     </figure>`;
 
-  const papersEl = document.getElementById('avg-papers');
-  papersEl.innerHTML = papers.map(p => card(p, PAPERS_BY_ID[p])).join('');
-  document.getElementById('media').classList.remove('hidden');
+  const gridEl = document.getElementById('avg-papers');
+  const filterEl = document.getElementById('avg-club-filter');
 
-  const gridEl = document.getElementById('avg-clubs');
-  const filterEl = document.getElementById('avg-paper-filter');
-
-  function draw(paper) {
-    gridEl.innerHTML = CLUB_KEYS
-      .filter(c => counts[`${paper}-${c}`])
-      .map(c => card(`${paper}-${c}`, CLUB_META[c].name))
+  // null = "Todos" (the plain per-paper mean); a club key switches all three
+  // papers to that club's mean at once, so the three cards stay comparable.
+  function draw(club) {
+    gridEl.innerHTML = papers
+      .filter(p => !club || counts[`${p}-${club}`])
+      .map(p => card(club ? `${p}-${club}` : p, PAPERS_BY_ID[p]))
       .join('');
-    [...filterEl.children].forEach(b => b.classList.toggle('active', b.dataset.paper === paper));
+    [...filterEl.children].forEach(b => b.classList.toggle('active', b.dataset.club === (club || 'todos')));
   }
 
-  filterEl.innerHTML = papers.map(p => `<button data-paper="${p}">${PAPERS_BY_ID[p]}</button>`).join('');
-  filterEl.addEventListener('click', e => { if (e.target.dataset.paper) draw(e.target.dataset.paper); });
-  draw(papers[0]);
-  document.getElementById('media-clube').classList.remove('hidden');
+  filterEl.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CLUB_KEYS.map(c => ({ id: c, name: CLUB_META[c].name }))]
+    .map(c => `<button data-club="${c.id}">${c.name}</button>`).join('');
+  filterEl.addEventListener('click', e => {
+    if (!e.target.dataset.club) return;
+    draw(e.target.dataset.club === 'todos' ? null : e.target.dataset.club);
+  });
+  draw(null);
+  document.getElementById('media').classList.remove('hidden');
 
   // Detail is the whole point of these and the grid renders them small.
-  [papersEl, gridEl].forEach(g => g.addEventListener('click', e => {
+  gridEl.addEventListener('click', e => {
     if (e.target.tagName === 'IMG') openCoverModal(e.target.src, e.target.alt);
-  }));
+  });
 }
 
 function fitTextToContainer(el, maxRem = 4.5, minRem = 1.6) {

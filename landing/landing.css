@@ -336,6 +336,9 @@ body {
 .bc-label { position: sticky; left: 0; z-index: 1; background: var(--l-panel); flex: 0 0 62px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l-muted); }
 .bc-strip { flex: 1; display: flex; height: 34px; }
 .bc-day { flex: 1 1 0; min-width: 2px; position: relative; opacity: 0.82; }
+/* Mirrors the calendar's selected day here, across all three rows — JS-toggled
+   (not :hover) so it works from a tap too. */
+.bc-day.selected { opacity: 1; outline: 2px solid var(--l-yellow); outline-offset: -1px; z-index: 10; }
 
 .l-day-panel { margin-top: 14px; background: var(--l-panel); border-left: 4px solid var(--l-panel2); padding: 14px 18px; min-height: 60px; display: flex; align-items: center; }
 .l-day-hint { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--l-muted); text-align: center; width: 100%; }
@@ -402,6 +405,10 @@ body {
   border: 1px solid var(--l-panel2);
   display: grid; grid-template-columns: 1fr 1.2fr; gap: 0;
 }
+/* "Conversa" sits flush underneath with no gap — one continuous card, its own
+   top border reading as the only divider between verdict and comments. */
+#latest { margin-bottom: 0; }
+#latest .l-latest-inner { border-bottom: none; }
 .l-latest-left { padding: 24px 26px; }
 #latest-title { white-space: nowrap; overflow: hidden; }
 .l-latest-desc { font-size: 0.82rem; color: var(--l-muted); line-height: 1.5; margin-top: 6px; }
@@ -539,7 +546,7 @@ body {
 /* ── Comentários ────────────────────────────────────────────────────── */
 
 .l-comments {
-  margin-top: 18px;
+  margin-top: 0;
   background: linear-gradient(135deg, var(--l-panel), var(--l-panel2));
   border: 1px solid var(--l-panel2);
   padding: 18px 20px 20px;
