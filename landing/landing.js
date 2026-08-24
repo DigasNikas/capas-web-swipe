@@ -211,13 +211,26 @@ function dayStats(day) {
 function pulseFor(day, matchesByDate) {
   const prevMatches = matchesByDate.get(prevDateStr(day.date)) || [];
   if (prevMatches.length === 0) return null;
+
   const covered = new Set(Object.values(day.covers));
-  const noneMentioned = prevMatches.every(m => !covered.has(m));
-  const someUnmentionedMulti = prevMatches.length > 1 && prevMatches.some(m => !covered.has(m));
-  const { unanimous } = dayStats(day);
-  const singleNotUnanimous = prevMatches.length === 1 && !unanimous;
-  if (noneMentioned || someUnmentionedMulti || singleNotUnanimous) return prevMatches;
-  return null;
+  const alsoPlayed = new Set(prevMatches);
+
+  // A club's missing/split coverage only counts as a snub when a specific
+  // rival took the front page instead — a club that didn't itself play
+  // that day, and isn't Restantes. Restantes means a bigger, unrelated
+  // story; another club from prevMatches is an equally legitimate story
+  // on a multi-match day. Neither is evidence anyone was hidden on
+  // purpose, so neither should count against the paper that picked it.
+  const stolenBySomeRival = club =>
+    Object.values(day.covers).some(c => c !== 'others' && c !== club && !alsoPlayed.has(c));
+
+  if (prevMatches.length > 1) {
+    const snubbed = prevMatches.filter(m => !covered.has(m) && stolenBySomeRival(m));
+    return snubbed.length ? snubbed : null;
+  }
+
+  const club = prevMatches[0];
+  return stolenBySomeRival(club) ? prevMatches : null;
 }
 
 function renderCalendar(days, matchesByDate, epoca) {
