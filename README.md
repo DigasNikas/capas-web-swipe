@@ -192,16 +192,11 @@ no build step, no GitHub Actions workflow involved.
 
 The Worker runs hourly from **05:00–08:00 UTC** (06:00–09:00/07:00–10:00 Lisbon), scraping today's cover for each newspaper. Running four times ensures the cover is captured even if sapo.pt is slow to publish.
 
-### Sources, and the fallback
+### Sources, primary and fallback
 
-The archive is built from **sapo.pt**, which is where the scraper still looks
-first. It is not reliable: on 2026-08-24 it stopped answering on both :80 and
-:443 for hours — confirmed dead from three separate networks, not a block — and
-every run logged `Failed to fetch page ...: 522`, Cloudflare's "no answer from
-origin".
-
-So `scraper.js` falls back to **capasjornais.pt**, which carries the same three
-papers at a URL computable from the date alone:
+The scraper looks at **capasjornais.pt** first: its images carry no watermark
+(sapo.pt's do), and the URL is computable from the date alone — no page to
+fetch, no HTMLRewriter:
 
 ```
 https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg
@@ -210,14 +205,22 @@ https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg
                                                  jornal_o_jogo
 ```
 
-No page to fetch, no HTMLRewriter, and back issues go years deep — so it covers
-outages *and* backfills. Missing dates 404 cleanly, so a fallback miss is just a
-log line. `node api/lib/scraper.test.mjs` guards the date munging (sapo writes
-`YYYYMMDD`, capasjornais writes `DDMMYYYY` under a `YYYYMM` folder).
+Missing dates 404 cleanly, so a miss here is just a log line, not an error.
+`node api/lib/scraper.test.mjs` guards the date munging (capasjornais.pt writes
+`DDMMYYYY` under a `YYYYMM` folder, unlike sapo's `YYYYMMDD`). Back issues go
+years deep, so it covers backfills as well as day-to-day scraping.
 
-Full-res is ~960×1230 there versus sapo's framing, so a stretch scraped from the
-fallback is a third "era" for `scripts/avg_cover.py` to align — it already
-cross-correlates, so this costs nothing, but rerun it after a long outage.
+**sapo.pt** — the archive's original source, and still the one whose page gets
+parsed (HTMLRewriter, `.article-newspaper img`) — is the fallback, used only
+when capasjornais.pt 404s or is down. It does go down: on 2026-08-24 it stopped
+answering on both :80 and :443 for hours — confirmed dead from three separate
+networks, not a block — and every scrape logged `Failed to fetch page ...:
+522`, Cloudflare's "no answer from origin".
+
+Full-res framing differs slightly between the two (~960×1230 on capasjornais.pt
+vs sapo's crop), so a stretch scraped from the fallback is a third "era" for
+`scripts/avg_cover.py` to align — it already cross-correlates, so this costs
+nothing, but rerun it after a long sapo.pt-fallback stretch.
 
 ### Manual (GitHub Actions)
 

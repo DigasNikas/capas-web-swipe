@@ -1,9 +1,9 @@
 import { classifyAndStore } from "./ai.js";
 
 export const NEWSPAPERS = [
-  { slug: "record", url: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}", fallback: "jornal_record" },
-  { slug: "abola",  url: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}", fallback: "jornal_a_bola" },
-  { slug: "ojogo",  url: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}", fallback: "jornal_o_jogo" },
+  { slug: "record", capasjornais: "jornal_record",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
+  { slug: "abola",  capasjornais: "jornal_a_bola",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
+  { slug: "ojogo",  capasjornais: "jornal_o_jogo",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}" },
 ];
 
 const FETCH_HEADERS = {
@@ -41,14 +41,13 @@ async function extractCoverImage(response) {
   return imageUrl;
 }
 
-// sapo.pt is the source the whole archive was built from, but it does go down —
-// on 2026-08-24 it stopped answering on :80 and :443 for hours and every scrape
-// logged a 522. capasjornais.pt carries the same three papers at a URL you can
-// compute from the date alone (no page to parse, no HTMLRewriter) and keeps
-// years of back issues, so it covers both the outage and any backfill.
-export function fallbackUrl(newspaper, dateStr) {
+// capasjornais.pt is the primary source: its images carry no watermark (sapo.pt's
+// do), and the URL is computable from the date alone — no page to fetch, no
+// HTMLRewriter. sapo.pt is the fallback, used when capasjornais.pt 404s or is
+// down, which does happen — it went dark for hours on 2026-08-24.
+export function capasjornaisUrl(newspaper, dateStr) {
   const [y, m, d] = [dateStr.slice(0, 4), dateStr.slice(4, 6), dateStr.slice(6, 8)];
-  return `https://capasjornais.pt/img/FrontPages/${y}${m}/${newspaper.fallback}_${d}${m}${y}.jpg`;
+  return `https://capasjornais.pt/img/FrontPages/${y}${m}/${newspaper.capasjornais}_${d}${m}${y}.jpg`;
 }
 
 // null rather than a throw: a dead source is the normal case here, not an error.
@@ -64,13 +63,13 @@ async function tryFetch(url) {
 
 // The cover image itself, from whichever source still has it.
 async function fetchCover(newspaper, dateStr) {
-  const page = await tryFetch(newspaper.url.replace("{date}", dateStr));
-  if (page) {
-    const imgUrl = await extractCoverImage(page);
-    const img = imgUrl && (await tryFetch(imgUrl));
-    if (img) return img;
-  }
-  return tryFetch(fallbackUrl(newspaper, dateStr));
+  const primary = await tryFetch(capasjornaisUrl(newspaper, dateStr));
+  if (primary) return primary;
+
+  const page = await tryFetch(newspaper.sapoUrl.replace("{date}", dateStr));
+  if (!page) return null;
+  const imgUrl = await extractCoverImage(page);
+  return imgUrl && tryFetch(imgUrl);
 }
 
 export async function scrapeNewspaper(newspaper, date, env) {
@@ -95,7 +94,7 @@ export async function scrapeNewspaper(newspaper, date, env) {
 
   const imgResponse = await fetchCover(newspaper, dateStr);
   if (!imgResponse) {
-    console.error(`No cover for ${newspaper.slug} ${dateLabel}: sapo.pt and capasjornais.pt both came up empty`);
+    console.error(`No cover for ${newspaper.slug} ${dateLabel}: capasjornais.pt and sapo.pt both came up empty`);
     return;
   }
 
