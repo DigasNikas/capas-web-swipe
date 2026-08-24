@@ -46,3 +46,17 @@ CREATE TABLE IF NOT EXISTS analytics_covers (
   votes_total INTEGER NOT NULL,
   updated_at  TEXT DEFAULT (datetime('now'))
 );
+
+-- Landing-page comments, scoped to a single cover day. Reads always filter on
+-- the newest date in analytics_covers, so a comment stops being reachable the
+-- moment tomorrow's covers land. No email column by design — the landing page
+-- must never be able to correlate a comment with an app account.
+CREATE TABLE IF NOT EXISTS comments (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  date       TEXT NOT NULL,            -- 'YYYY-MM-DD', the cover day
+  author     TEXT NOT NULL,            -- Google given_name, first word only
+  author_sub TEXT NOT NULL,            -- opaque Google subject id, for rate limits
+  body       TEXT NOT NULL,            -- <= 240 chars, plain text
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_date ON comments(date, created_at);
