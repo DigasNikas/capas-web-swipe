@@ -5,9 +5,10 @@
  *   COVERS_BUCKET  — R2 bucket
  *   DB             — D1 database
  *   IMAGES         — Cloudflare Images (thumbnail generation)
+ *   AI             — Workers AI (zero-shot cover classification)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
- *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs and /notify endpoints
+ *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-* and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
  */
@@ -22,6 +23,7 @@ import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
+import { handleBackfillAi } from "./handlers/backfill-ai.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
 export default {
@@ -52,6 +54,7 @@ export default {
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
+    if (method === "POST" && pathname === "/backfill-ai")     return handleBackfillAi(request, env);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
     if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);
