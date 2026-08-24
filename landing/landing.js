@@ -537,17 +537,21 @@ function renderAiDiffs(rows) {
   });
 }
 
+// Same shape as the app's Histórico grid: small portrait card, caption laid
+// over the cover. The two verdicts are colour blocks rather than text so the
+// disagreement is readable at thumbnail size — club colour carries it, the
+// SCP/SLB/FCP code is just the confirmation.
 function aiDiffCard(r) {
   const d = new Date(r.date + 'T00:00:00');
   const paper = PAPERS_BY_ID[r.newspaper];
-  const club = k => `<b style="color:${CLUB_META[k].color}">${CLUB_META[k].name}</b>`;
+  const side = (tag, k) =>
+    `<span class="ad-v" style="background:${CLUB_META[k].color}"><i>${tag}</i>${CLUB_META[k].short}</span>`;
   return `
     <figure class="l-ai-diff">
       <img src="${r.thumb_url}" alt="${paper}" loading="lazy" data-url="${r.url}" />
       <figcaption>
-        <div class="ad-meta">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}</div>
-        <div class="ad-row"><span class="ad-tag ad-tag-ai">AI</span>${club(r.ai_club)}</div>
-        <div class="ad-row"><span class="ad-tag">VOTO</span>${club(r.club)}</div>
+        <div class="ad-date">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]}</div>
+        <div class="ad-vs">${side('AI', r.ai_club)}${side('VOTO', r.club)}</div>
       </figcaption>
     </figure>`;
 }

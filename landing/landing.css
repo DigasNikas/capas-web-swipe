@@ -428,16 +428,23 @@ body {
 }
 @keyframes ai-blink { 50% { opacity: 0.2; } }
 
+/* Mirrors the app's Histórico grid — dense portrait cards, caption over the
+   cover — so the two products look like one. */
 .l-ai-diffs-btn { margin-top: 16px; }
-.l-ai-diffs { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
-.l-ai-diff { margin: 0; }
-.l-ai-diff img { width: 100%; aspect-ratio: 0.72; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,0.4); cursor: zoom-in; transition: transform 0.15s ease; }
-.l-ai-diff .ad-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--l-muted); margin-top: 5px; }
-.l-ai-diff .ad-row { display: flex; align-items: baseline; gap: 6px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
-.l-ai-diff .ad-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; color: var(--l-muted); width: 26px; flex: none; }
-.l-ai-diff .ad-tag-ai { color: #3ddc84; }
+.l-ai-diffs { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; align-items: start; }
+
+.l-ai-diff { margin: 0; position: relative; background: #14141b; cursor: zoom-in; }
+.l-ai-diff::before { content: ''; display: block; padding-bottom: 133.33%; }
+.l-ai-diff img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.l-ai-diff figcaption { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 3px 3px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); }
+.l-ai-diff .ad-date { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255,255,255,0.95); text-align: center; line-height: 1.2; margin-bottom: 3px; }
+.l-ai-diff .ad-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.l-ai-diff .ad-v { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; font-weight: 700; color: #fff; text-align: center; padding: 2px 0 3px; line-height: 1.1; }
+.l-ai-diff .ad-v i { display: block; font-style: normal; font-size: 0.42rem; font-weight: 500; letter-spacing: 0.08em; opacity: 0.8; }
+
 @media (hover: hover) {
-  .l-ai-diff img:hover { transform: scale(1.04); }
+  .l-ai-diff:hover { outline: 1px solid var(--l-yellow); }
 }
 
 .l-footer { text-align: center; padding: 30px 0 50px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--l-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
