@@ -47,6 +47,7 @@ capas-web-swipe/
 │       ├── catalogue.js    Histórico rendering (drill-down, filters, image grid)
 │       ├── leaderboard.js  Leaderboard modal (fetch + render)
 │       ├── account.js      Conta modal (stats, rank, Histórico) — reuses catalogue.js
+│       ├── settings.js     Definições modal (vote method toggles, theme) — persists to localStorage
 │       └── modals.js       animateModalClose, swipe-down-to-close, instrucoes modal
 │
 ├── wrangler.toml         Cloudflare Worker configuration
@@ -75,17 +76,11 @@ capas-web-swipe/
 │       ├── backfill-ai.js      POST /backfill-ai     (admin)
 │       └── *.test.mjs    Self-checks — plain `node api/handlers/<name>.test.mjs`, no framework
 │
-├── scripts/              Local tooling (not deployed)
-│   ├── scrape_month.sh   Trigger the /scrape API for a full calendar month
-│   ├── eval-ai.mjs       Score the AI prompt against the crowd labels — see "AI Detector"
-│   ├── avg_cover.py      Pixel-wise mean of every cover → landing/avg/ (numpy + pillow)
-│   └── import_matches.py Import match dates into D1 (football-data.org + api-sports.io)
-│
-└── images/               Newspaper logos (static assets for the frontend)
-    ├── abola.png
-    ├── ojogo.png
-    ├── record.png
-    └── manifest.json
+└── scripts/              Local tooling (not deployed)
+    ├── scrape_month.sh   Trigger the /scrape API for a full calendar month
+    ├── eval-ai.mjs       Score the AI prompt against the crowd labels — see "AI Detector"
+    ├── avg_cover.py      Pixel-wise mean of every cover → landing/avg/ (numpy + pillow)
+    └── import_matches.py Import match dates into D1 (football-data.org + api-sports.io)
 ```
 
 The frontend uses native ES modules (`<script type="module">`) — no build step required. `src/` and `style.css` live inside `app/` because only `app.js` uses them — `landing/` never touches either. Every reference across files (`/src/state.js`, `/style.css`) uses an absolute path rather than a relative one. Modules share state via the `state` object exported from `src/state.js`, which is passed by reference across all imports — `account.js` reads `state.images`/`state.catalogue` directly rather than refetching `/api/covers`+`/api/swipes` itself, since `app.js`'s `init()` already loaded them before any modal can be opened.
