@@ -222,6 +222,7 @@ function pulseFor(day, matchesByDate) {
 
 function renderCalendar(days, matchesByDate, epoca) {
   let paperFilter = null;
+  let selectedCell = null;
   const calEl = document.getElementById('calendar');
   const legendEl = document.getElementById('legend');
   const panelEl = document.getElementById('day-panel');
@@ -343,7 +344,12 @@ function renderCalendar(days, matchesByDate, epoca) {
           const pulse = pulseFor(day, matchesByDate);
           if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
         }
-        cell.addEventListener('click', () => showDay(day));
+        cell.addEventListener('click', () => {
+          if (selectedCell) selectedCell.classList.remove('selected');
+          cell.classList.add('selected');
+          selectedCell = cell;
+          showDay(day);
+        });
         grid.appendChild(cell);
       });
 
