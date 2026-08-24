@@ -150,8 +150,12 @@ function renderEpoca(rows, epoca, matchesByDate) {
   });
 
   renderSuspeito(computeSuspeito(days, matchesByDate), epoca);
-  const highlightBarcodeDay = renderBarcode(days);
-  renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay);
+  // Each needs to call into the other (a click on either selects the same
+  // day in both), so the barcode's onSelect closes over this binding rather
+  // than the two functions taking each other as arguments directly.
+  let selectCalendarDay;
+  const highlightBarcodeDay = renderBarcode(days, date => selectCalendarDay?.(date));
+  selectCalendarDay = renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay);
 }
 
 function renderPapers(rows) {
@@ -427,6 +431,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
       monthDays.forEach(day => {
         const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
         const cell = document.createElement('div');
+        cell.dataset.date = day.date;
         if (paperFilter && !focusClub) {
           cell.className = 'cal-day no-data';
           cell.style.background = 'var(--l-panel2)';
@@ -439,13 +444,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
           const pulse = pulseFor(day, matchesByDate);
           if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
         }
-        cell.addEventListener('click', () => {
-          if (selectedCell) selectedCell.classList.remove('selected');
-          cell.classList.add('selected');
-          selectedCell = cell;
-          showDay(day);
-          if (highlightBarcodeDay) highlightBarcodeDay(day.date);
-        });
+        cell.addEventListener('click', () => selectByDate(day.date));
         grid.appendChild(cell);
       });
 
@@ -454,13 +453,26 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
     });
   }
 
+  // Shared by the calendar's own cell clicks and the barcode's onSelect
+  // callback, so picking a day from either place puts both in sync.
+  function selectByDate(date) {
+    const day = days.find(d => d.date === date);
+    if (!day) return;
+    if (selectedCell) selectedCell.classList.remove('selected');
+    const cell = calEl.querySelector(`.cal-day[data-date="${date}"]`);
+    if (cell) { cell.classList.add('selected'); selectedCell = cell; }
+    showDay(day);
+    if (highlightBarcodeDay) highlightBarcodeDay(date);
+  }
+
   draw();
+  return selectByDate;
 }
 
 // One stripe per day per paper: a whole season of front pages in one glance.
 // Fed by the same `days` the calendar builds, so it follows the epoca dropdown
 // and needs no data of its own.
-function renderBarcode(days) {
+function renderBarcode(days, onSelect) {
   const el = document.getElementById('barcode');
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
   el.innerHTML = '';
@@ -479,6 +491,7 @@ function renderBarcode(days) {
       stripe.dataset.date = day.date;
       stripe.style.background = club ? CLUB_META[club].color : 'var(--l-panel2)';
       stripe.dataset.tip = `${day.date} \u00b7 ${club ? CLUB_META[club].name : 'sem capa'}`;
+      stripe.addEventListener('click', () => onSelect(day.date));
       strip.appendChild(stripe);
     });
 
