@@ -269,39 +269,46 @@ function suspeitoRowsHtml(rows, nameOf) {
     : '<div class="s-empty">Sem incidentes nesta época.</div>';
 }
 
+function suspeitoResultsHtml(stats) {
+  const { offenderCounts, victimCounts, incidents } = stats;
+  const offenderRows = Object.entries(offenderCounts).sort((a, b) => b[1] - a[1]);
+  const victimRows = Object.entries(victimCounts).sort((a, b) => b[1] - a[1]);
+
+  return `
+    <div class="s-card">
+      <h3>Ofensor · por jornal</h3>
+      ${suspeitoRowsHtml(offenderRows, id => PAPERS_BY_ID[id] || id)}
+    </div>
+    <div class="s-card">
+      <h3>Vítima · por clube</h3>
+      ${suspeitoRowsHtml(victimRows, id => CLUB_META[id].name)}
+    </div>
+    <div class="s-card l-suspeito-incidents">
+      <h3>Incidentes (${incidents.length})</h3>
+      ${incidents.length ? incidents.map(i => `
+        <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${i.offenders.map(p => PAPERS_BY_ID[p] || p).join(', ')}</div>
+      `).join('') : '<div class="s-empty">Sem incidentes nesta época.</div>'}
+    </div>
+  `;
+}
+
 function renderSuspeito(stats, epoca) {
   document.getElementById('suspeito').classList.remove('hidden');
   document.getElementById('suspeito-eyebrow').textContent = `O SUSPEITO · ÉPOCA ${epoca}`;
 
   const resultsEl = document.getElementById('suspeito-results');
   const btn = document.getElementById('btn-suspeito-reveal');
+  let revealed = false;
   resultsEl.classList.add('hidden');
   resultsEl.innerHTML = '';
   btn.classList.remove('hidden');
+  btn.textContent = 'Revelar o suspeito';
 
   btn.onclick = () => {
-    const { offenderCounts, victimCounts, incidents } = stats;
-    const offenderRows = Object.entries(offenderCounts).sort((a, b) => b[1] - a[1]);
-    const victimRows = Object.entries(victimCounts).sort((a, b) => b[1] - a[1]);
-
-    resultsEl.innerHTML = `
-      <div class="s-card">
-        <h3>Ofensor · por jornal</h3>
-        ${suspeitoRowsHtml(offenderRows, id => PAPERS_BY_ID[id] || id)}
-      </div>
-      <div class="s-card">
-        <h3>Vítima · por clube</h3>
-        ${suspeitoRowsHtml(victimRows, id => CLUB_META[id].name)}
-      </div>
-      <div class="s-card l-suspeito-incidents">
-        <h3>Incidentes (${incidents.length})</h3>
-        ${incidents.length ? incidents.map(i => `
-          <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${i.offenders.map(p => PAPERS_BY_ID[p] || p).join(', ')}</div>
-        `).join('') : '<div class="s-empty">Sem incidentes nesta época.</div>'}
-      </div>
-    `;
-    resultsEl.classList.remove('hidden');
-    btn.classList.add('hidden');
+    revealed = !revealed;
+    if (revealed && !resultsEl.innerHTML) resultsEl.innerHTML = suspeitoResultsHtml(stats);
+    resultsEl.classList.toggle('hidden', !revealed);
+    btn.textContent = revealed ? 'Esconder' : 'Revelar o suspeito';
   };
 }
 
