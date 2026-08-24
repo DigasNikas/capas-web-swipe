@@ -22,6 +22,7 @@ echo ""
 while IFS=' ' read -r START END; do
   echo -n "  $START → $END ... "
   RESPONSE=$(curl -s -o - -w "\n%{http_code}" \
+    -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
     -H "Authorization: Bearer $SECRET" \
     "$URL/scrape?start=$START&end=$END")
   HTTP_CODE=$(echo "$RESPONSE" | tail -1)

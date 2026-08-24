@@ -1,0 +1,29 @@
+name: Regenerate A Capa Média
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pillow
+      - run: python3 scripts/avg_cover.py
+
+      # Nothing to do most runs: the archive barely changes day to day, and
+      # the averages move even less. Commit only when the pixels actually did.
+      - name: Commit regenerated averages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add landing/avg/
+          git diff --cached --quiet && echo "No changes." && exit 0
+          git commit -m "Regenerate A capa média"
+          git push

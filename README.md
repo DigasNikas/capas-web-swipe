@@ -230,12 +230,16 @@ cross-correlates, so this costs nothing, but rerun it after a long outage.
 > to publish the Worker on `workers.dev` and point the workflow there, or to run
 > the curl locally, which is not challenged.
 
-Two workflows are available under **Actions**:
+Every script in `scripts/` has a matching one-click workflow under **Actions**:
 
 - **Scrape Newspaper Covers** — trigger with a `days` count (last N days)
 - **Scrape Newspaper Covers (Date Range)** — trigger with `start` and `end` in `YYYYMMDD` format
+- **Scrape Newspaper Covers (Full Month)** — trigger with `year` and `month`; wraps `scrape_month.sh`
+- **Regenerate A Capa Média** — no inputs; runs `avg_cover.py` and commits `landing/avg/` straight to the branch if the pixels changed
+- **Evaluate AI Prompt** — trigger with a sample size or "score everything"; wraps `eval-ai.mjs`, prints its report to the run log
+- **Import Match Dates** — trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead; wraps `import_matches.py`
 
-Both require `ADMIN_SECRET` to be set in repository secrets.
+The three scrape workflows and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets; `eval-ai` and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has — `eval-ai`'s token additionally needs **Workers AI · Read**, which the deploy token may not carry.
 
 ### Manual (curl)
 
@@ -265,7 +269,7 @@ For scraping large amounts of covers at once, use `scrape_month.sh` — it calls
 ADMIN_SECRET=<secret> ./scripts/scrape_month.sh 2025 11
 ```
 
-This is the main way to backfill a full month without triggering the GitHub Actions workflow day by day or crafting individual curl commands.
+Or trigger the **Scrape Newspaper Covers (Full Month)** Action instead of running it locally — same script, same Bot Fight Mode coin flip as the other two workflows.
 
 ---
 

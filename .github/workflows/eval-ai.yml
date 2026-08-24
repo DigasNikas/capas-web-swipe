@@ -1,0 +1,33 @@
+name: Evaluate AI Prompt
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: "Sample size (ignored if 'all' is checked)"
+        required: false
+        default: "40"
+      all:
+        description: "Score every labelled cover (~579 calls, most of a day's neuron budget)"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run eval-ai.mjs
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ "${{ inputs.all }}" = "true" ]; then
+            node scripts/eval-ai.mjs --all
+          else
+            node scripts/eval-ai.mjs --n "${{ inputs.n }}"
+          fi
