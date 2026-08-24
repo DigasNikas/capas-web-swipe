@@ -610,9 +610,13 @@ header h1 {
 .cal-day.has-data {
   cursor: pointer;
 }
-.cal-day.has-data:hover {
-  background: var(--surface2);
-  transform: scale(1.08);
+/* Gated behind (hover: hover) so a touch tap doesn't leave the day
+   "stuck" scaled up on mobile. */
+@media (hover: hover) {
+  .cal-day.has-data:hover {
+    background: var(--surface2);
+    transform: scale(1.08);
+  }
 }
 
 .cal-day.pending {
