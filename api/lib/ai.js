@@ -8,6 +8,10 @@
 // Resolution and headline-reading are what decide it: most covers are called
 // by the Portuguese text, not by kit colours, so the thumbnails used elsewhere
 // on the site are not good enough input and the full-res original is fetched.
+//
+// That 87% is agreement with the crowd, not correctness — at least one of the
+// four "misses" ("rui costa seduz ríos") is a cover the model read right and
+// the vote read wrong. Which is the point of showing both numbers on the page.
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
 const CLUBS = ["benfica", "sporting", "porto", "others"];

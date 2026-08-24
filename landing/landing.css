@@ -256,47 +256,64 @@ body {
 .cal-day.empty { visibility: hidden; }
 .cal-day.majority { opacity: 0.85; }
 .cal-day.unanimous { opacity: 1; }
-.cal-day:not(.empty):hover {
+.cal-day .pulse { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; pointer-events: none; }
+
+/* Tap/click-driven equivalent of the hover scale below, toggled via JS
+   (not :hover) so it also works on touch — this is what shows a chosen
+   day as "picked" while its details are open in the panel underneath. */
+.cal-day.selected {
   transform: scale(1.35);
   opacity: 1;
   z-index: 10;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
-.cal-day .pulse { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; pointer-events: none; }
 
-/* Custom tooltip (data-tip) instead of the native title attribute —
-   the browser default has a slow show delay and unstyled OS chrome. */
-.cal-day[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--l-bg);
-  border: 1px solid var(--l-panel2);
-  color: var(--l-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  padding: 5px 9px;
-  border-radius: 4px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  z-index: 20;
-  animation: tip-in 0.1s ease-out;
-}
-.cal-day[data-tip]:hover::before {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--l-panel2);
-  margin-bottom: 3px;
-  z-index: 20;
-  animation: tip-in 0.1s ease-out;
+/* Hover-only: scale/tooltip on mouse-over. Gated behind (hover: hover) so
+   touch taps don't trigger a "stuck" hover state on mobile — a tap would
+   otherwise scale the day up and pop the tooltip with no way to dismiss
+   it short of tapping elsewhere. */
+@media (hover: hover) {
+  .cal-day:not(.empty):hover {
+    transform: scale(1.35);
+    opacity: 1;
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Custom tooltip (data-tip) instead of the native title attribute —
+     the browser default has a slow show delay and unstyled OS chrome. */
+  .cal-day[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--l-bg);
+    border: 1px solid var(--l-panel2);
+    color: var(--l-text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    padding: 5px 9px;
+    border-radius: 4px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 20;
+    animation: tip-in 0.1s ease-out;
+  }
+  .cal-day[data-tip]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--l-panel2);
+    margin-bottom: 3px;
+    z-index: 20;
+    animation: tip-in 0.1s ease-out;
+  }
 }
 @keyframes tip-in {
   from { opacity: 0; transform: translate(-50%, 2px); }
@@ -316,6 +333,51 @@ body {
 .l-day-papers .dp-name { font-size: 0.5rem; color: var(--l-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
 .l-day-papers .dp-club { font-size: 0.68rem; font-weight: 700; margin-top: 1px; }
 .l-day-alert { margin-top: 6px; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--l-yellow); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-yellow); text-transform: uppercase; }
+
+/* O Suspeito */
+.l-suspeito-intro { font-size: 0.95rem; line-height: 1.55; color: var(--l-text); opacity: 0.9; max-width: 62ch; margin-bottom: 18px; }
+.l-suspeito-btn { border: none; cursor: pointer; font-family: inherit; }
+
+.l-suspeito-results { margin-top: 22px; display: grid; gap: 14px; }
+@media (min-width: 640px) {
+  .l-suspeito-results { grid-template-columns: 1fr 1fr; }
+  .l-suspeito-incidents { grid-column: 1 / -1; }
+}
+
+.s-card {
+  background: var(--l-panel);
+  border: 1px solid var(--l-panel2);
+  padding: 18px 20px;
+}
+.s-card h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--l-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.s-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 0;
+  border-top: 1px solid var(--l-panel2);
+}
+.s-row:first-of-type { border-top: none; }
+.s-row .s-name { font-weight: 700; }
+.s-row .s-count { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--l-yellow); font-variant-numeric: tabular-nums; }
+.s-empty { font-size: 0.85rem; color: var(--l-muted); padding: 4px 0; }
+
+.l-suspeito-incidents .s-inc {
+  font-size: 0.8rem;
+  color: var(--l-muted);
+  padding: 7px 0;
+  border-top: 1px solid var(--l-panel2);
+}
+.l-suspeito-incidents .s-inc:first-of-type { border-top: none; }
+.l-suspeito-incidents .s-inc b { color: var(--l-text); font-variant-numeric: tabular-nums; }
 
 /* Latest */
 .l-latest .l-latest-inner {
@@ -475,7 +537,7 @@ body {
   margin-top: 10px;
   min-height: 34px;
 }
-.l-comments-auth { display: flex; align-items: center; gap: 10px; }
+.l-comments-auth { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .l-comments-auth .l-cta-small {
   margin-bottom: 0;
   border: none;
@@ -483,6 +545,7 @@ body {
   font-family: inherit;
 }
 .l-comments-hint {
+  flex: 0 0 100%;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   letter-spacing: 0.08em;
@@ -530,7 +593,6 @@ body {
 
 @media (max-width: 460px) {
   .l-calendar { grid-template-columns: repeat(2, 1fr); }
-  .l-brief-stats { grid-template-columns: 1fr; }
 
   /* Below this width, the eyebrow and legend can wrap to an extra
      line depending on which filter is active (their text/item count
