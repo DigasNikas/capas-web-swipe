@@ -538,7 +538,6 @@ body {
 
 @media (max-width: 460px) {
   .l-calendar { grid-template-columns: repeat(2, 1fr); }
-  .l-brief-stats { grid-template-columns: 1fr; }
 
   /* Below this width, the eyebrow and legend can wrap to an extra
      line depending on which filter is active (their text/item count
