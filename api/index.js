@@ -22,6 +22,7 @@ import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
+import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
 export default {
   async scheduled(event, env, ctx) {
@@ -29,6 +30,9 @@ export default {
     for (const newspaper of NEWSPAPERS) {
       ctx.waitUntil(scrapeNewspaper(newspaper, today, env));
     }
+    // Comments are already unreachable once a newer day exists — this just
+    // stops the table growing.
+    ctx.waitUntil(env.DB.prepare("DELETE FROM comments WHERE date < date('now','-2 days')").run());
   },
 
   async fetch(request, env, ctx) {
@@ -48,6 +52,9 @@ export default {
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
+    if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
+    if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
+    if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);
 
     return new Response("Not found", { status: 404 });
   },
