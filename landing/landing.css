@@ -280,9 +280,12 @@ body {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
 
+  .bc-day:hover { opacity: 1; outline: 1px solid var(--l-text); outline-offset: -1px; z-index: 10; }
+
   /* Custom tooltip (data-tip) instead of the native title attribute —
      the browser default has a slow show delay and unstyled OS chrome. */
-  .cal-day[data-tip]:hover::after {
+  .cal-day[data-tip]:hover::after,
+  .bc-day[data-tip]:hover::after {
     content: attr(data-tip);
     position: absolute;
     bottom: calc(100% + 8px);
@@ -302,7 +305,8 @@ body {
     z-index: 20;
     animation: tip-in 0.1s ease-out;
   }
-  .cal-day[data-tip]:hover::before {
+  .cal-day[data-tip]:hover::before,
+  .bc-day[data-tip]:hover::before {
     content: '';
     position: absolute;
     bottom: 100%;
@@ -319,6 +323,19 @@ body {
   from { opacity: 0; transform: translate(-50%, 2px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* Barcode: one stripe per day, one row per paper. Scrolls sideways rather than
+   dropping days when the season is longer than the viewport is wide. */
+.l-barcode-block { margin-top: 22px; border-top: 1px solid var(--l-panel2); padding-top: 18px; }
+.l-barcode-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 12px; }
+.l-barcode-range { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--l-muted); }
+.l-barcode { background: var(--l-panel); border: 1px solid var(--l-panel2); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
+/* max-content so the row spans the whole scroll width — a row stretched to the
+   visible width only would drag the sticky label off-screen with it. */
+.l-barcode-row { display: flex; align-items: center; gap: 12px; width: max-content; min-width: 100%; }
+.bc-label { position: sticky; left: 0; z-index: 1; background: var(--l-panel); flex: 0 0 62px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l-muted); }
+.bc-strip { flex: 1; display: flex; height: 34px; }
+.bc-day { flex: 1 1 0; min-width: 2px; position: relative; opacity: 0.82; }
 
 .l-day-panel { margin-top: 14px; background: var(--l-panel); border-left: 4px solid var(--l-panel2); padding: 14px 18px; min-height: 60px; display: flex; align-items: center; }
 .l-day-hint { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--l-muted); text-align: center; width: 100%; }
@@ -475,6 +492,19 @@ body {
 }
 
 .l-footer { text-align: center; padding: 30px 0 50px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--l-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+
+/* A capa media */
+.l-avg-desc { max-width: 62ch; }
+.l-avg-filter { margin: 0 0 18px; width: fit-content; }
+.l-avg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; }
+.l-avg-card { margin: 0; background: var(--l-panel); border: 1px solid var(--l-panel2); padding: 10px; }
+.l-avg-card img { width: 100%; aspect-ratio: 0.8; object-fit: cover; object-position: top; display: block; background: #fff; cursor: zoom-in; }
+.l-avg-card figcaption {
+  margin-top: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.l-avg-card figcaption span { color: var(--l-muted); font-weight: 400; letter-spacing: 0.04em; text-transform: none; }
 
 .hidden { display: none !important; }
 

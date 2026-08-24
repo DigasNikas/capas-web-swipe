@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing.css?v=18" />
+  <link rel="stylesheet" href="/landing.css?v=20" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%230a0a0f'/><path d='M16 9l5 3.6-2 6.4h-6l-2-6.4Z' fill='%23ffd60a'/></svg>">
 </head>
 <body>
@@ -65,6 +65,14 @@
       <div id="day-panel" class="l-day-panel">
         <div class="l-day-hint">toca num dia →</div>
       </div>
+
+      <div class="l-barcode-block">
+        <div class="l-barcode-head">
+          <div class="l-eyebrow">CÓDIGO DE BARRAS · UMA RISCA POR DIA</div>
+          <div id="barcode-range" class="l-barcode-range"></div>
+        </div>
+        <div id="barcode" class="l-barcode"></div>
+      </div>
     </section>
 
     <section id="suspeito" class="l-section hidden">
@@ -98,34 +106,6 @@
       </div>
     </section>
 
-    <section id="ai" class="l-section l-latest hidden">
-      <div class="l-eyebrow l-ai-live">DETECTOR · ML LIVE</div>
-      <h2 class="l-h2" id="ai-title">E a máquina, <span class="l-accent">que diz?</span></h2>
-      <div class="l-latest-inner">
-        <div class="l-latest-left">
-          <p class="l-latest-desc">
-            As mesmas capas, sem intervenção humana: lidas por um modelo de visão (Llama 4 Scout),
-            sem treino nenhum sobre este arquivo.
-            <span id="ai-agreement" class="l-ai-agreement"></span>
-          </p>
-          <div id="ai-date" class="l-latest-date"></div>
-          <div id="ai-covers" class="l-latest-covers"></div>
-        </div>
-        <div class="l-latest-right">
-          <div class="l-eyebrow">RESULTADO</div>
-          <div id="ai-winner" class="l-latest-winner"></div>
-          <div class="l-latest-conf-row">
-            <div class="l-latest-conf-track"><div id="ai-conf-fill" class="l-latest-conf-fill"></div></div>
-            <span id="ai-conf-label" class="l-latest-conf-label"></span>
-          </div>
-          <div id="ai-vs-human" class="l-ai-vs"></div>
-        </div>
-      </div>
-
-      <button id="btn-ai-diffs" class="l-cta l-cta-small l-suspeito-btn l-ai-diffs-btn hidden" type="button"></button>
-      <div id="ai-diffs" class="l-ai-diffs hidden"></div>
-    </section>
-
     <section id="conversa" class="l-section hidden">
       <div class="l-comments">
         <div class="l-comments-head">
@@ -146,6 +126,55 @@
       </div>
     </section>
 
+    <section id="ai" class="l-section l-latest hidden">
+      <div class="l-eyebrow l-ai-live">DETECTOR · ML LIVE</div>
+      <h2 class="l-h2" id="ai-title">E a máquina, <span class="l-accent">que diz?</span></h2>
+      <div class="l-latest-inner">
+        <div class="l-latest-left">
+          <p class="l-latest-desc">
+            As mesmas capas, sem intervenção humana: lidas por um modelo de visão (Llama 4 Scout),
+            sem treino nenhum sobre este arquivo.
+            <span id="ai-agreement" class="l-ai-agreement"></span>
+          </p>
+          <div id="ai-date" class="l-latest-date"></div>
+        </div>
+        <div class="l-latest-right">
+          <div class="l-eyebrow">RESULTADO</div>
+          <div id="ai-winner" class="l-latest-winner"></div>
+          <div class="l-latest-conf-row">
+            <div class="l-latest-conf-track"><div id="ai-conf-fill" class="l-latest-conf-fill"></div></div>
+            <span id="ai-conf-label" class="l-latest-conf-label"></span>
+          </div>
+          <div id="ai-vs-human" class="l-ai-vs"></div>
+        </div>
+      </div>
+
+      <button id="btn-ai-diffs" class="l-cta l-cta-small l-suspeito-btn l-ai-diffs-btn hidden" type="button"></button>
+      <div id="ai-diffs" class="l-ai-diffs hidden"></div>
+    </section>
+
+    <section id="media" class="l-section hidden">
+      <div class="l-eyebrow">A CAPA MÉDIA · ZERO IA</div>
+      <h2 class="l-h2">Todas as capas <span class="l-accent">ao mesmo tempo</span></h2>
+      <p class="l-latest-desc l-avg-desc">
+        Média pixel a pixel de todas as capas de cada jornal. O cabeçalho está sempre no mesmo
+        sítio, por isso sobrevive nítido; os títulos mudam todos os dias e desfazem-se em fantasma.
+        É o retrato de cada jornal com os dias todos sobrepostos — e não precisou de modelo nenhum.
+      </p>
+      <div id="avg-papers" class="l-avg-grid"></div>
+    </section>
+
+    <section id="media-clube" class="l-section hidden">
+      <div class="l-eyebrow">A CAPA MÉDIA · POR DONO DO DIA</div>
+      <h2 class="l-h2">O mesmo jornal, <span class="l-accent">quatro humores</span></h2>
+      <p class="l-latest-desc l-avg-desc">
+        A mesma média, dividida pelo clube que ganhou a capa. Vermelho onde manda o Benfica,
+        verde onde manda o Sporting: a mancha de cor muda, o cabeçalho não.
+      </p>
+      <div id="avg-paper-filter" class="l-filter-group l-avg-filter"></div>
+      <div id="avg-clubs" class="l-avg-grid"></div>
+    </section>
+
     <footer class="l-footer">
       <p>Queres votar tu também?</p>
       <a href="https://app.capas.digasnikas.com/" class="l-cta">Entrar →</a>
@@ -159,6 +188,6 @@
   </div>
 
   <script src="https://accounts.google.com/gsi/client" id="gsi" async></script>
-  <script type="module" src="/landing.js?v=18"></script>
+  <script type="module" src="/landing.js?v=20"></script>
 </body>
 </html>

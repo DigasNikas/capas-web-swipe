@@ -68,6 +68,7 @@ async function init() {
   renderEpoca(rows, defaultEpoca, matchesByDate);
   renderVerdict('latest', stats.latest, 'dos votos');
   renderAi(stats.latestAi, stats.latest, stats.rows);
+  renderAvgCovers();
   if (stats.latest) initComments();
 }
 
@@ -150,6 +151,7 @@ function renderEpoca(rows, epoca, matchesByDate) {
 
   renderSuspeito(computeSuspeito(days, matchesByDate), epoca);
   renderCalendar(days, matchesByDate, epoca);
+  renderBarcode(days);
 }
 
 function renderPapers(rows) {
@@ -454,6 +456,39 @@ function renderCalendar(days, matchesByDate, epoca) {
   draw();
 }
 
+// One stripe per day per paper: a whole season of front pages in one glance.
+// Fed by the same `days` the calendar builds, so it follows the epoca dropdown
+// and needs no data of its own.
+function renderBarcode(days) {
+  const el = document.getElementById('barcode');
+  const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
+  el.innerHTML = '';
+
+  Object.keys(PAPERS_BY_ID).forEach(paper => {
+    const row = document.createElement('div');
+    row.className = 'l-barcode-row';
+    row.innerHTML = `<span class="bc-label">${PAPERS_BY_ID[paper]}</span>`;
+
+    const strip = document.createElement('div');
+    strip.className = 'bc-strip';
+    sorted.forEach(day => {
+      const club = day.covers[paper];
+      const stripe = document.createElement('i');
+      stripe.className = 'bc-day';
+      stripe.style.background = club ? CLUB_META[club].color : 'var(--l-panel2)';
+      stripe.dataset.tip = `${day.date} \u00b7 ${club ? CLUB_META[club].name : 'sem capa'}`;
+      strip.appendChild(stripe);
+    });
+
+    row.appendChild(strip);
+    el.appendChild(row);
+  });
+
+  document.getElementById('barcode-range').textContent = sorted.length
+    ? `${sorted[0].date} \u2192 ${sorted[sorted.length - 1].date} \u00b7 ${sorted.length} dias`
+    : '';
+}
+
 // Renders one verdict card — the crowd's ("latest") or the model's ("ai").
 // Both sections have the same markup under a different id prefix and share the
 // .l-latest* styles; only the source of `club` and the unit label differ.
@@ -466,18 +501,10 @@ function renderVerdict(id, data, unit) {
   const dateLabel = new Date(data.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
   document.getElementById(`${id}-date`).textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 
+  // Only the crowd's card shows the covers — the model's section sits right
+  // below it and would just repeat the same three thumbnails.
   const coversEl = document.getElementById(`${id}-covers`);
-  coversEl.innerHTML = '';
-  data.covers.forEach(c => {
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <img src="${c.thumb_url}" alt="${c.name}" loading="lazy" />
-      <div class="lc-name">${c.name}</div>
-      <div class="lc-club" style="color:${CLUB_META[c.club].color}">${CLUB_META[c.club].name}</div>
-    `;
-    div.querySelector('img').addEventListener('click', () => openCoverModal(c.url, c.name));
-    coversEl.appendChild(div);
-  });
+  if (coversEl) renderVerdictCovers(coversEl, data.covers);
 
   const winnerEl = document.getElementById(`${id}-winner`);
   const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--l-yellow)';
@@ -606,6 +633,66 @@ function aiDiffCard(r) {
 // Shrinks font-size until the (single-line) text fits its container —
 // club names range from "Porto" to "Empate técnico", too wide a spread
 // for one fixed clamp() to keep on one line at every length.
+function renderVerdictCovers(coversEl, covers) {
+  coversEl.innerHTML = '';
+  covers.forEach(c => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <img src="${c.thumb_url}" alt="${c.name}" loading="lazy" />
+      <div class="lc-name">${c.name}</div>
+      <div class="lc-club" style="color:${CLUB_META[c.club].color}">${CLUB_META[c.club].name}</div>
+    `;
+    div.querySelector('img').addEventListener('click', () => openCoverModal(c.url, c.name));
+    coversEl.appendChild(div);
+  });
+}
+
+// The averages are generated offline by scripts/avg_cover.py and committed
+// under landing/avg/, so this is a plain static fetch with no endpoint behind
+// it. Both sections stay hidden if the files aren't there.
+async function renderAvgCovers() {
+  let counts;
+  try {
+    counts = await (await fetch('/avg/counts.json')).json();
+  } catch {
+    return;
+  }
+
+  const papers = Object.keys(PAPERS_BY_ID).filter(p => counts[p]);
+  if (!papers.length) return;
+
+  const card = (key, label) => `
+    <figure class="l-avg-card">
+      <img src="/avg/${key}.jpg" alt="Capa m\u00e9dia \u2014 ${label}" loading="lazy" />
+      <figcaption>${label}<span>m\u00e9dia de ${counts[key]} capas</span></figcaption>
+    </figure>`;
+
+  const papersEl = document.getElementById('avg-papers');
+  papersEl.innerHTML = papers.map(p => card(p, PAPERS_BY_ID[p])).join('');
+  document.getElementById('media').classList.remove('hidden');
+
+  const gridEl = document.getElementById('avg-clubs');
+  const filterEl = document.getElementById('avg-paper-filter');
+
+  function draw(paper) {
+    gridEl.innerHTML = CLUB_KEYS
+      .filter(c => counts[`${paper}-${c}`])
+      .map(c => card(`${paper}-${c}`, CLUB_META[c].name))
+      .join('');
+    [...filterEl.children].forEach(b => b.classList.toggle('active', b.dataset.paper === paper));
+  }
+
+  filterEl.innerHTML = papers.map(p => `<button data-paper="${p}">${PAPERS_BY_ID[p]}</button>`).join('');
+  filterEl.addEventListener('click', e => { if (e.target.dataset.paper) draw(e.target.dataset.paper); });
+  draw(papers[0]);
+  document.getElementById('media-clube').classList.remove('hidden');
+
+  // Detail is the whole point of these and the grid renders them small.
+  [papersEl, gridEl].forEach(g => g.addEventListener('click', e => {
+    if (e.target.tagName === 'IMG') openCoverModal(e.target.src, e.target.alt);
+  }));
+}
+
 function fitTextToContainer(el, maxRem = 4.5, minRem = 1.6) {
   let size = maxRem;
   el.style.fontSize = `${size}rem`;
