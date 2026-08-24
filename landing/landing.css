@@ -258,6 +258,16 @@ body {
 .cal-day.unanimous { opacity: 1; }
 .cal-day .pulse { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; pointer-events: none; }
 
+/* Tap/click-driven equivalent of the hover scale below, toggled via JS
+   (not :hover) so it also works on touch — this is what shows a chosen
+   day as "picked" while its details are open in the panel underneath. */
+.cal-day.selected {
+  transform: scale(1.35);
+  opacity: 1;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
 /* Hover-only: scale/tooltip on mouse-over. Gated behind (hover: hover) so
    touch taps don't trigger a "stuck" hover state on mobile — a tap would
    otherwise scale the day up and pop the tooltip with no way to dismiss
