@@ -9,25 +9,49 @@
 // by the Portuguese text, not by kit colours, so the thumbnails used elsewhere
 // on the site are not good enough input and the full-res original is fetched.
 //
-// That 87% is agreement with the crowd, not correctness — at least one of the
-// four "misses" ("rui costa seduz ríos") is a cover the model read right and
-// the vote read wrong. Which is the point of showing both numbers on the page.
-const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+// That 30-cover sample flattered it. Scored over the whole archive the first
+// prompt agreed with the crowd on 77% (447/579), and the misses were lopsided:
+//   others  → big three   67 of 132 misses    (others recall 39%)
+//   benfica → sporting    22                  (benfica recall 76%)
+// It over-called Sporting (+36% against the true count) and Porto (+33%), and
+// under-called Benfica (−21%) and others (−51%). Three causes, all addressed
+// below: the parser guessed instead of abstaining, every one of these front
+// pages carries small SPORTING / FC PORTO boxes down the rails, and "red kit"
+// is a useless Benfica cue when Record and A Bola print their masthead in red.
+//
+// Score with scripts/eval-ai.mjs before and after touching PROMPT. Changing it
+// by eye and hoping is how the numbers above happened.
+export const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
-const CLUBS = ["benfica", "sporting", "porto", "others"];
+export const CLUBS = ["benfica", "sporting", "porto", "others"];
 
-const PROMPT =
-  "This is the front page of a Portuguese sports newspaper (Record, A Bola or O Jogo). " +
-  "Decide which football club the page is mostly about — the biggest headline and the main photo. " +
-  "Benfica (Águias, red kit), Sporting (Leões, green-and-white stripes), " +
-  "FC Porto (Dragões, blue-and-white stripes). " +
-  "If the page is mostly about none of those three, answer others.\n" +
-  "Quote the main headline, then on a new line write 'ANSWER: <club>' " +
-  "with one of: benfica, sporting, porto, others.";
+// Names over colours: at full resolution the model reads the page, and the club
+// names and nicknames are unambiguous where the palette is not.
+export const PROMPT =
+  "You are looking at the front page of a Portuguese sports daily (Record, A Bola or O Jogo).\n" +
+  "Name the football club the page is MOSTLY about — the dominant headline and the main photo, " +
+  "the story that fills the page.\n" +
+  "\n" +
+  "Ignore these. They are on every edition and say nothing about the day:\n" +
+  "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n" +
+  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA\n" +
+  "- teasers, adverts, cartoons and results bars along the edges\n" +
+  "\n" +
+  "How the clubs are named on these pages:\n" +
+  "- benfica: Benfica, SLB, Aguias, Encarnados, da Luz\n" +
+  "- sporting: Sporting, SCP, Leoes, Alvalade, verde-e-brancos\n" +
+  "- porto: FC Porto, FCP, Dragoes, Dragao, azuis-e-brancos\n" +
+  "- others: the main story is none of those three — the Portugal national team, " +
+  "Braga, Guimaraes or another club, another sport (cycling, futsal), " +
+  "or a transfer round-up with no single club on top\n" +
+  "\n" +
+  "Reply in exactly two lines:\n" +
+  "HEADLINE: <the biggest headline, copied>\n" +
+  "ANSWER: <benfica|sporting|porto|others>";
 
 // btoa needs a binary string; spreading a 300 KB Uint8Array into
 // String.fromCharCode blows the argument limit, so build it in chunks.
-function toBase64(buffer) {
+export function toBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {
@@ -36,9 +60,32 @@ function toBase64(buffer) {
   return btoa(binary);
 }
 
-// Asking for the headline first measurably beats asking for the bare word —
-// it makes the model actually read the page — so the answer arrives as prose
-// and has to be parsed back down to one of the four keys.
+// Strict on purpose. The old parser fell back to scanning the whole reply when
+// the ANSWER: marker was missing, and then picked whichever club came first in
+// CLUBS rather than first in the text — so "not Benfica, this is Sporting"
+// parsed as benfica, and a reply truncated before the marker still produced a
+// confident label. An unreadable reply is now no label: ai_club stays NULL and
+// the next backfill pass retries the cover.
+export function parseAnswer(text) {
+  const raw = String(text ?? "");
+  const lower = raw.toLowerCase();
+  const marker = lower.lastIndexOf("answer:");
+  if (marker === -1) return { club: null, headline: null };
+
+  const tail = lower.slice(marker + "answer:".length);
+  let club = null;
+  let at = Infinity;
+  for (const c of CLUBS) {
+    const i = tail.indexOf(c);
+    if (i !== -1 && i < at) { at = i; club = c; }
+  }
+
+  // What the model says it read. Stored so a wrong label can be diagnosed with
+  // one SQL query instead of by opening the image and guessing what it saw.
+  const head = raw.slice(0, marker).match(/headline:\s*(.+)/i);
+  return { club, headline: head ? head[1].trim().slice(0, 200) : null };
+}
+
 export async function classifyCover(env, buffer, contentType = "image/jpeg") {
   const res = await env.AI.run(MODEL, {
     messages: [{
@@ -48,12 +95,14 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg") {
         { type: "image_url", image_url: { url: `data:${contentType};base64,${toBase64(buffer)}` } },
       ],
     }],
-    max_tokens: 150,
+    // 150 could run out mid-headline and never reach ANSWER:, which under the
+    // old parser became a guess. Output tokens are noise next to a full-res
+    // image, so there is no reason to be tight here.
+    max_tokens: 300,
+    temperature: 0.2,
   });
 
-  const text = String(res?.response ?? "").toLowerCase();
-  const answer = text.split("answer:").pop();
-  return CLUBS.find(c => answer.includes(c)) ?? null;
+  return parseAnswer(res?.response);
 }
 
 // Never throws: a model hiccup must not take down the daily scrape, and an
@@ -63,10 +112,15 @@ export async function classifyAndStore(env, coverId, r2Key) {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
 
-    const club = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType);
+    const { club, headline } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType);
     if (!club) return null;
 
-    await env.DB.prepare("UPDATE covers SET ai_club = ? WHERE id = ?").bind(club, coverId).run();
+    await env.DB
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ? WHERE id = ?")
+      // Empty string, not null: ai_headline being NULL is what marks a cover as
+      // classified by an older prompt and puts it back in the backfill queue.
+      .bind(club, headline ?? "", coverId)
+      .run();
     return club;
   } catch (err) {
     console.error(`AI classification failed for cover ${coverId}: ${err}`);
