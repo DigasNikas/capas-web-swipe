@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS covers (
   r2_key     TEXT NOT NULL,           -- '2026/04/25/record_2026-04-25.jpg'
   url        TEXT NOT NULL,           -- full public URL
   thumb_url  TEXT,                    -- generated 220px WebP thumbnail (nullable, backfilled)
+  ai_club    TEXT,                    -- zero-shot model guess (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_club TEXT
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE (newspaper, date)
 );

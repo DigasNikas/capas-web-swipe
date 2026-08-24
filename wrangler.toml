@@ -25,6 +25,9 @@ database_id   = "a21b563d-6d8d-4355-af98-92045becf861"
 [images]
 binding = "IMAGES"
 
+[ai]
+binding = "AI"
+
 [observability]
 [observability.logs]
 enabled = true

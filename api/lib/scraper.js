@@ -1,3 +1,5 @@
+import { classifyAndStore } from "./ai.js";
+
 export const NEWSPAPERS = [
   { slug: "record", url: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
   { slug: "abola",  url: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
@@ -89,10 +91,16 @@ export async function scrapeNewspaper(newspaper, date, env) {
     generateThumbnail(env, thumbSource, thumbKey),
   ]);
 
-  await env.DB
+  const { meta } = await env.DB
     .prepare("INSERT INTO covers (newspaper, date, r2_key, url, thumb_url) VALUES (?, ?, ?, ?, ?)")
     .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl)
     .run();
 
   console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);
+
+  // After the insert, not before: the cover is worth keeping whether or not
+  // the model has an opinion about it. classifyAndStore swallows its own
+  // errors for the same reason.
+  const aiClub = await classifyAndStore(env, meta.last_row_id, r2Key);
+  console.log(`AI says ${newspaper.slug} ${dateLabel} is ${aiClub ?? "unclassified"}`);
 }

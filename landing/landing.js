@@ -66,7 +66,8 @@ async function init() {
   setupEpocaDropdown(epocas, defaultEpoca, e => renderEpoca(rows, e, matchesByDate));
 
   renderEpoca(rows, defaultEpoca, matchesByDate);
-  renderLatest(stats.latest);
+  renderVerdict('latest', stats.latest, 'dos votos');
+  renderAi(stats.latestAi, stats.latest);
   if (stats.latest) initComments();
 }
 
@@ -354,19 +355,21 @@ function renderCalendar(days, matchesByDate, epoca) {
   draw();
 }
 
-function renderLatest(latest) {
-  if (!latest) return;
-  const section = document.getElementById('latest');
-  section.classList.remove('hidden');
+// Renders one verdict card — the crowd's ("latest") or the model's ("ai").
+// Both sections have the same markup under a different id prefix and share the
+// .l-latest* styles; only the source of `club` and the unit label differ.
+function renderVerdict(id, data, unit) {
+  if (!data) return;
+  document.getElementById(id).classList.remove('hidden');
 
-  fitTextToContainer(document.getElementById('latest-title'), 2.6, 1);
+  fitTextToContainer(document.getElementById(`${id}-title`), 2.6, 1);
 
-  const dateLabel = new Date(latest.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
-  document.getElementById('latest-date').textContent = `INPUT · ${dateLabel.toUpperCase()}`;
+  const dateLabel = new Date(data.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById(`${id}-date`).textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 
-  const coversEl = document.getElementById('latest-covers');
+  const coversEl = document.getElementById(`${id}-covers`);
   coversEl.innerHTML = '';
-  latest.covers.forEach(c => {
+  data.covers.forEach(c => {
     const div = document.createElement('div');
     div.innerHTML = `
       <img src="${c.thumb_url}" alt="${c.name}" loading="lazy" />
@@ -377,16 +380,30 @@ function renderLatest(latest) {
     coversEl.appendChild(div);
   });
 
-  const winnerEl = document.getElementById('latest-winner');
-  const winnerColor = latest.hasMajority ? CLUB_META[latest.winner].color : 'var(--l-yellow)';
-  winnerEl.textContent = latest.hasMajority ? CLUB_META[latest.winner].name : 'Empate técnico';
+  const winnerEl = document.getElementById(`${id}-winner`);
+  const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--l-yellow)';
+  winnerEl.textContent = data.hasMajority ? CLUB_META[data.winner].name : 'Empate técnico';
   winnerEl.style.color = winnerColor;
   fitTextToContainer(winnerEl, 4.5, 1);
 
-  const pct = Math.round(latest.confidence * 100);
-  document.getElementById('latest-conf-fill').style.width = `${pct}%`;
-  document.getElementById('latest-conf-fill').style.background = winnerColor;
-  document.getElementById('latest-conf-label').textContent = `${pct}% dos votos`;
+  const pct = Math.round(data.confidence * 100);
+  document.getElementById(`${id}-conf-fill`).style.width = `${pct}%`;
+  document.getElementById(`${id}-conf-fill`).style.background = winnerColor;
+  document.getElementById(`${id}-conf-label`).textContent = `${pct}% ${unit}`;
+}
+
+function renderAi(latestAi, latest) {
+  renderVerdict('ai', latestAi, 'dos jornais');
+  if (!latestAi) return;
+
+  const pct = Math.round(latestAi.agreement * 100);
+  document.getElementById('ai-agreement').textContent =
+    `Concorda com a comunidade em ${pct}% das ${latestAi.labelled} capas já analisadas.`;
+
+  const same = latest && latest.winner === latestAi.winner;
+  const verdictEl = document.getElementById('ai-vs-human');
+  verdictEl.textContent = same ? 'HOJE · CONCORDA COM A COMUNIDADE' : 'HOJE · DISCORDA DA COMUNIDADE';
+  verdictEl.classList.toggle('disagrees', !same);
 }
 
 // Shrinks font-size until the (single-line) text fits its container —
