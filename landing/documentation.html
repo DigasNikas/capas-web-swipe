@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Avaliador de capas — documentation</title>
+<!-- Internal documentation for whoever works on the codebase (README.md
+     "This README is a map, not the manual") — public only because there is
+     nothing to gate it behind, not because it's meant for search results. -->
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%230a0a0f'/><path d='M16 9l5 3.6-2 6.4h-6l-2-6.4Z' fill='%23ffd60a'/></svg>">
+<style>
+  /* Same palette as landing.css — this page has no separate design system,
+     it's the site's own dark theme with a reading layout on top. Landing
+     itself has no light/dark toggle, so neither does this. */
+  :root {
+    --bg: #0a0a0f;
+    --panel: #13131a;
+    --panel2: #1c1c26;
+    --text: #ffffff;
+    --muted: #7a7a8c;
+    --yellow: #ffd60a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter Tight', sans-serif;
+    line-height: 1.55;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--panel2);
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+  header h1 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+  header h1 a { color: inherit; text-decoration: none; }
+  header h1 .dot { color: var(--yellow); }
+  header .sub {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .layout { display: flex; min-height: calc(100vh - 49px); }
+
+  nav {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--panel2);
+    background: var(--panel);
+    padding: 18px 0 40px;
+    position: sticky;
+    top: 49px;
+    height: calc(100vh - 49px);
+    overflow-y: auto;
+  }
+  nav a {
+    display: block;
+    padding: 6px 22px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  nav a:hover { background: var(--panel2); }
+  nav a.active { color: var(--yellow); font-weight: 700; background: var(--panel2); }
+  nav a.section { padding-left: 38px; font-size: 0.75rem; color: var(--muted); }
+  nav a.section:hover { color: var(--text); }
+
+  main { flex: 1; min-width: 0; padding: 28px 40px 80px; max-width: 860px; }
+
+  main h1 { font-size: 1.7rem; margin: 0 0 18px; font-weight: 800; }
+  main h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 34px 0 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--panel2);
+  }
+  main h3 { font-size: 1.02rem; font-weight: 700; margin: 24px 0 10px; }
+  main p { margin: 0 0 12px; color: var(--text); }
+  main ul, main ol { margin: 0 0 12px; padding-left: 26px; }
+  main li { margin: 4px 0; }
+  main code {
+    background: var(--panel2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  main pre {
+    background: var(--panel2);
+    border: 1px solid var(--panel2);
+    border-radius: 4px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 14px;
+  }
+  main pre code { background: none; padding: 0; font-size: 0.8rem; }
+  main table {
+    border-collapse: collapse;
+    margin: 0 0 14px;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    font-size: 0.85rem;
+  }
+  main th, main td {
+    border: 1px solid var(--panel2);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  main th { background: var(--panel2); }
+  main blockquote {
+    margin: 0 0 12px;
+    padding: 4px 14px;
+    border-left: 3px solid var(--yellow);
+    color: var(--muted);
+  }
+  main hr { border: none; border-top: 1px solid var(--panel2); margin: 20px 0; }
+  main a { color: var(--yellow); }
+  main .error { color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .layout { display: block; }
+    nav { width: auto; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--panel2); }
+    nav a.section { display: none; }
+    main { padding: 20px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">avaliador<span class="dot">.</span>capas</a></h1>
+  <span class="sub">documentation</span>
+</header>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="content"><p class="error">A carregar…</p></main>
+</div>
+
+<script>
+// The chapters, in reading order. Each is a markdown file in documentation/ —
+// that folder is the documentation; this page only renders it. README.md and
+// the per-folder READMEs stay short and point here.
+//
+// The ids are the filenames *and* the URL hash, so renaming a chapter file
+// changes its deep links.
+const CHAPTERS = [
+  { id: "overview", title: "Overview" },
+  { id: "frontend", title: "Frontend" },
+  { id: "api", title: "API" },
+  { id: "scraping", title: "Scraping" },
+  { id: "ai-detector", title: "AI Detector" },
+  { id: "archive-views", title: "Archive views" },
+  { id: "match-dates", title: "Match dates" },
+  { id: "deployment", title: "Deployment" },
+];
+
+// ---- Markdown rendering ----
+//
+// Hand-written rather than a library — this project has no build step and no
+// dependencies anywhere in its frontend, and a docs page is not the place to
+// start. Covers the subset these chapters actually use: headings, paragraphs,
+// nested dash lists, numbered lists, fenced code, tables, blockquotes, hr,
+// and inline bold/italic/code/links. Anything else degrades to a plain
+// paragraph, never to broken HTML — every piece of text passes through esc()
+// before any inline markup is applied.
+
+function esc(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (_, c) => {
+    codes.push(c);
+    return "\x00" + (codes.length - 1) + "\x00";
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, text, href) =>
+    /^(https?:\/\/|\/|#)/.test(href) ? `<a href="${href}">${text}</a>` : text,
+  );
+  return s.replace(/\x00(\d+)\x00/g, (_, i) => `<code>${codes[i]}</code>`);
+}
+
+function slugify(text) {
+  return text
+    .toLowerCase()
+    .replace(/`/g, "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function renderMarkdown(md) {
+  const lines = md.split("\n");
+  const out = [];
+  const sections = []; // {slug, text} for every ## — feeds the sidebar
+  let i = 0;
+
+  const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+  const listItem = (l) => l.match(/^(\s*)-\s+(.*)$/);
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (/^\s*$/.test(line)) { i++; continue; }
+
+    const fence = line.match(/^```(\w*)\s*$/);
+    if (fence) {
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) buf.push(lines[i++]);
+      i++;
+      out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`);
+      continue;
+    }
+
+    const h = line.match(/^(#{1,3})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      const text = h[2].trim();
+      const slug = slugify(text);
+      if (level === 2) sections.push({ slug, text });
+      out.push(`<h${level} id="${level > 1 ? slug : ""}">${inline(esc(text))}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    if (/^---+\s*$/.test(line)) { out.push("<hr />"); i++; continue; }
+
+    if (/^>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) buf.push(lines[i++].replace(/^>\s?/, ""));
+      out.push(`<blockquote><p>${inline(esc(buf.join(" ")))}</p></blockquote>`);
+      continue;
+    }
+
+    if (isTableRow(line) && i + 1 < lines.length && /^\s*\|[\s|:-]+\|\s*$/.test(lines[i + 1])) {
+      const cells = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => inline(esc(c.trim())));
+      const head = cells(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) rows.push(cells(lines[i++]));
+      out.push(
+        `<table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+          rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") +
+          "</tbody></table>",
+      );
+      continue;
+    }
+
+    if (listItem(line)) {
+      const items = [];
+      while (i < lines.length) {
+        const m = listItem(lines[i]);
+        if (m) {
+          items.push({ depth: m[1].length >= 2 ? 1 : 0, text: m[2] });
+          i++;
+        } else if (/^\s{2,}\S/.test(lines[i]) && items.length > 0) {
+          items[items.length - 1].text += " " + lines[i].trim();
+          i++;
+        } else break;
+      }
+      let html = "<ul>";
+      let depth = 0;
+      for (const it of items) {
+        if (it.depth > depth) { html += "<ul>"; depth = it.depth; }
+        else if (it.depth < depth) { html += "</li></ul></li>"; depth = it.depth; }
+        else if (html !== "<ul>") html += "</li>";
+        html += `<li>${inline(esc(it.text))}`;
+      }
+      html += "</li>" + (depth > 0 ? "</ul></li>" : "") + "</ul>";
+      out.push(html);
+      continue;
+    }
+
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^\s*\d+\.\s+(.*)$/);
+        if (m) { items.push(m[1]); i++; }
+        else if (/^\s{2,}\S/.test(lines[i]) && items.length > 0) { items[items.length - 1] += " " + lines[i].trim(); i++; }
+        else break;
+      }
+      out.push(`<ol>${items.map((t) => `<li>${inline(esc(t))}</li>`).join("")}</ol>`);
+      continue;
+    }
+
+    const buf = [line];
+    i++;
+    while (
+      i < lines.length &&
+      !/^\s*$/.test(lines[i]) &&
+      !/^(#{1,3})\s/.test(lines[i]) &&
+      !/^```/.test(lines[i]) &&
+      !listItem(lines[i]) &&
+      !/^\s*\d+\.\s+/.test(lines[i]) &&
+      !isTableRow(lines[i]) &&
+      !/^>\s?/.test(lines[i])
+    ) {
+      buf.push(lines[i++]);
+    }
+    out.push(`<p>${inline(esc(buf.join(" ")))}</p>`);
+  }
+
+  return { html: out.join("\n"), sections };
+}
+
+// ---- Navigation ----
+//
+// Hash routing: #<chapter> opens a chapter, #<chapter>/<section-slug> also
+// scrolls to that ## heading. The hash is the whole state, so a deep link
+// pasted into another browser lands on the same spot.
+
+const nav = document.getElementById("nav");
+const content = document.getElementById("content");
+const cache = new Map();
+let current = null;
+
+function parseHash() {
+  const [chapter, section] = location.hash.replace(/^#/, "").split("/");
+  return { chapter: CHAPTERS.some((c) => c.id === chapter) ? chapter : CHAPTERS[0].id, section: section || null };
+}
+
+function renderNav(activeId, sections) {
+  nav.innerHTML = CHAPTERS.map((c) => {
+    const link = `<a href="#${c.id}" class="${c.id === activeId ? "active" : ""}">${c.title}</a>`;
+    if (c.id !== activeId || sections.length === 0) return link;
+    return link + sections.map((s) => `<a class="section" href="#${c.id}/${s.slug}">${s.text.replace(/`/g, "")}</a>`).join("");
+  }).join("");
+}
+
+async function show() {
+  const { chapter, section } = parseHash();
+  if (chapter !== current) {
+    current = chapter;
+    if (!cache.has(chapter)) {
+      try {
+        const res = await fetch(`documentation/${chapter}.md`);
+        if (!res.ok) throw new Error(String(res.status));
+        cache.set(chapter, renderMarkdown(await res.text()));
+      } catch {
+        cache.set(chapter, { html: '<p class="error">Não foi possível carregar este capítulo.</p>', sections: [] });
+      }
+    }
+    const doc = cache.get(chapter);
+    content.innerHTML = doc.html;
+    renderNav(chapter, doc.sections);
+  }
+  if (section) {
+    const el = document.getElementById(section);
+    if (el) el.scrollIntoView();
+  } else {
+    window.scrollTo(0, 0);
+  }
+}
+
+window.addEventListener("hashchange", show);
+show();
+</script>
+</body>
+</html>
