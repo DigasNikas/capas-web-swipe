@@ -57,6 +57,7 @@ capas-web-swipe/
 │   │   ├── http.js       CORS headers + json() helper
 │   │   ├── scraper.js    Scraping logic (fetch → HTMLRewriter → R2 + D1 → AI)
 │   │   ├── ai.js         Zero-shot cover classification (Workers AI) — see "AI Detector"
+│   │   ├── ai.test.mjs   Self-check for the ANSWER: parser: node api/lib/ai.test.mjs
 │   │   └── email.js      Outbound mail for /notify
 │   └── handlers/
 │       ├── covers.js     GET  /covers
@@ -73,6 +74,7 @@ capas-web-swipe/
 │
 ├── scripts/              Local tooling (not deployed)
 │   ├── scrape_month.sh   Trigger the /scrape API for a full calendar month
+│   ├── eval-ai.mjs       Score the AI prompt against the crowd labels — see "AI Detector"
 │   └── import_matches.py Import match dates into D1 (football-data.org + api-sports.io)
 │
 └── images/               Newspaper logos (static assets for the frontend)
@@ -110,15 +112,16 @@ push — same push, same commit, two independent deploys (different
 ### D1 Schema
 
 **`covers`** — one row per newspaper per day. `url` is the full-res image; `thumb_url` is a generated 220px WebP thumbnail (nullable — falls back to `url` in `/api/covers` and `/api/stats` for covers scraped before thumbnails existed; backfill with `/api/backfill-thumbs`). Thumbnails feed small on-screen previews (landing calendar, catalogue grid); the swipe card and cover modal always use the full-res `url`.  
-`ai_club` is the model's own guess for that cover (nullable — absent until classified; backfill with `/api/backfill-ai`). It sits on `covers` rather than beside the votes because it is not a vote and has no user attached to it.  
+`ai_club` is the model's own guess for that cover (nullable — absent until classified; backfill with `/api/backfill-ai`), and `ai_headline` is the headline it quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. A NULL `ai_headline` also marks a cover as classified by an older prompt, which is how the backfill knows to re-label it. Both sit on `covers` rather than beside the votes because neither is a vote and neither has a user attached to it.  
 **`swipes`** — one row per user per cover (upserted on re-swipe)  
 **`matches`** — match dates for Sporting, Benfica, Porto (used to highlight the calendar)  
 **`analytics_covers`** — one row per cover with ≥1 vote: the winning club + vote counts, refreshed on every swipe. Never joined with `swipes`/`user_email`, which is the rule that keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, joining `covers` only for image URLs and `ai_club` — columns with no user attached to them.
 
-`ai_club` was added after the fact. An existing database needs it applied by hand; `schema.sql` already has it for a fresh one:
+`ai_club` and `ai_headline` were added after the fact. An existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
 
 ```sql
 ALTER TABLE covers ADD COLUMN ai_club TEXT;
+ALTER TABLE covers ADD COLUMN ai_headline TEXT;
 ```
 
 ---
@@ -140,7 +143,7 @@ credentialed requests, no CORS/cookie complexity).
 | `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
 | `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
 | `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generates `thumb_url` for 25 covers per call (Workers execution limits rule out doing this in one shot for 1000+ covers) — returns `{done, remaining}`, call repeatedly until `remaining` is 0 |
-| `POST` | `/api/backfill-ai` | `capas.` | Bearer | One-off: classifies 8 covers per call, newest first — returns `{done, attempted, remaining}`, call repeatedly. Batch is smaller than the thumbnail one because each cover is a multi-second model call |
+| `POST` | `/api/backfill-ai` | `capas.` | Bearer | Classifies 8 covers per call, newest first — returns `{done, attempted, remaining}`, call repeatedly. Also re-labels covers left by an older prompt (no `ai_headline`). Batch is smaller than the thumbnail one because each cover is a multi-second model call |
 | `GET`/`POST`/`DELETE` | `/api/comments` | either | — / Google | Ephemeral comments on the current day's covers; wiped when the covers change |
 | `POST` | `/api/notify` | `capas.` | Bearer | Send the daily notification mail |
 
@@ -243,7 +246,9 @@ are used as a *benchmark*, never as training data.
 
 ### Model choice
 
-Picked by benchmarking against 30 randomly sampled crowd-labelled covers:
+Picked by benchmarking against 30 randomly sampled crowd-labelled covers. The
+sample was small and it flattered the winner — scored over the whole archive it
+lands at 77%, which is the next section:
 
 | Model | Input | Agreement |
 |---|---|---|
@@ -259,12 +264,69 @@ Two things drive that gap, and both shaped the implementation:
   the Portuguese headline is unreadable and accuracy collapses.
 - **Making the model quote the headline before answering is worth ~7 points.**
   The prompt asks for the headline first and an `ANSWER: <club>` line second,
-  so the reply arrives as prose and is parsed back down to one of four keys.
+  so the reply arrives as prose and is parsed back down to one of four keys —
+  and a reply with no `ANSWER:` line in it is no label at all, not a guess.
 
-> That 87% is *agreement with the crowd*, not correctness. At least one of the
-> four disagreements — "rui costa seduz ríos" — is a cover the model read right
-> and the vote read wrong. Treat the number as "how often the machine and the
-> room land in the same place", which is what the page actually claims.
+> Agreement is *agreement with the crowd*, not correctness. Some of the
+> disagreements — "rui costa seduz ríos" — are covers the model read right and
+> the vote read wrong. Treat the number as "how often the machine and the room
+> land in the same place", which is what the page actually claims. Most covers
+> carry a single vote, so the crowd side of it is thin too.
+
+### Scoring, and what the first prompt got wrong
+
+30 covers was too small a benchmark. Scored across the whole archive that first
+prompt agreed on **77% (447/579)**, and the misses were lopsided:
+
+| crowd label | recall | most common miss |
+|---|---|---|
+| sporting | 95% | — |
+| porto | 92% | — |
+| benfica | 76% | → sporting (22) |
+| **others** | **39%** | → sporting (37), → porto (28) |
+
+It over-called Sporting (+36% against the true count) and Porto (+33%), and
+under-called Benfica (−21%) and others (−51%). Three causes, all now fixed:
+
+- **The parser guessed instead of abstaining.** With no `ANSWER:` marker in the
+  reply — truncated output, a refusal, a paragraph of prose — it fell back to
+  scanning the whole response, and then picked whichever club came first in the
+  `CLUBS` array rather than first in the text. "Not Benfica, this is Sporting"
+  parsed as `benfica`. Now a reply without the marker produces no label at all:
+  the cover keeps `ai_club IS NULL` and the next backfill pass retries it.
+- **The rails.** Every one of these front pages carries small `SPORTING` /
+  `FC PORTO` section boxes down the side whatever the main story is, and the
+  prompt never mentioned them. It now names them and says to ignore them, along
+  with teasers, adverts and results bars.
+- **"Red kit" was a trap.** Record and A Bola print their own masthead in red,
+  so red is the *least* discriminative colour on the page — a good way to lose
+  Benfica covers. Colour cues are gone; the prompt lists names and nicknames
+  (Águias, Leões, Dragões, Alvalade, da Luz) instead, and gives `others` an
+  actual definition (Seleção, Braga, Guimarães, another sport, a transfer
+  round-up) rather than leaving it as "none of the above".
+
+`scripts/eval-ai.mjs` scores the current prompt against the crowd labels without
+deploying anything: public `/api/stats` for the labels, public R2 URLs for the
+images, a Workers AI · Read token for the calls. Run it before *and* after
+touching `PROMPT`.
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/eval-ai.mjs --n 40
+```
+
+It prints agreement, per-class recall, a confusion matrix, and every miss with
+the headline the model quoted — that last column is what says whether it misread
+a rail box or hit a genuinely ambiguous page. Calls cost neurons against the
+same **10,000/day free allowance** the daily scrape uses, so `--all` (579 calls)
+is not something to run twice in an afternoon.
+
+A prompt change only reaches covers that get classified again, and `ai_headline`
+is what makes that automatic: covers labelled by an older prompt don't have one,
+so `/api/backfill-ai` picks them up on its normal loop and replaces the label in
+place. No wiping `ai_club` first — the section keeps working while it runs.
+
+`node api/lib/ai.test.mjs` covers the parser, which is the part that turns a bad
+reply into a wrong label.
 
 ### Where it runs
 
