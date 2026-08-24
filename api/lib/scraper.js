@@ -1,9 +1,9 @@
 import { classifyAndStore } from "./ai.js";
 
 export const NEWSPAPERS = [
-  { slug: "record", url: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
-  { slug: "abola",  url: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
-  { slug: "ojogo",  url: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}" },
+  { slug: "record", url: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}", fallback: "jornal_record" },
+  { slug: "abola",  url: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}", fallback: "jornal_a_bola" },
+  { slug: "ojogo",  url: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}", fallback: "jornal_o_jogo" },
 ];
 
 const FETCH_HEADERS = {
@@ -41,6 +41,38 @@ async function extractCoverImage(response) {
   return imageUrl;
 }
 
+// sapo.pt is the source the whole archive was built from, but it does go down —
+// on 2026-08-24 it stopped answering on :80 and :443 for hours and every scrape
+// logged a 522. capasjornais.pt carries the same three papers at a URL you can
+// compute from the date alone (no page to parse, no HTMLRewriter) and keeps
+// years of back issues, so it covers both the outage and any backfill.
+export function fallbackUrl(newspaper, dateStr) {
+  const [y, m, d] = [dateStr.slice(0, 4), dateStr.slice(4, 6), dateStr.slice(6, 8)];
+  return `https://capasjornais.pt/img/FrontPages/${y}${m}/${newspaper.fallback}_${d}${m}${y}.jpg`;
+}
+
+// null rather than a throw: a dead source is the normal case here, not an error.
+async function tryFetch(url) {
+  try {
+    const res = await fetch(url, { headers: FETCH_HEADERS });
+    return res.ok ? res : null;
+  } catch (err) {
+    console.error(`Fetch failed for ${url}: ${err}`);
+    return null;
+  }
+}
+
+// The cover image itself, from whichever source still has it.
+async function fetchCover(newspaper, dateStr) {
+  const page = await tryFetch(newspaper.url.replace("{date}", dateStr));
+  if (page) {
+    const imgUrl = await extractCoverImage(page);
+    const img = imgUrl && (await tryFetch(imgUrl));
+    if (img) return img;
+  }
+  return tryFetch(fallbackUrl(newspaper, dateStr));
+}
+
 export async function scrapeNewspaper(newspaper, date, env) {
   const dateStr   = date.toISOString().slice(0, 10).replace(/-/g, "");  // 20260425
   const dateLabel = date.toISOString().slice(0, 10);                    // 2026-04-25
@@ -48,7 +80,6 @@ export async function scrapeNewspaper(newspaper, date, env) {
   const month     = dateLabel.slice(5, 7);
   const day       = dateLabel.slice(8, 10);
 
-  const pageUrl   = newspaper.url.replace("{date}", dateStr);
   const r2Key     = `${year}/${month}/${day}/${newspaper.slug}_${dateLabel}.jpg`;
   const publicUrl = `${env.R2_PUBLIC_URL}/${r2Key}`;
 
@@ -62,21 +93,9 @@ export async function scrapeNewspaper(newspaper, date, env) {
     return;
   }
 
-  const pageResponse = await fetch(pageUrl, { headers: FETCH_HEADERS });
-  if (!pageResponse.ok) {
-    console.error(`Failed to fetch page for ${newspaper.slug} ${dateLabel}: ${pageResponse.status}`);
-    return;
-  }
-
-  const imgUrl = await extractCoverImage(pageResponse);
-  if (!imgUrl) {
-    console.error(`No cover image found for ${newspaper.slug} ${dateLabel}`);
-    return;
-  }
-
-  const imgResponse = await fetch(imgUrl, { headers: FETCH_HEADERS });
-  if (!imgResponse.ok) {
-    console.error(`Failed to download image for ${newspaper.slug} ${dateLabel}: ${imgResponse.status}`);
+  const imgResponse = await fetchCover(newspaper, dateStr);
+  if (!imgResponse) {
+    console.error(`No cover for ${newspaper.slug} ${dateLabel}: sapo.pt and capasjornais.pt both came up empty`);
     return;
   }
 

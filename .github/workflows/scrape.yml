@@ -12,8 +12,18 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
+      # Cloudflare Bot Fight Mode challenges GitHub's runners — they come from
+      # Microsoft/Azure IPs, which it treats as datacenter bot traffic. On the
+      # Free plan there is no per-path exemption, so this is a coin flip on the
+      # UA heuristic. -f is gone on purpose: it hides the response body, which
+      # is the only way to tell a Cloudflare challenge page (403, ~5 KB of
+      # HTML) from the Worker rejecting the token (401, 12 bytes of text).
       - name: Trigger scraper
         run: |
-          curl -f \
+          code=$(curl -sS -o response.txt -w '%{http_code}' \
+            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
-            "https://capas.digasnikas.com/api/scrape?days=${{ inputs.days }}"
+            "https://capas.digasnikas.com/api/scrape?days=${{ inputs.days }}")
+          echo "HTTP $code"
+          head -c 2000 response.txt
+          test "$code" = "200"

@@ -9,7 +9,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 ## How It Works
 
-1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers from sapo.pt and stores them in **R2** (images) and **D1** (metadata).
+1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers (sapo.pt, falling back to capasjornais.pt) and stores them in **R2** (images) and **D1** (metadata).
 2. **`capas.digasnikas.com`** is the public landing page — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
 3. The same three covers are also read by a **vision model** (Workers AI, zero-shot — no training) and shown side by side with the crowd's verdict in the landing page's "Detetor AI" section.
 4. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
@@ -56,11 +56,12 @@ capas-web-swipe/
 │   ├── index.js          Router + cron entry point
 │   ├── schema.sql        D1 database schema
 │   ├── lib/
-│   │   ├── http.js       CORS headers + json() helper
-│   │   ├── scraper.js    Scraping logic (fetch → HTMLRewriter → R2 + D1 → AI)
-│   │   ├── ai.js         Zero-shot cover classification (Workers AI) — see "AI Detector"
-│   │   ├── ai.test.mjs   Self-check for the ANSWER: parser: node api/lib/ai.test.mjs
-│   │   └── email.js      Outbound mail for /notify
+│   │   ├── http.js           CORS headers + json() helper
+│   │   ├── scraper.js        Scraping logic (fetch → HTMLRewriter → R2 + D1 → AI)
+│   │   ├── scraper.test.mjs  Self-check: the capasjornais.pt fallback URL is built right
+│   │   ├── ai.js             Zero-shot cover classification (Workers AI) — see "AI Detector"
+│   │   ├── ai.test.mjs       Self-check for the ANSWER: parser: node api/lib/ai.test.mjs
+│   │   └── email.js          Outbound mail for /notify
 │   └── handlers/
 │       ├── covers.js     GET  /covers
 │       ├── matches.js    GET  /matches
@@ -196,7 +197,43 @@ no build step, no GitHub Actions workflow involved.
 
 The Worker runs hourly from **05:00–08:00 UTC** (06:00–09:00/07:00–10:00 Lisbon), scraping today's cover for each newspaper. Running four times ensures the cover is captured even if sapo.pt is slow to publish.
 
+### Sources, and the fallback
+
+The archive is built from **sapo.pt**, which is where the scraper still looks
+first. It is not reliable: on 2026-08-24 it stopped answering on both :80 and
+:443 for hours — confirmed dead from three separate networks, not a block — and
+every run logged `Failed to fetch page ...: 522`, Cloudflare's "no answer from
+origin".
+
+So `scraper.js` falls back to **capasjornais.pt**, which carries the same three
+papers at a URL computable from the date alone:
+
+```
+https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg
+                                                 jornal_a_bola
+                                                 jornal_record
+                                                 jornal_o_jogo
+```
+
+No page to fetch, no HTMLRewriter, and back issues go years deep — so it covers
+outages *and* backfills. Missing dates 404 cleanly, so a fallback miss is just a
+log line. `node api/lib/scraper.test.mjs` guards the date munging (sapo writes
+`YYYYMMDD`, capasjornais writes `DDMMYYYY` under a `YYYYMM` folder).
+
+Full-res is ~960×1230 there versus sapo's framing, so a stretch scraped from the
+fallback is a third "era" for `scripts/avg_cover.py` to align — it already
+cross-correlates, so this costs nothing, but rerun it after a long outage.
+
 ### Manual (GitHub Actions)
+
+> **Known failure:** the runner gets **403** with ~5 KB of HTML. That is not a
+> bad `ADMIN_SECRET` — a wrong token returns a 12-byte `401`. It is Cloudflare
+> **Bot Fight Mode** issuing a managed challenge, because GitHub's runners come
+> from Microsoft/Azure IPs. Confirmed in `firewallEventsAdaptive`:
+> `ruleId: bot_fight_mode`, `source: botFight`, `clientASNDescription:
+> Microsoft Corporation`. The Free plan has no per-path exemption; the fixes are
+> to publish the Worker on `workers.dev` and point the workflow there, or to run
+> the curl locally, which is not challenged.
 
 Two workflows are available under **Actions**:
 
