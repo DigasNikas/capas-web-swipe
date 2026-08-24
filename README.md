@@ -11,8 +11,9 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers from sapo.pt and stores them in **R2** (images) and **D1** (metadata).
 2. **`capas.digasnikas.com`** is the public landing page — it shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table, no login required.
-3. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
-4. Everything past login lives on that subdomain. "Conta" opens as a bottom-sheet modal over the swipe app (same pattern as the leaderboard and Instruções modals — no page navigation), showing a user's own stats, leaderboard rank, and swipe history. Access is configured as a multi-domain application, so signing in on one host authenticates the other too.
+3. The same three covers are also read by a **vision model** (Workers AI, zero-shot — no training) and shown side by side with the crowd's verdict in the landing page's "Detetor AI" section.
+4. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access** — the Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
+5. Everything past login lives on that subdomain. "Conta" opens as a bottom-sheet modal over the swipe app (same pattern as the leaderboard and Instruções modals — no page navigation), showing a user's own stats, leaderboard rank, and swipe history. Access is configured as a multi-domain application, so signing in on one host authenticates the other too.
 
 ---
 
@@ -54,14 +55,21 @@ capas-web-swipe/
 │   ├── schema.sql        D1 database schema
 │   ├── lib/
 │   │   ├── http.js       CORS headers + json() helper
-│   │   └── scraper.js    Scraping logic (fetch → HTMLRewriter → R2 + D1)
+│   │   ├── scraper.js    Scraping logic (fetch → HTMLRewriter → R2 + D1 → AI)
+│   │   ├── ai.js         Zero-shot cover classification (Workers AI) — see "AI Detector"
+│   │   └── email.js      Outbound mail for /notify
 │   └── handlers/
 │       ├── covers.js     GET  /covers
 │       ├── matches.js    GET  /matches
 │       ├── stats.js      GET  /stats  (public — reads analytics_covers only, never swipes)
 │       ├── swipes.js     GET  + POST /swipes (POST also refreshes analytics_covers)
+│       ├── comments.js   GET + POST + DELETE /comments (ephemeral, Google sign-in)
 │       ├── leaderboard.js GET /leaderboard
-│       └── scrape.js     GET  /scrape  (admin, bearer-protected)
+│       ├── scrape.js     GET  /scrape  (admin, bearer-protected)
+│       ├── notify.js     POST /notify  (admin, bearer-protected)
+│       ├── backfill-thumbs.js  POST /backfill-thumbs (admin)
+│       ├── backfill-ai.js      POST /backfill-ai     (admin)
+│       └── *.test.mjs    Self-checks — plain `node api/handlers/<name>.test.mjs`, no framework
 │
 ├── scripts/              Local tooling (not deployed)
 │   ├── scrape_month.sh   Trigger the /scrape API for a full calendar month
@@ -92,6 +100,7 @@ Cross-host links (landing's "Entrar", app's "Início") are absolute URLs, since 
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
 | Image storage | Cloudflare R2 | Full-res covers + generated thumbnails |
 | Image processing | Cloudflare Images (Workers binding) | Generates a 220px WebP thumbnail per cover at scrape time (free tier: 5,000 transformations/month) |
+| Cover classification | Workers AI (`AI` binding) | Reads each cover and guesses the club it is about — zero-shot, no training. ~$0.0006/cover |
 | Auth | Cloudflare Access | Gates the entire `app.capas.digasnikas.com` — pages and its `/api/covers`, `/api/swipes`, `/api/leaderboard`. `capas.digasnikas.com` (landing, `/api/stats`, `/api/matches`) is fully public. |
 
 Both Pages projects git-connect to this repo/branch and deploy on every
@@ -101,9 +110,16 @@ push — same push, same commit, two independent deploys (different
 ### D1 Schema
 
 **`covers`** — one row per newspaper per day. `url` is the full-res image; `thumb_url` is a generated 220px WebP thumbnail (nullable — falls back to `url` in `/api/covers` and `/api/stats` for covers scraped before thumbnails existed; backfill with `/api/backfill-thumbs`). Thumbnails feed small on-screen previews (landing calendar, catalogue grid); the swipe card and cover modal always use the full-res `url`.  
+`ai_club` is the model's own guess for that cover (nullable — absent until classified; backfill with `/api/backfill-ai`). It sits on `covers` rather than beside the votes because it is not a vote and has no user attached to it.  
 **`swipes`** — one row per user per cover (upserted on re-swipe)  
 **`matches`** — match dates for Sporting, Benfica, Porto (used to highlight the calendar)  
-**`analytics_covers`** — one row per cover with ≥1 vote: the winning club + vote counts, refreshed on every swipe. Never joined with `swipes`/`user_email` — this is the only table the public landing page's API reads.
+**`analytics_covers`** — one row per cover with ≥1 vote: the winning club + vote counts, refreshed on every swipe. Never joined with `swipes`/`user_email`, which is the rule that keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, joining `covers` only for image URLs and `ai_club` — columns with no user attached to them.
+
+`ai_club` was added after the fact. An existing database needs it applied by hand; `schema.sql` already has it for a fresh one:
+
+```sql
+ALTER TABLE covers ADD COLUMN ai_club TEXT;
+```
 
 ---
 
@@ -124,6 +140,9 @@ credentialed requests, no CORS/cookie complexity).
 | `GET` | `/api/leaderboard` | `app.` | Access | Swipe count ranked by user |
 | `GET` | `/api/scrape` | `capas.` | Bearer | Trigger scraper manually (see below) |
 | `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generates `thumb_url` for 25 covers per call (Workers execution limits rule out doing this in one shot for 1000+ covers) — returns `{done, remaining}`, call repeatedly until `remaining` is 0 |
+| `POST` | `/api/backfill-ai` | `capas.` | Bearer | One-off: classifies 8 covers per call, newest first — returns `{done, attempted, remaining}`, call repeatedly. Batch is smaller than the thumbnail one because each cover is a multi-second model call |
+| `GET`/`POST`/`DELETE` | `/api/comments` | either | — / Google | Ephemeral comments on the current day's covers; wiped when the covers change |
+| `POST` | `/api/notify` | `capas.` | Bearer | Send the daily notification mail |
 
 ---
 
@@ -193,6 +212,11 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 # Processes 25 per call — loop until "remaining" hits 0.
 until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
+
+# One-off: classify covers that predate the AI detector.
+# Processes 8 per call, newest first — safe to Ctrl-C once the sample is big enough.
+until curl -s -X POST -H "Authorization: Bearer <secret>" \
+  "https://capas.digasnikas.com/api/backfill-ai" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
 
 ### Bulk backfill (full month)
@@ -204,6 +228,62 @@ ADMIN_SECRET=<secret> ./scripts/scrape_month.sh 2025 11
 ```
 
 This is the main way to backfill a full month without triggering the GitHub Actions workflow day by day or crafting individual curl commands.
+
+---
+
+## AI Detector
+
+The landing page's second verdict card. Same three covers, same arithmetic,
+same layout as "Hoje é dia de quem?" — but the club comes from a vision model
+reading the front page instead of from votes.
+
+**Zero-shot: nothing here is trained on this archive.** The model is shown the
+cover and asked which club the page is about. The 1255 crowd-labelled covers
+are used as a *benchmark*, never as training data.
+
+### Model choice
+
+Picked by benchmarking against 30 randomly sampled crowd-labelled covers:
+
+| Model | Input | Agreement |
+|---|---|---|
+| **`@cf/meta/llama-4-scout-17b-16e-instruct`** | full-res | **87%** |
+| `@cf/meta/llama-3.2-11b-vision-instruct` | full-res | 67% |
+| `@cf/meta/llama-3.2-11b-vision-instruct` | 220px thumb | 53% |
+
+Two things drive that gap, and both shaped the implementation:
+
+- **Covers are decided by the headline text, not by kit colours.** So the
+  classifier fetches the full-res original back out of R2 rather than reusing
+  the 220px thumbnail the rest of the site runs on — at thumbnail resolution
+  the Portuguese headline is unreadable and accuracy collapses.
+- **Making the model quote the headline before answering is worth ~7 points.**
+  The prompt asks for the headline first and an `ANSWER: <club>` line second,
+  so the reply arrives as prose and is parsed back down to one of four keys.
+
+> That 87% is *agreement with the crowd*, not correctness. At least one of the
+> four disagreements — "rui costa seduz ríos" — is a cover the model read right
+> and the vote read wrong. Treat the number as "how often the machine and the
+> room land in the same place", which is what the page actually claims.
+
+### Where it runs
+
+Classification happens at the end of a successful scrape, *after* the D1 insert
+— the cover is worth keeping whether or not the model has an opinion about it.
+`classifyAndStore` swallows its own errors for the same reason: a model hiccup
+must never take down the daily scrape. An unclassified cover is simply absent
+from the AI section until a backfill picks it up.
+
+`/api/stats` returns a second `latestAi` block alongside `latest`. Papers the
+backfill hasn't reached yet are *excluded* from the day's verdict rather than
+counted as misses, so an in-progress backfill can't skew it.
+
+### Cost
+
+~$0.0006 per cover ($0.27/M input + $0.85/M output tokens). Three covers a day
+is roughly **€0.65/year**; classifying the entire archive is a **one-off €0.75**.
+The backfill exists to give the "concorda com a comunidade em X% das N capas"
+line a denominator worth quoting — the section itself only ever shows today.
 
 ---
 
