@@ -147,6 +147,7 @@ function renderEpoca(rows, epoca, matchesByDate) {
     return { date, covers, urls, winner, tally };
   });
 
+  renderSuspeito(computeSuspeito(days, matchesByDate), epoca);
   renderCalendar(days, matchesByDate, epoca);
 }
 
@@ -207,29 +208,101 @@ function dayStats(day) {
   return { paperIds, unanimous, hasMajority };
 }
 
-function pulseFor(day, matchesByDate) {
+// Which of yesterday's match clubs got unfairly snubbed today, and by
+// which papers. A club is only snubbed when a specific rival — a club
+// that didn't itself play that day, and isn't Restantes — took the front
+// page instead. Restantes means a bigger, unrelated story; another club
+// from prevMatches is an equally legitimate story on a multi-match day.
+// Neither is evidence anyone was hidden on purpose, so neither counts
+// against the paper that picked it.
+function snubInfoFor(day, matchesByDate) {
   const prevMatches = matchesByDate.get(prevDateStr(day.date)) || [];
-  if (prevMatches.length === 0) return null;
+  if (prevMatches.length === 0) return { prevMatches, offendersByClub: {} };
 
   const covered = new Set(Object.values(day.covers));
   const alsoPlayed = new Set(prevMatches);
+  const paperIds = Object.keys(day.covers);
 
-  // A club's missing/split coverage only counts as a snub when a specific
-  // rival took the front page instead — a club that didn't itself play
-  // that day, and isn't Restantes. Restantes means a bigger, unrelated
-  // story; another club from prevMatches is an equally legitimate story
-  // on a multi-match day. Neither is evidence anyone was hidden on
-  // purpose, so neither should count against the paper that picked it.
-  const stolenBySomeRival = club =>
-    Object.values(day.covers).some(c => c !== 'others' && c !== club && !alsoPlayed.has(c));
+  const offendersOf = club => paperIds.filter(p => {
+    const c = day.covers[p];
+    return c !== 'others' && c !== club && !alsoPlayed.has(c);
+  });
 
-  if (prevMatches.length > 1) {
-    const snubbed = prevMatches.filter(m => !covered.has(m) && stolenBySomeRival(m));
-    return snubbed.length ? snubbed : null;
-  }
+  // On a multi-match day, only a club with zero coverage is even a
+  // candidate — one that got some coverage already wasn't snubbed just
+  // because another paper covered a co-match rival instead.
+  const candidates = prevMatches.length > 1 ? prevMatches.filter(m => !covered.has(m)) : prevMatches;
 
-  const club = prevMatches[0];
-  return stolenBySomeRival(club) ? prevMatches : null;
+  const offendersByClub = {};
+  candidates.forEach(club => {
+    const offenders = offendersOf(club);
+    if (offenders.length) offendersByClub[club] = offenders;
+  });
+
+  return { prevMatches, offendersByClub };
+}
+
+function pulseFor(day, matchesByDate) {
+  const snubbed = Object.keys(snubInfoFor(day, matchesByDate).offendersByClub);
+  return snubbed.length ? snubbed : null;
+}
+
+function computeSuspeito(days, matchesByDate) {
+  const offenderCounts = {};
+  const victimCounts = {};
+  const incidents = [];
+  days.forEach(day => {
+    const { offendersByClub } = snubInfoFor(day, matchesByDate);
+    Object.entries(offendersByClub).forEach(([club, offenders]) => {
+      victimCounts[club] = (victimCounts[club] || 0) + 1;
+      offenders.forEach(p => { offenderCounts[p] = (offenderCounts[p] || 0) + 1; });
+      incidents.push({ date: day.date, club, offenders });
+    });
+  });
+  incidents.sort((a, b) => a.date.localeCompare(b.date));
+  return { offenderCounts, victimCounts, incidents };
+}
+
+function suspeitoRowsHtml(rows, nameOf) {
+  return rows.length
+    ? rows.map(([id, n]) => `<div class="s-row"><span class="s-name">${nameOf(id)}</span><span class="s-count">${n}</span></div>`).join('')
+    : '<div class="s-empty">Sem incidentes nesta época.</div>';
+}
+
+function renderSuspeito(stats, epoca) {
+  document.getElementById('suspeito').classList.remove('hidden');
+  document.getElementById('suspeito-eyebrow').textContent = `O SUSPEITO · ÉPOCA ${epoca}`;
+
+  const resultsEl = document.getElementById('suspeito-results');
+  const btn = document.getElementById('btn-suspeito-reveal');
+  resultsEl.classList.add('hidden');
+  resultsEl.innerHTML = '';
+  btn.classList.remove('hidden');
+
+  btn.onclick = () => {
+    const { offenderCounts, victimCounts, incidents } = stats;
+    const offenderRows = Object.entries(offenderCounts).sort((a, b) => b[1] - a[1]);
+    const victimRows = Object.entries(victimCounts).sort((a, b) => b[1] - a[1]);
+
+    resultsEl.innerHTML = `
+      <div class="s-card">
+        <h3>Ofensor · por jornal</h3>
+        ${suspeitoRowsHtml(offenderRows, id => PAPERS_BY_ID[id] || id)}
+      </div>
+      <div class="s-card">
+        <h3>Vítima · por clube</h3>
+        ${suspeitoRowsHtml(victimRows, id => CLUB_META[id].name)}
+      </div>
+      <div class="s-card l-suspeito-incidents">
+        <h3>Incidentes (${incidents.length})</h3>
+        ${incidents.length ? incidents.map(i => `
+          <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${i.offenders.map(p => PAPERS_BY_ID[p] || p).join(', ')}</div>
+        `).join('') : '<div class="s-empty">Sem incidentes nesta época.</div>'}
+      </div>
+    `;
+    resultsEl.classList.remove('hidden');
+    btn.classList.add('hidden');
+  };
 }
 
 function renderCalendar(days, matchesByDate, epoca) {

@@ -334,6 +334,51 @@ body {
 .l-day-papers .dp-club { font-size: 0.68rem; font-weight: 700; margin-top: 1px; }
 .l-day-alert { margin-top: 6px; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--l-yellow); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--l-yellow); text-transform: uppercase; }
 
+/* O Suspeito */
+.l-suspeito-intro { font-size: 0.95rem; line-height: 1.55; color: var(--l-text); opacity: 0.9; max-width: 62ch; margin-bottom: 18px; }
+.l-suspeito-btn { border: none; cursor: pointer; font-family: inherit; }
+
+.l-suspeito-results { margin-top: 22px; display: grid; gap: 14px; }
+@media (min-width: 640px) {
+  .l-suspeito-results { grid-template-columns: 1fr 1fr; }
+  .l-suspeito-incidents { grid-column: 1 / -1; }
+}
+
+.s-card {
+  background: var(--l-panel);
+  border: 1px solid var(--l-panel2);
+  padding: 18px 20px;
+}
+.s-card h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--l-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.s-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 0;
+  border-top: 1px solid var(--l-panel2);
+}
+.s-row:first-of-type { border-top: none; }
+.s-row .s-name { font-weight: 700; }
+.s-row .s-count { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--l-yellow); font-variant-numeric: tabular-nums; }
+.s-empty { font-size: 0.85rem; color: var(--l-muted); padding: 4px 0; }
+
+.l-suspeito-incidents .s-inc {
+  font-size: 0.8rem;
+  color: var(--l-muted);
+  padding: 7px 0;
+  border-top: 1px solid var(--l-panel2);
+}
+.l-suspeito-incidents .s-inc:first-of-type { border-top: none; }
+.l-suspeito-incidents .s-inc b { color: var(--l-text); font-variant-numeric: tabular-nums; }
+
 /* Latest */
 .l-latest .l-latest-inner {
   background: linear-gradient(135deg, var(--l-panel), var(--l-panel2));
