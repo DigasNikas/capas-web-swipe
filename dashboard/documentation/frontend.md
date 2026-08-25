@@ -4,7 +4,7 @@ Two Cloudflare Pages projects deploy from this same repo/branch, each pointed at
 
 ## `dashboard/` — public results page
 
-Deploys as `capas-landing` (project name; `destination_dir: dashboard`) → `capas.digasnikas.com`.
+Deploys as `capas-dashboard` (`destination_dir: dashboard`) → `capas.digasnikas.com`.
 
 | File | What |
 |---|---|

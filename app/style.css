@@ -583,6 +583,30 @@ header h1 {
 }
 .cal-nav-btn:hover { border-color: var(--accent); }
 
+/* Below the grid, not beside the month nav above it — this jumps between
+   days that still need votes, unrelated to which month is on screen. */
+#calendar-jump {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+#cal-jump-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.cal-jump-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  border-color: var(--border);
+}
+.cal-jump-btn:disabled:hover { border-color: var(--border); }
+
 #calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

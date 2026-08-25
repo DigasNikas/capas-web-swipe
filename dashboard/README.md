@@ -2,7 +2,7 @@
 
 This README is a map, not the manual — the reasoning lives at [capas.digasnikas.com/documentation](https://capas.digasnikas.com/documentation).
 
-Cloudflare Pages project `capas-landing` (`destination_dir: dashboard`), deployed at `capas.digasnikas.com`. Public, no login. Native ES modules, no build step.
+Cloudflare Pages project `capas-dashboard` (`destination_dir: dashboard`), deployed at `capas.digasnikas.com`. Public, no login. Native ES modules, no build step.
 
 | File | What |
 |---|---|

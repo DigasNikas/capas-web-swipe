@@ -469,6 +469,35 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
   return selectByDate;
 }
 
+// Hover only (matches .cal-day's own @media (hover: hover) gate in the CSS \u2014
+// no lingering tooltip from a touch tap's ghost mouseenter). Positioned in
+// JS rather than as a CSS ::after like .cal-day's, because a stripe near
+// .d-barcode's scrolled edge would otherwise get its tooltip clipped by that
+// same overflow-x:auto instead of floating free.
+const HOVER_CAPABLE = matchMedia('(hover: hover)').matches;
+let bcTooltipEl = null;
+
+function showBcTooltip(stripe) {
+  if (!bcTooltipEl) {
+    bcTooltipEl = document.createElement('div');
+    bcTooltipEl.className = 'bc-tooltip hidden';
+    document.body.appendChild(bcTooltipEl);
+  }
+  bcTooltipEl.textContent = stripe.dataset.tip;
+  bcTooltipEl.classList.remove('hidden');
+
+  const r = stripe.getBoundingClientRect();
+  const margin = 8;
+  const tw = bcTooltipEl.offsetWidth;
+  const left = Math.max(margin, Math.min(r.left + r.width / 2 - tw / 2, innerWidth - tw - margin));
+  bcTooltipEl.style.left = `${left}px`;
+  bcTooltipEl.style.top = `${r.top - bcTooltipEl.offsetHeight - 8}px`;
+}
+
+function hideBcTooltip() {
+  bcTooltipEl?.classList.add('hidden');
+}
+
 // One stripe per day per paper: a whole season of front pages in one glance.
 // Fed by the same `days` the calendar builds, so it follows the epoca dropdown
 // and needs no data of its own.
@@ -492,6 +521,10 @@ function renderBarcode(days, onSelect) {
       stripe.style.background = club ? CLUB_META[club].color : 'var(--d-panel2)';
       stripe.dataset.tip = `${day.date} \u00b7 ${club ? CLUB_META[club].name : 'sem capa'}`;
       stripe.addEventListener('click', () => onSelect(day.date));
+      if (HOVER_CAPABLE) {
+        stripe.addEventListener('mouseenter', () => showBcTooltip(stripe));
+        stripe.addEventListener('mouseleave', hideBcTooltip);
+      }
       strip.appendChild(stripe);
     });
 
@@ -502,6 +535,15 @@ function renderBarcode(days, onSelect) {
   document.getElementById('barcode-range').textContent = sorted.length
     ? `${sorted[0].date} \u2192 ${sorted[sorted.length - 1].date} \u00b7 ${sorted.length} dias`
     : '';
+
+  // Dragging the strip while a tooltip is open would leave it pointing at
+  // wherever the stripe used to be \u2014 hide it instead of trying to track.
+  // #barcode itself persists across \u00e9poca switches (only its children are
+  // rebuilt above), so guard against re-wiring this on every renderBarcode.
+  if (!el.dataset.tooltipWired) {
+    el.addEventListener('scroll', hideBcTooltip, { passive: true });
+    el.dataset.tooltipWired = '1';
+  }
 
   // Lets the calendar mirror its selected day here, across all three rows.
   return function highlightBarcodeDay(date) {
@@ -771,13 +813,6 @@ async function initComments() {
 function renderComments(list) {
   const el = document.getElementById('comments-list');
   el.innerHTML = '';
-  if (!list.length) {
-    const empty = document.createElement('p');
-    empty.className = 'd-comments-empty';
-    empty.textContent = 'Ainda ninguém disse nada. Começa tu.';
-    el.appendChild(empty);
-    return;
-  }
   list.forEach(c => el.appendChild(commentEl(c)));
 }
 
@@ -808,11 +843,19 @@ function commentEl(c) {
   return row;
 }
 
+// Also flips the textarea itself between disabled/writable and shows/hides
+// #comment-gate over it — signed out, the box is blocked outright rather
+// than just sitting there disabled underneath a prompt below it.
 function renderCommentAuth() {
-  const el = document.getElementById('comment-auth');
+  const el     = document.getElementById('comment-auth');
+  const gate   = document.getElementById('comment-gate');
+  const bodyEl = document.getElementById('comment-body');
   el.innerHTML = '';
 
   if (session) {
+    gate.classList.add('hidden');
+    bodyEl.disabled = false;
+
     const send = document.createElement('button');
     send.type = 'submit';
     send.className = 'd-cta d-cta-small';
@@ -828,12 +871,11 @@ function renderCommentAuth() {
     return;
   }
 
-  const hint = document.createElement('span');
-  hint.className = 'd-comments-hint';
-  hint.textContent = 'Entra para comentar';
-  const slot = document.createElement('div');
-  el.append(hint, slot);
+  gate.classList.remove('hidden');
+  bodyEl.disabled = true;
 
+  const slot = document.getElementById('comment-gate-btn');
+  slot.innerHTML = '';
   whenGis(() => {
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential });
     google.accounts.id.renderButton(slot, {
@@ -896,9 +938,7 @@ async function submitComment(e) {
   }
 
   bodyEl.value = '';
-  const list = document.getElementById('comments-list');
-  list.querySelector('.d-comments-empty')?.remove();
-  list.appendChild(commentEl(data));
+  document.getElementById('comments-list').appendChild(commentEl(data));
   renderCommentAuth();
 }
 
