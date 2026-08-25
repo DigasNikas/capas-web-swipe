@@ -333,6 +333,25 @@ export function triggerAction(direction) {
   commitSwipe(card, direction);
 }
 
+// dateGroups is newest-first, so "oldest still pending" is the highest
+// index with an unsaved id and "latest still pending" (today, or the
+// closest day to it) is the lowest — same scan advanceToNextPendingGroup
+// does, just not stopping at the first hit.
+function pendingDateGroups() {
+  const savedIds = new Set(state.catalogue.map(e => e.id));
+  return state.dateGroups.filter(g => g.ids.some(id => !savedIds.has(id)));
+}
+
+export function goToOldestPending() {
+  const pending = pendingDateGroups();
+  if (pending.length) goToCalendarDate(pending[pending.length - 1].date);
+}
+
+export function goToLatestPending() {
+  const pending = pendingDateGroups();
+  if (pending.length) goToCalendarDate(pending[0].date);
+}
+
 export function goToCalendarDate(dateStr) {
   const groupIndex = state.dateGroups.findIndex(g => g.date === dateStr);
   if (groupIndex === -1) return;

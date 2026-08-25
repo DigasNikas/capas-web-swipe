@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>avaliador.capas dashboard ⚽</title>
+  <title>avaliador.capas dashboard</title>
   <meta name="description" content="Que clube cada jornal desportivo português mais cobre? Resultados ao vivo, votados pela comunidade." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -114,10 +114,16 @@
         </div>
         <div id="comments-list" class="d-comments-list" aria-live="polite"></div>
         <form id="comments-form" class="d-comments-form">
-          <textarea id="comment-body" name="comment" rows="2" maxlength="240"
-                    autocomplete="off" spellcheck="true"
-                    aria-label="Escrever comentário"
-                    placeholder="O que achas das capas de hoje?…"></textarea>
+          <div class="d-comments-box">
+            <textarea id="comment-body" name="comment" rows="2" maxlength="240"
+                      autocomplete="off" spellcheck="true"
+                      aria-label="Escrever comentário"
+                      placeholder="O que achas das capas de hoje?…" disabled></textarea>
+            <div id="comment-gate" class="d-comments-gate">
+              <span class="d-comments-hint">Entra para comentar</span>
+              <div id="comment-gate-btn"></div>
+            </div>
+          </div>
           <div class="d-comments-actions">
             <div id="comment-auth" class="d-comments-auth"></div>
             <span id="comment-error" class="d-comments-error" role="alert"></span>

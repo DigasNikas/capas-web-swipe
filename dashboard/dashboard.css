@@ -282,9 +282,12 @@ body {
   .bc-day:hover { opacity: 1; outline: 1px solid var(--d-text); outline-offset: -1px; z-index: 10; }
 
   /* Custom tooltip (data-tip) instead of the native title attribute —
-     the browser default has a slow show delay and unstyled OS chrome. */
-  .cal-day[data-tip]:hover::after,
-  .bc-day[data-tip]:hover::after {
+     the browser default has a slow show delay and unstyled OS chrome.
+     .bc-day is NOT here: it lives inside .d-barcode's own overflow-x:auto,
+     so a CSS-positioned tooltip on a stripe near the scrolled edge gets
+     clipped by that same overflow instead of floating free — see the
+     JS-positioned #bc-tooltip near .d-barcode below instead. */
+  .cal-day[data-tip]:hover::after {
     content: attr(data-tip);
     position: absolute;
     bottom: calc(100% + 8px);
@@ -304,8 +307,7 @@ body {
     z-index: 20;
     animation: tip-in 0.1s ease-out;
   }
-  .cal-day[data-tip]:hover::before,
-  .bc-day[data-tip]:hover::before {
+  .cal-day[data-tip]:hover::before {
     content: '';
     position: absolute;
     bottom: 100%;
@@ -328,7 +330,46 @@ body {
 .d-barcode-block { margin-top: 22px; border-top: 1px solid var(--d-panel2); padding-top: 18px; }
 .d-barcode-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 12px; }
 .d-barcode-range { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--d-muted); }
-.d-barcode { background: var(--d-panel); border: 1px solid var(--d-panel2); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
+/* Scrollbar hidden: the row already scrolls fine by drag/trackpad/shift-wheel,
+   and a bar permanently pinned under three thin colour rows read as a stray
+   UI element more than a hint. scrollbar-width/-ms-overflow-style still leave
+   the element scrollable, just undrawn. */
+.d-barcode {
+  background: var(--d-panel); border: 1px solid var(--d-panel2); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px; overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.d-barcode::-webkit-scrollbar { display: none; }
+
+/* JS-positioned (dashboard.js), not the .cal-day ::after/::before pattern —
+   this one has to escape .d-barcode's own overflow-x:auto, which a
+   CSS-absolute tooltip anchored to a stripe near the scrolled edge cannot:
+   it gets clipped by that same overflow instead of floating free. Fixed
+   positioning sidesteps it and lets the position be clamped to the
+   viewport so it never runs off the right edge either. */
+.bc-tooltip {
+  position: fixed;
+  background: var(--d-bg);
+  border: 1px solid var(--d-panel2);
+  color: var(--d-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 30;
+  animation: bc-tip-in 0.1s ease-out;
+}
+.bc-tooltip.hidden { display: none; }
+/* No horizontal translate baked in, unlike .cal-day's tip-in — this one's
+   left/top are already the final clamped position, set in JS. */
+@keyframes bc-tip-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 /* max-content so the row spans the whole scroll width — a row stretched to the
    visible width only would drag the sticky label off-screen with it. */
 .d-barcode-row { display: flex; align-items: center; gap: 12px; width: max-content; min-width: 100%; }
@@ -606,13 +647,9 @@ body {
   color: var(--d-text);
   overflow-wrap: anywhere;
 }
-.d-comments-empty {
-  font-size: 0.88rem;
-  color: var(--d-muted);
-  padding: 4px 0 2px;
-}
 
 .d-comments-form { margin-top: 14px; }
+.d-comments-box { position: relative; }
 .d-comments-form textarea {
   width: 100%;
   resize: vertical;
@@ -631,6 +668,23 @@ body {
   outline-offset: 1px;
   border-color: transparent;
 }
+.d-comments-form textarea:disabled { color: transparent; }
+
+/* Blocks the textarea outright rather than just disabling it underneath —
+   signing in is the point, not a thing to notice after typing. Toggled in
+   renderCommentAuth(), same call that flips the textarea's disabled state. */
+.d-comments-gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(10, 10, 15, 0.9);
+  border-radius: 6px;
+}
+.d-comments-gate.hidden { display: none; }
 
 .d-comments-actions {
   display: flex;

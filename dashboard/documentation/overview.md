@@ -16,7 +16,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)** (the logged-in 
 
 | Resource | Provider | Purpose |
 |---|---|---|
-| Dashboard hosting | Cloudflare Pages (`capas-landing`) | Serves `dashboard/` at `capas.digasnikas.com` — public |
+| Dashboard hosting | Cloudflare Pages (`capas-dashboard`) | Serves `dashboard/` at `capas.digasnikas.com` — public |
 | App hosting | Cloudflare Pages (`capas-app`) | Serves `app/` at `app.capas.digasnikas.com` — behind Access. One page — the swipe app, account/leaderboard/instructions all as modals. |
 | Worker | Cloudflare Workers | API + scheduled scraper, routed on both hostnames' `/api/*` |
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
