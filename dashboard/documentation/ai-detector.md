@@ -89,11 +89,11 @@ Each model gets the same report — accuracy, per-class precision/recall/F1, con
 |---|---|
 | Examples | **1,555** covers — every one with a crowd vote in `analytics_covers` (the archive holds more; unvoted covers aren't labelled, so they're excluded here) |
 | Representation | Each cover resized to 32×32 and flattened to a raw RGB pixel vector — **3,072 features**, values normalized to `[0, 1]`. No crops, no colour histograms, no OCR, no hand-built features of any kind |
-| Split | Chronological, 80/20 — **1,244 train** (older covers) / **311 test** (the most recent stretch), not random. A random split would let near-duplicate masthead templates from the same week leak between train and test |
+| Split | `--split chronological` (default) or `--split stratified` — see below for both. Either way, 80/20, **1,244 train** / **311 test** |
 | Labels | 4 classes from `analytics_covers.club`: `benfica`, `sporting`, `porto`, `others` |
 | Majority-class baseline | Always guessing `benfica` (the largest class in the test split) scores **35.7%** (111/311) |
 
-### Results — full archive run
+### Results — chronological split
 
 | Model | Accuracy | Macro F1 |
 |---|---|---|
@@ -120,3 +120,34 @@ Every model clears the 35.7% baseline, so all seven are learning *something* fro
 | Small MLP (PyTorch) | 70% | 93% | 63% | **0%** |
 
 `others` collapses for every model — worst for the two that scored *highest* on accuracy (Random Forest 2%, the MLP 0%, both just learning to guess `benfica` whenever unsure, since it's the largest class). This is the exact same failure shape the zero-shot model's first prompt had (see "Scoring, and what the first prompt got wrong" above: 39% recall on `others`, over-calling Sporting and Porto) — except there the fix was rewording the prompt to give `others` an actual definition. There's no prompt to reword here: `others` genuinely has no consistent visual signature across four completely different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up), so a model with no way to read what the headline says has nothing else to grab onto for that class. Confirms, from a completely different angle, that the earlier zero-shot fix was solving a real problem rather than an artifact of one bad prompt.
+
+### Results — stratified split
+
+Same 1,555 covers, same 80/20 ratio, same seven models — the only thing that changes is `train_test_split(..., stratify=y, random_state=0)` instead of the date cutoff, so the test set's four classes land in their true archive proportions (sporting 83, benfica 107, porto 64, others 57 — majority-class baseline **34.4%**) instead of whatever the most recent 311 covers happened to be.
+
+| Model | Accuracy | Macro F1 |
+|---|---|---|
+| Random Forest | **62.1%** | 0.54 |
+| Naive Bayes | 61.4% | 0.58 |
+| Logistic Regression | 61.1% | 0.58 |
+| Small MLP (PyTorch, from scratch) | 58.2% | 0.46 |
+| Linear SVM | 56.3% | 0.54 |
+| k-Nearest Neighbours | 55.3% | 0.50 |
+| Decision Tree | 38.6% | 0.36 |
+
+**Recall per class:**
+
+| Model | sporting | benfica | porto | others |
+|---|---|---|---|---|
+| Logistic Regression | 69% | 71% | 64% | 28% |
+| k-Nearest Neighbours | 41% | 83% | 62% | 16% |
+| Decision Tree | 35% | 50% | 45% | 16% |
+| Random Forest | 60% | 82% | 80% | 7% |
+| Linear SVM | 65% | 66% | 53% | 28% |
+| Naive Bayes | 67% | 65% | 80% | 25% |
+| Small MLP (PyTorch) | 67% | 95% | 36% | 0% |
+
+Random Forest scores byte-for-byte the same accuracy under both splits (62.1%) — reassuring, since it means that number isn't an artifact of which 311 covers ended up in the test set. Logistic Regression and Naive Bayes both do noticeably better stratified (55.3%→61.1%, 60.8%→61.4%): some of what looked like a weakness in the chronological run was really the chronological test tail being a harder-than-average slice of the archive for a linear/probabilistic model. The MLP goes the other way (62.1%→58.2%), which given it's the one model here with enough capacity to overfit is a small flag for that specific run rather than a strength lost.
+
+The one number that *doesn't* move is the one that matters most: `others` recall stays near-zero for Random Forest (2%→7%) and the MLP (0%→0%) regardless of split strategy. If the chronological result had been an artifact of test-set imbalance, stratifying would have fixed it — it didn't, which is stronger evidence that these two models specifically default to `benfica` (the largest class) whenever unsure, independent of how the test set happens to be composed. Logistic Regression, Linear SVM and Naive Bayes all keep `others` recall in the 25–28% range under stratification too, versus these two collapsing toward 0% — the margin models and linear model spread their mistakes across classes instead of defaulting to the majority one.
+

@@ -25,6 +25,7 @@ from PIL import Image
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
@@ -125,6 +126,12 @@ def evaluate(name, y_test, pred):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, help="use only the N most recent labelled covers (faster iteration)")
+    ap.add_argument("--split", choices=["chronological", "stratified"], default="chronological",
+                     help="chronological (default): train on the older 80%%, test on the most recent 20%% — "
+                          "honest about the real question ('can this predict a cover it hasn't seen') and "
+                          "immune to masthead-template leakage. stratified: sklearn's random stratified "
+                          "train_test_split, preserving each class's proportion in both halves — the more "
+                          "textbook default, at the cost of reintroducing that same leakage risk")
     args = ap.parse_args()
 
     rows = json.loads(fetch(STATS))["rows"]
@@ -143,16 +150,24 @@ def main():
     X = np.stack([v for v, _ in kept])
     y = np.array([c for _, c in kept])
 
-    # Chronological split — train on the older 80%, test on the most recent
-    # 20% — rather than a random one: covers share a masthead template
-    # within a stretch of dates, so a random split would let near-duplicate
-    # examples leak between train and test and inflate the score. This is
-    # also the honest version of the real question, "can this predict a
-    # cover it's never seen," since training only ever sees the past.
-    split = int(len(X) * 0.8)
-    X_train, X_test = X[:split], X[split:]
-    y_train, y_test = y[:split], y[split:]
-    print(f"train={len(X_train)}  test={len(X_test)}")
+    if args.split == "stratified":
+        # Random, but each class keeps its overall proportion in both halves
+        # — the textbook default. Still a random split under the hood, so
+        # it carries the same leakage risk chronological avoids: covers
+        # share a masthead template within a stretch of dates, and this can
+        # put near-duplicate examples on both sides of the split.
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, stratify=y, random_state=0)
+    else:
+        # Chronological — train on the older 80%, test on the most recent
+        # 20%. Immune to that leakage, and the honest version of the real
+        # question, "can this predict a cover it's never seen," since
+        # training only ever sees the past — at the cost of the test set's
+        # class balance being whatever the most recent stretch happens to be.
+        split = int(len(X) * 0.8)
+        X_train, X_test = X[:split], X[split:]
+        y_train, y_test = y[:split], y[split:]
+    print(f"split={args.split}  train={len(X_train)}  test={len(X_test)}")
 
     results = []
     for name, clf in MODELS.items():
