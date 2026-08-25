@@ -316,6 +316,13 @@ header h1 {
   .dir-hint.up    { top: calc(50% - var(--card-h)/2 - 1rem); font-weight: 700; }
   .dir-hint.down  { top: calc(50% + var(--card-h)/2 - 1.8rem); }
 
+  /* Title sits alone on its own wrapped line at this width (the button
+     row below is full-bleed 100vw) — center it so it lines up with the
+     already-centered button row and the Começar pill below, instead of
+     sitting left-aligned on its own. */
+  header { justify-content: center; }
+  header h1 { margin-right: 0; text-align: center; }
+
   /* Voltar is the least useful header action on mobile — shrink it to
      just the arrow so it stops eating a whole row's worth of width. */
   .voltar-text { display: none; }
