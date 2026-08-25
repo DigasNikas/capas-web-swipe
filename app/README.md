@@ -16,7 +16,7 @@ Cloudflare Pages project `capas-app`, deployed at `app.capas.digasnikas.com`, be
 | `src/ui.js` | Progress bar, date header, empty state updates |
 | `src/cards.js` | Card stack, swipe gestures, commit logic, group navigation |
 | `src/catalogue.js` | Histórico rendering (drill-down, filters, image grid) |
-| `src/leaderboard.js` | Leaderboard modal (fetch + render) |
+| `src/leaderboard.js` | Leaderboard modal (fetch + render) — rows drill down into a per-user club breakdown + streaks (`GET /api/user-stats`) |
 | `src/account.js` | Conta modal (stats, rank, Histórico) — reuses `catalogue.js` |
 | `src/settings.js` | Definições modal (vote method toggles, theme) — persists to `localStorage` |
 | `src/modals.js` | `animateModalClose`, swipe-down-to-close, instrucoes modal |

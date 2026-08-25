@@ -1424,8 +1424,11 @@ header h1 {
   border: 1px solid transparent;
   border-radius: 0;
   font-size: 0.95rem;
+  cursor: pointer;
   transition: transform 0.12s ease, border-color var(--transition);
 }
+.lb-row:hover { border-color: var(--accent); }
+.lb-row:active { transform: scale(0.98); }
 
 .lb-row.lb-rank-1 { background: rgba(245, 158, 11, 0.1);  border-color: rgba(245, 158, 11, 0.35); }
 .lb-row.lb-rank-2 { background: rgba(203, 213, 225, 0.08); border-color: rgba(203, 213, 225, 0.25); }
@@ -1489,6 +1492,32 @@ header h1 {
   background: var(--border);
   margin: 4px 0;
   list-style: none;
+}
+
+/* ─── Leaderboard row drill-down ─────────────────────────────────────────── */
+/* Same back-button + label shape as #catalogue-nav, kept separate rather
+   than shared since this modal isn't the account modal. */
+#lb-detail-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+#lb-detail-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .lb-loading {
