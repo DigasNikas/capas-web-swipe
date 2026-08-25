@@ -12,6 +12,7 @@ or its 77% archive-wide agreement; the point here is the exercise itself.
     .venv/bin/pip install torch          # optional — adds the MLP model
     .venv/bin/python scripts/train_classic_classifier.py
     .venv/bin/python scripts/train_classic_classifier.py --limit 200   # quick run
+    .venv/bin/python scripts/train_classic_classifier.py --per-newspaper
 """
 import argparse
 import io
@@ -123,6 +124,49 @@ def evaluate(name, y_test, pred):
     return acc
 
 
+def split_data(X, y, mode):
+    if mode == "stratified":
+        # Random, but each class keeps its overall proportion in both halves
+        # — the textbook default. Still a random split under the hood, so
+        # it carries the same leakage risk chronological avoids: covers
+        # share a masthead template within a stretch of dates, and this can
+        # put near-duplicate examples on both sides of the split.
+        return train_test_split(X, y, test_size=0.2, stratify=y, random_state=0)
+    # Chronological — train on the older 80%, test on the most recent 20%.
+    # Immune to that leakage, and the honest version of the real question,
+    # "can this predict a cover it's never seen," since training only ever
+    # sees the past — at the cost of the test set's class balance being
+    # whatever the most recent stretch happens to be.
+    split = int(len(X) * 0.8)
+    return X[:split], X[split:], y[:split], y[split:]
+
+
+def run_experiment(title, X, y, split_mode):
+    """Split, fit every model, evaluate. Shared by the pooled run and each
+    per-newspaper run — same models, same split logic, different rows."""
+    X_train, X_test, y_train, y_test = split_data(X, y, split_mode)
+    print(f"\n### {title} — split={split_mode}  train={len(X_train)}  test={len(X_test)}")
+
+    results = []
+    for name, clf in MODELS.items():
+        clf = clf.__class__(**clf.get_params())  # fresh instance — don't reuse fitted state across newspapers
+        clf.fit(X_train, y_train)
+        acc = evaluate(name, y_test, clf.predict(X_test))
+        results.append((name, acc))
+
+    try:
+        pred = train_mlp(X_train, y_train, X_test)
+        acc = evaluate("Small MLP (PyTorch, from scratch)", y_test, pred)
+        results.append(("Small MLP (PyTorch, from scratch)", acc))
+    except ImportError:
+        print("\n(skipping the PyTorch MLP — `pip install torch` to include it)")
+
+    print(f"\n=== {title} summary (by accuracy) ===")
+    for name, acc in sorted(results, key=lambda r: -r[1]):
+        print(f"  {name:<34} {acc:.1%}")
+    return dict(results)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, help="use only the N most recent labelled covers (faster iteration)")
@@ -132,6 +176,11 @@ def main():
                           "immune to masthead-template leakage. stratified: sklearn's random stratified "
                           "train_test_split, preserving each class's proportion in both halves — the more "
                           "textbook default, at the cost of reintroducing that same leakage risk")
+    ap.add_argument("--per-newspaper", action="store_true",
+                     help="train and test a separate set of models per newspaper, instead of pooling all "
+                          "newspapers together. Controls for each paper's own masthead/layout: pooled "
+                          "training can let a model shortcut on 'which paper is this' (which correlates "
+                          "with club) rather than actually reading the cover")
     args = ap.parse_args()
 
     rows = json.loads(fetch(STATS))["rows"]
@@ -144,47 +193,28 @@ def main():
     with ThreadPoolExecutor(12) as pool:
         vectors = list(pool.map(lambda r: vectorize(r["url"]), rows))
 
-    kept = [(v, r["club"]) for v, r in zip(vectors, rows) if v is not None]
+    kept = [(v, r["club"], r["newspaper"]) for v, r in zip(vectors, rows) if v is not None]
     print(f"{len(kept)} vectorized ({len(rows) - len(kept)} failed to download)")
 
-    X = np.stack([v for v, _ in kept])
-    y = np.array([c for _, c in kept])
+    if not args.per_newspaper:
+        X = np.stack([v for v, _, _ in kept])
+        y = np.array([c for _, c, _ in kept])
+        run_experiment("Pooled (all newspapers)", X, y, args.split)
+        return
 
-    if args.split == "stratified":
-        # Random, but each class keeps its overall proportion in both halves
-        # — the textbook default. Still a random split under the hood, so
-        # it carries the same leakage risk chronological avoids: covers
-        # share a masthead template within a stretch of dates, and this can
-        # put near-duplicate examples on both sides of the split.
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, stratify=y, random_state=0)
-    else:
-        # Chronological — train on the older 80%, test on the most recent
-        # 20%. Immune to that leakage, and the honest version of the real
-        # question, "can this predict a cover it's never seen," since
-        # training only ever sees the past — at the cost of the test set's
-        # class balance being whatever the most recent stretch happens to be.
-        split = int(len(X) * 0.8)
-        X_train, X_test = X[:split], X[split:]
-        y_train, y_test = y[:split], y[split:]
-    print(f"split={args.split}  train={len(X_train)}  test={len(X_test)}")
+    papers = sorted({p for _, _, p in kept})
+    per_paper_results = {}
+    for paper in papers:
+        subset = [(v, c) for v, c, p in kept if p == paper]
+        X = np.stack([v for v, _ in subset])
+        y = np.array([c for _, c in subset])
+        per_paper_results[paper] = run_experiment(paper, X, y, args.split)
 
-    results = []
-    for name, clf in MODELS.items():
-        clf.fit(X_train, y_train)
-        acc = evaluate(name, y_test, clf.predict(X_test))
-        results.append((name, acc))
-
-    try:
-        pred = train_mlp(X_train, y_train, X_test)
-        acc = evaluate("Small MLP (PyTorch, from scratch)", y_test, pred)
-        results.append(("Small MLP (PyTorch, from scratch)", acc))
-    except ImportError:
-        print("\n(skipping the PyTorch MLP — `pip install torch` to include it)")
-
-    print("\n=== summary (by accuracy) ===")
-    for name, acc in sorted(results, key=lambda r: -r[1]):
-        print(f"  {name:<34} {acc:.1%}")
+    model_names = list(per_paper_results[papers[0]].keys())
+    print("\n=== accuracy by model x newspaper ===")
+    print(f"{'':34}" + "".join(f"{p:>10}" for p in papers))
+    for name in model_names:
+        print(f"{name:34}" + "".join(f"{per_paper_results[p][name]:9.1%} " for p in papers))
 
 
 if __name__ == "__main__":
