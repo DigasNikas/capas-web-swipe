@@ -81,6 +81,42 @@ python3 -m venv .venv && .venv/bin/pip install numpy pillow scikit-learn
 .venv/bin/python scripts/train_classic_classifier.py --limit 200   # quick run
 ```
 
-Each model gets the same report — accuracy, per-class precision/recall/F1, confusion matrix, same shape as `eval-ai.mjs`'s own output — followed by a summary table ranked by accuracy. A 150-cover quick run (train=120, test=30) landed logistic regression and the linear SVM on top at 80%, the decision tree last at 70%, everything else clustered around 73-77% — close enough together that picking a "winner" from a sample this size isn't meaningful. That closeness itself is informative though: on flattened pixels with no OCR, the algorithm matters less than the representation does. The real comparison, model choice included, is a full run against the whole labelled archive, not this one.
+Each model gets the same report — accuracy, per-class precision/recall/F1, confusion matrix, same shape as `eval-ai.mjs`'s own output — followed by a summary table ranked by accuracy.
 
-Worth being honest about the ceiling here: the model choice section above found the signal is the headline *text*, and a model that can't read is working from strictly less information than one that can — so a lower plateau than the zero-shot model, once measured on the full archive, would be the expected outcome of skipping OCR entirely, not a bug in the exercise.
+### Data
+
+| | |
+|---|---|
+| Examples | **1,555** covers — every one with a crowd vote in `analytics_covers` (the archive holds more; unvoted covers aren't labelled, so they're excluded here) |
+| Representation | Each cover resized to 32×32 and flattened to a raw RGB pixel vector — **3,072 features**, values normalized to `[0, 1]`. No crops, no colour histograms, no OCR, no hand-built features of any kind |
+| Split | Chronological, 80/20 — **1,244 train** (older covers) / **311 test** (the most recent stretch), not random. A random split would let near-duplicate masthead templates from the same week leak between train and test |
+| Labels | 4 classes from `analytics_covers.club`: `benfica`, `sporting`, `porto`, `others` |
+| Majority-class baseline | Always guessing `benfica` (the largest class in the test split) scores **35.7%** (111/311) |
+
+### Results — full archive run
+
+| Model | Accuracy | Macro F1 |
+|---|---|---|
+| Random Forest | **62.1%** | 0.52 |
+| Small MLP (PyTorch, from scratch) | **62.1%** | 0.52 |
+| Naive Bayes | 60.8% | 0.57 |
+| k-Nearest Neighbours | 56.9% | 0.52 |
+| Logistic Regression | 55.3% | 0.50 |
+| Linear SVM | 54.3% | 0.49 |
+| Decision Tree | 43.7% | 0.43 |
+
+Every model clears the 35.7% baseline, so all seven are learning *something* from raw pixels alone — just not much beyond "which club's mean colour palette does this look closest to." All seven land well below the zero-shot model's 77% archive-wide agreement, which is the expected cost of skipping OCR entirely: the model choice section above already established the signal is the headline *text*, and none of these seven models can read.
+
+**Recall per class** — the more telling table, since accuracy alone hides which class each model is actually failing on:
+
+| Model | sporting | benfica | porto | others |
+|---|---|---|---|---|
+| Naive Bayes | 64% | 78% | 61% | **26%** |
+| Logistic Regression | 68% | 77% | 41% | 17% |
+| Linear SVM | 68% | 76% | 36% | 18% |
+| k-Nearest Neighbours | 45% | 84% | 64% | 18% |
+| Decision Tree | 55% | 45% | 49% | 23% |
+| Random Forest | 67% | 88% | 73% | 2% |
+| Small MLP (PyTorch) | 70% | 93% | 63% | **0%** |
+
+`others` collapses for every model — worst for the two that scored *highest* on accuracy (Random Forest 2%, the MLP 0%, both just learning to guess `benfica` whenever unsure, since it's the largest class). This is the exact same failure shape the zero-shot model's first prompt had (see "Scoring, and what the first prompt got wrong" above: 39% recall on `others`, over-calling Sporting and Porto) — except there the fix was rewording the prompt to give `others` an actual definition. There's no prompt to reword here: `others` genuinely has no consistent visual signature across four completely different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up), so a model with no way to read what the headline says has nothing else to grab onto for that class. Confirms, from a completely different angle, that the earlier zero-shot fix was solving a real problem rather than an artifact of one bad prompt.
