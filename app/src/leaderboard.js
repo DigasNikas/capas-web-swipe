@@ -1,7 +1,7 @@
 import { API_URL, ACTIONS } from './state.js';
 import {
   leaderboardModal, leaderboardList, leaderboardMe, modalOverlay,
-  leaderboardDetail, btnLbBack, lbDetailName, lbCurrentStreak, lbBestStreak, lbDetailBreakdown,
+  userDetailPanel, btnLbBack, lbDetailName, lbCurrentStreak, lbBestStreak, lbDetailBreakdown,
 } from './dom.js';
 import { animateModalClose } from './modals.js';
 
@@ -80,9 +80,7 @@ export async function openLeaderboard() {
 }
 
 async function openUserDetail(email) {
-  leaderboardList.classList.add('hidden');
-  leaderboardMe.classList.add('hidden');
-  leaderboardDetail.classList.remove('hidden');
+  userDetailPanel.classList.remove('hidden');
 
   lbDetailName.textContent = email.split('@')[0];
   lbCurrentStreak.textContent = '–';
@@ -117,13 +115,26 @@ async function openUserDetail(email) {
   }
 }
 
-function closeUserDetail() {
-  leaderboardDetail.classList.add('hidden');
-  leaderboardList.classList.remove('hidden');
-  leaderboardMe.classList.remove('hidden');
+// Mirrors animateModalClose's timing/easing but for the drawer's own
+// horizontal slide — not worth generalizing that helper for one caller.
+export function closeUserDetail() {
+  if (userDetailPanel.classList.contains('hidden')) return;
+  const content = userDetailPanel.querySelector('.udp-content');
+  content.style.animation = 'drawer-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
+    userDetailPanel.classList.add('hidden');
+  }, 280);
 }
 
 btnLbBack.addEventListener('click', closeUserDetail);
+
+// Own backdrop click-to-close, same as #cover-modal — guarded to the panel
+// itself so a click on the back button or a breakdown row doesn't also
+// close it (they're descendants, so they'd otherwise bubble up here too).
+userDetailPanel.addEventListener('click', e => {
+  if (e.target === userDetailPanel) closeUserDetail();
+});
 
 export function closeLeaderboard() {
   animateModalClose(leaderboardModal, () => {

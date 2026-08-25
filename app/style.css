@@ -1307,6 +1307,48 @@ header h1 {
   cursor: pointer;
 }
 
+/* User detail panel (leaderboard row drill-down) — same "standalone overlay
+   above .modal" shape as .cover-modal (z-index 70 vs .modal's 60), but a
+   left-edge drawer instead of a centered fullscreen view: Classificação
+   stays visible and open behind it rather than being replaced. Own
+   full-viewport click target closes it, guarded to the panel itself so
+   clicks inside .udp-content (the back button, breakdown rows) don't. */
+#user-detail-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+#user-detail-panel:not(.hidden) { pointer-events: all; }
+#user-detail-panel:not(.hidden) .udp-content {
+  animation: drawer-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes drawer-in {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes drawer-out {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+.udp-content {
+  background: var(--surface);
+  width: min(340px, 86vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 20px 20px;
+  gap: 14px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  border-radius: 0 16px 16px 0;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+
 /* ─── Instruções modal ───────────────────────────────────────────────────── */
 .instrucoes-content {
   overflow-y: auto;
