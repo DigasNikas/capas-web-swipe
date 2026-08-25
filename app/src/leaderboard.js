@@ -1,8 +1,18 @@
-import { API_URL } from './state.js';
-import { leaderboardModal, leaderboardList, leaderboardMe, modalOverlay } from './dom.js';
+import { API_URL, ACTIONS } from './state.js';
+import {
+  leaderboardModal, leaderboardList, leaderboardMe, modalOverlay,
+  leaderboardDetail, btnLbBack, lbDetailName, lbCurrentStreak, lbBestStreak, lbDetailBreakdown,
+} from './dom.js';
 import { animateModalClose } from './modals.js';
 
 const MEDAL_COLORS = { 1: '#f5b042', 2: '#cbd5e1', 3: '#d97706' };
+
+// decision -> {label, color}, derived from ACTIONS (state.js) rather than a
+// second hand-written map — action.name (keep/reject/skip/favorite) is
+// exactly the CSS custom property name too (--keep/--reject/--skip/--favorite).
+const CLUB_META = Object.fromEntries(
+  Object.values(ACTIONS).map(a => [a.decision, { label: a.label, color: `var(--${a.name})` }])
+);
 
 function medalSvg(rank) {
   return `<svg class="lb-medal" viewBox="0 0 24 24" width="18" height="18">
@@ -12,14 +22,26 @@ function medalSvg(rank) {
 }
 
 function rowHtml({ user_email, swipes, rank }, isMe) {
-  const rankClass = rank <= 3 ? ` lb-rank-${rank}` : '';
   const rankLabel = rank <= 3 ? medalSvg(rank) : `${rank}.`;
   const name = user_email.split('@')[0];
   const you = isMe ? ' <span class="lb-you">tu</span>' : '';
   return `<span class="lb-rank">${rankLabel}</span><span class="lb-name">${name}${you}</span><span class="lb-count">${swipes}</span>`;
 }
 
+// Same tap/keyboard pattern as the app calendar's cells (calendar.js) — role
+// + tabIndex + Enter/Space, not just a click listener.
+function makeRowClickable(el, email) {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `Ver estatísticas de ${email.split('@')[0]}`);
+  el.addEventListener('click', () => openUserDetail(email));
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUserDetail(email); }
+  });
+}
+
 export async function openLeaderboard() {
+  closeUserDetail();
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
   leaderboardMe.innerHTML = '';
   leaderboardModal.classList.remove('hidden');
@@ -39,6 +61,7 @@ export async function openLeaderboard() {
       const pinned = document.createElement('div');
       pinned.className = 'lb-row lb-me lb-pinned-row';
       pinned.innerHTML = rowHtml(meEntry, true);
+      makeRowClickable(pinned, meEntry.user_email);
       leaderboardMe.appendChild(pinned);
     }
 
@@ -46,6 +69,7 @@ export async function openLeaderboard() {
       const li = document.createElement('li');
       li.className = `lb-row${entry.rank <= 3 ? ` lb-rank-${entry.rank}` : ''}${entry.is_me ? ' lb-me' : ''}`;
       li.innerHTML = rowHtml(entry, entry.is_me);
+      makeRowClickable(li, entry.user_email);
       leaderboardList.appendChild(li);
     });
 
@@ -54,6 +78,52 @@ export async function openLeaderboard() {
     leaderboardList.innerHTML = '<li class="lb-loading">Erro ao carregar.</li>';
   }
 }
+
+async function openUserDetail(email) {
+  leaderboardList.classList.add('hidden');
+  leaderboardMe.classList.add('hidden');
+  leaderboardDetail.classList.remove('hidden');
+
+  lbDetailName.textContent = email.split('@')[0];
+  lbCurrentStreak.textContent = '–';
+  lbBestStreak.textContent = '–';
+  lbDetailBreakdown.innerHTML = '<p class="lb-loading">A carregar…</p>';
+
+  try {
+    const res = await fetch(`${API_URL}/user-stats?email=${encodeURIComponent(email)}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+
+    lbCurrentStreak.textContent = data.currentStreak;
+    lbBestStreak.textContent = data.bestStreak;
+
+    const total = Object.values(data.breakdown).reduce((a, b) => a + b, 0);
+    lbDetailBreakdown.innerHTML = '';
+    Object.keys(CLUB_META).forEach(decision => {
+      const { label, color } = CLUB_META[decision];
+      const count = data.breakdown[decision] ?? 0;
+      const pct   = total ? Math.round((count / total) * 100) : 0;
+      const row = document.createElement('div');
+      row.className = 'acc-bar-row';
+      row.innerHTML = `
+        <span>${label}</span>
+        <span class="acc-bar-track"><span class="acc-bar-fill" style="width:${pct}%;background:${color}"></span></span>
+        <span>${count}</span>
+      `;
+      lbDetailBreakdown.appendChild(row);
+    });
+  } catch {
+    lbDetailBreakdown.innerHTML = '<p class="lb-loading">Erro ao carregar.</p>';
+  }
+}
+
+function closeUserDetail() {
+  leaderboardDetail.classList.add('hidden');
+  leaderboardList.classList.remove('hidden');
+  leaderboardMe.classList.remove('hidden');
+}
+
+btnLbBack.addEventListener('click', closeUserDetail);
 
 export function closeLeaderboard() {
   animateModalClose(leaderboardModal, () => {

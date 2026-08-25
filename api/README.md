@@ -30,6 +30,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `swipes.js` | `GET` + `POST /swipes` (`POST` also refreshes `analytics_covers`) |
 | `comments.js` | `GET` + `POST` + `DELETE /comments` (ephemeral, Google sign-in) |
 | `leaderboard.js` | `GET /leaderboard` |
+| `user-stats.js` | `GET /user-stats?email=` — per-club breakdown + current/best streak, for the leaderboard's row drill-down |
 | `scrape.js` | `GET /scrape` (admin, bearer-protected) |
 | `notify.js` | `POST /notify` (admin, bearer-protected) |
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
