@@ -587,14 +587,21 @@ header h1 {
 
 /* Below the grid, not beside the month nav above it — jumps between the next
    day still needing a vote and today, unrelated to which month is on
-   screen. Same look as #calendar-nav above the grid, on purpose. */
+   screen. Same look as #calendar-nav above the grid, on purpose. Each
+   button carries its own label right beside it rather than one shared
+   caption in the middle, so it's clear which word belongs to which arrow. */
 #calendar-jump {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 10px;
 }
-#cal-jump-label {
+.cal-jump-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-jump-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
   font-weight: 600;
