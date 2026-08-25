@@ -1,7 +1,7 @@
 import { json } from "../lib/http.js";
 
 // Public OAuth client ID — same Google client the Cloudflare Access IdP uses.
-// It is not a secret (it ships in the landing page's source too); only the
+// It is not a secret (it ships in the dashboard's source too); only the
 // authorised JavaScript origins registered against it matter.
 const GOOGLE_CLIENT_ID = "107331929504-16jvt0ml8gago9iofrd2sqtg1barsob6.apps.googleusercontent.com";
 

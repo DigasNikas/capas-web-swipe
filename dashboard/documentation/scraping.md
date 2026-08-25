@@ -30,7 +30,7 @@ Every script in `scripts/` has a matching one-click workflow under **Actions**:
 - **Scrape Newspaper Covers** — trigger with a `days` count (last N days)
 - **Scrape Newspaper Covers (Date Range)** — trigger with `start` and `end` in `YYYYMMDD` format
 - **Scrape Newspaper Covers (Full Month)** — trigger with `year` and `month`; wraps `scrape_month.sh`
-- **Regenerate A Capa Média** — no inputs; runs `avg_cover.py` and commits `landing/avg/` straight to the branch if the pixels changed — see [Archive views](#archive-views)
+- **Regenerate A Capa Média** — no inputs; runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed — see [Archive views](#archive-views)
 - **Evaluate AI Prompt** — trigger with a sample size or "score everything"; wraps `eval-ai.mjs`, prints its report to the run log — see [AI Detector](#ai-detector)
 - **Import Match Dates** — trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead; wraps `import_matches.py` — see [Match dates](#match-dates)
 

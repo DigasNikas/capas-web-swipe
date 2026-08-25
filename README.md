@@ -13,7 +13,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 | Folder | What | |
 |---|---|---|
-| `landing/` | Public results page (Pages, `capas.digasnikas.com`) — also serves `/documentation` | [landing/README.md](landing/README.md) |
+| `dashboard/` | Public results page (Pages, `capas.digasnikas.com`) — also serves `/documentation` | [dashboard/README.md](dashboard/README.md) |
 | `app/` | Swipe app, behind Cloudflare Access (Pages, `app.capas.digasnikas.com`) | [app/README.md](app/README.md) |
 | `api/` | Cloudflare Worker: scraper + REST API, one D1 database behind both frontends | [api/README.md](api/README.md) |
 | `scripts/` | Local tooling — each script has a matching one-click GitHub Action | [scripts/README.md](scripts/README.md) |

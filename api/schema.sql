@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 
 -- Public results, derived from swipes. Never joined with user_email —
--- this is the only table the public landing page's API is allowed to read.
+-- this is the only table the public dashboard's API is allowed to read.
 CREATE TABLE IF NOT EXISTS analytics_covers (
   cover_id    INTEGER PRIMARY KEY REFERENCES covers(id),
   newspaper   TEXT NOT NULL,
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS analytics_covers (
   updated_at  TEXT DEFAULT (datetime('now'))
 );
 
--- Landing-page comments, scoped to a single cover day. Reads always filter on
+-- Dashboard comments, scoped to a single cover day. Reads always filter on
 -- the newest date in analytics_covers, so a comment stops being reachable the
--- moment tomorrow's covers land. No email column by design — the landing page
+-- moment tomorrow's covers land. No email column by design — the dashboard
 -- must never be able to correlate a comment with an app account.
 CREATE TABLE IF NOT EXISTS comments (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
