@@ -667,12 +667,6 @@ header h1 {
   background: var(--accent);
 }
 
-.cal-day.active {
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 700;
-}
-
 .cal-day.completed {
   background: var(--surface2);
   color: var(--text);
@@ -694,6 +688,18 @@ header h1 {
   line-height: 11px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* Comes after .pending/.completed on purpose: a day can be both voted (or
+   pending) AND the selected one, and being selected should read as the
+   loudest signal on the cell regardless — same specificity as either, so
+   source order is what makes this win. The ::after badges above are
+   unaffected (they aren't background, and .active sets none) so a
+   selected+completed day still shows the ✓. */
+.cal-day.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
 }
 
 /* ─── Progress Bar ───────────────────────────────────────────────────────── */
