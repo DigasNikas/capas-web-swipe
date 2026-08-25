@@ -54,9 +54,12 @@ export function renderCalendar() {
     const ds = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const el = document.createElement('div');
     el.className = 'cal-day';
-    if      (completedDates.has(ds)) el.classList.add('completed');
-    else if (ds === activeDate)      el.classList.add('active');
-    else if (allDates.has(ds))       el.classList.add('pending');
+    // Vote status and "is this the selected day" are independent facts, not
+    // one exclusive state — a fully-voted day can still be the active one
+    // (e.g. jumped to via » Hoje), and it needs to read as selected too.
+    if (completedDates.has(ds)) el.classList.add('completed');
+    else if (allDates.has(ds))  el.classList.add('pending');
+    if (ds === activeDate)      el.classList.add('active');
     el.textContent = d;
 
     if (allDates.has(ds)) {
