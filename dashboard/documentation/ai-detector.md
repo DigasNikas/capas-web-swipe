@@ -175,6 +175,30 @@ The archive only ever has three newspapers in it — A Bola, Record, O Jogo — 
 
 Splitting by newspaper is not free — every paper's training set shrinks from 1,244 pooled covers down to ~410–420 — but two of the three still come out ahead of the pooled chronological run (best pooled: 62.1%). Record jumps to **82.9%**, a +20.8pp gain, and A Bola to 69.5%, +7.4pp; O Jogo's best model (57.8%) actually lands *below* the pooled number, and barely above its own 56.9% majority-class baseline — for O Jogo specifically, none of these seven pixel-only models find much real signal, isolated or not (its test set isn't the pooled one, so this isn't a strict like-for-like comparison, but the standalone number stands on its own regardless).
 
-That gap also reframes the `others`-recall collapse from the two split-strategy runs above. Looked at per newspaper, Random Forest and the MLP get **exactly 0% recall on whichever class is numerically smallest in that paper's own test set** — porto in A Bola (4 covers) and Record (2 covers), sporting in O Jogo (5 covers) — regardless of what that class is actually called. So it was never really `others` these two models struggle with; it's whichever label is rarest in front of them. High-capacity, high-accuracy models here default to the safe majority guess the moment a class gets thin, which the pooled runs happened to always make `others` (the pooled archive's own rarest label) — same underlying mechanism, a coincidence of which label that turned out to be.
+That gap also reframes the `others`-recall collapse from the two split-strategy runs above. Looked at per newspaper, Random Forest and the MLP collapse toward **0% recall on each paper's two least-represented classes** — porto and others in A Bola, sporting and benfica in O Jogo, porto and others in Record — regardless of what those classes are actually called. So it was never really `others` these two models struggle with; it's whichever labels are rarest in front of them. High-capacity, high-accuracy models here default to the safe majority guess the moment a class gets thin, which the pooled runs happened to always make `others` (the pooled archive's own rarest label) — same underlying mechanism, a coincidence of which label that turned out to be.
+
+### Per newspaper, stratified split
+
+Same per-newspaper isolation, `--split stratified` instead of the date cutoff — same check as the pooled comparison above, now run inside each paper's own, much smaller dataset.
+
+| Newspaper | Test-set split (sporting/benfica/porto/others) | Majority baseline |
+|---|---|---|
+| A Bola | 31 / 48 / 5 / 21 | 45.7% (benfica) |
+| O Jogo | 8 / 16 / 55 / 23 | 53.9% (porto) |
+| Record | 44 / 44 / 4 / 13 | 41.9% (sporting/benfica tied) |
+
+| Model | A Bola | O Jogo | Record |
+|---|---|---|---|
+| Logistic Regression | **70.5%** | **60.8%** | 76.2% |
+| k-Nearest Neighbours | 61.0% | 45.1% | 61.9% |
+| Decision Tree | 47.6% | 43.1% | 46.7% |
+| Random Forest | 68.6% | 53.9% | 72.4% |
+| Linear SVM | 63.8% | 58.8% | 71.4% |
+| Naive Bayes | 61.0% | 47.1% | 65.7% |
+| Small MLP (PyTorch) | 67.6% | 54.9% | **78.1%** |
+
+Same shape as the chronological per-newspaper run, which is the point of checking: A Bola (70.5% vs 69.5%) and Record (78.1% vs 82.9%) land in the same range either way, so neither result was a fluke of the date cutoff. O Jogo is the one that moves — its best model now clears its own baseline by +6.9pp (53.9%→60.8%) instead of the chronological run's +0.9pp. So O Jogo isn't quite signal-free after all; the chronological test tail (its most recent covers) just happened to be an unusually hard stretch for these models specifically.
+
+The two-smallest-classes collapse replicates too: Random Forest and the MLP again land at 0% recall on each paper's rarest pair — porto/others in A Bola, sporting/benfica in O Jogo (bar the MLP's 6% on benfica, one lonely correct guess out of 16), porto/others in Record. Two different split strategies, six separate newspaper-scoped training runs, the same models defaulting to the majority class every time a label gets thin.
 
 
