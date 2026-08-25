@@ -1,7 +1,7 @@
 /* ─── Reset & Variables ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Same design system as landing/landing.css :root — same product, one look. */
+/* Same design system as dashboard/dashboard.css :root — same product, one look. */
 :root {
   --bg: #0a0a0f;
   --surface: #13131a;
@@ -143,7 +143,7 @@ header h1 {
 
 .header-actions .btn-icon { display: none; color: var(--text); }
 
-/* Matches landing's .l-cta/.l-cta-small exactly (same tokens, same rules). */
+/* Matches the dashboard's .d-cta/.d-cta-small exactly (same tokens, same rules). */
 .btn-cta {
   display: inline-flex;
   align-items: center;
@@ -286,7 +286,7 @@ header h1 {
 .dir-hint.down::after  { content: '↓'; top: calc(100% + 6px);   left: 50%; transform: translateX(-50%); }
 
 /* Flat edge indicators at card-area edges during drag — was a blurred
-   radial-glow oval, which was the odd one out against landing's flat,
+   radial-glow oval, which was the odd one out against the dashboard's flat,
    zero-blur, zero-gradient system everywhere else. Solid color bar
    instead, same club-color mapping. */
 .edge-oval {
@@ -1243,7 +1243,7 @@ header h1 {
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
-/* Fullscreen cover viewer — matches landing/landing.css's .l-cover-modal
+/* Fullscreen cover viewer — matches dashboard/dashboard.css's .d-cover-modal
    exactly (same rules, app's own tokens). Sits above the bottom-sheet
    modals (z-index 200 vs .modal's 60) since it can open from within one. */
 .cover-modal {

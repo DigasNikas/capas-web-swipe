@@ -21,4 +21,4 @@ Cloudflare Pages project `capas-app`, deployed at `app.capas.digasnikas.com`, be
 | `src/settings.js` | Definições modal (vote method toggles, theme) — persists to `localStorage` |
 | `src/modals.js` | `animateModalClose`, swipe-down-to-close, instrucoes modal |
 
-`src/` and `style.css` live here rather than being shared with `landing/` because only `app.js` uses them. Modules share state via the `state` object exported from `src/state.js`, passed by reference across every import.
+`src/` and `style.css` live here rather than being shared with `dashboard/` because only `app.js` uses them. Modules share state via the `state` object exported from `src/state.js`, passed by reference across every import.

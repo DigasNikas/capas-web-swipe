@@ -1,6 +1,6 @@
 # AI Detector
 
-The landing page's second verdict card. Same three covers, same arithmetic, same layout as "Hoje é dia de quem?" — but the club comes from a vision model reading the front page instead of from votes.
+The dashboard's second verdict card. Same three covers, same arithmetic, same layout as "Hoje é dia de quem?" — but the club comes from a vision model reading the front page instead of from votes.
 
 **Zero-shot: nothing here is trained on this archive.** The model is shown the cover and asked which club the page is about. The 1255 crowd-labelled covers are used as a *benchmark*, never as training data.
 

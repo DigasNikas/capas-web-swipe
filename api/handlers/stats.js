@@ -19,7 +19,7 @@ function verdict(rows, key) {
 }
 
 // Public — reads only analytics_covers (+ covers for image URLs and the model's
-// own guess), never swipes. Returns raw per-cover rows; the landing page
+// own guess), never swipes. Returns raw per-cover rows; the dashboard
 // aggregates them (by época, by paper, by day) client-side so filtering doesn't
 // need another round trip.
 export async function handleStats(env) {

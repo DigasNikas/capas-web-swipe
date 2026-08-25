@@ -2,10 +2,10 @@ const API_URL = '/api';
 
 const CLUB_KEYS = ['sporting', 'porto', 'benfica', 'others'];
 const CLUB_META = {
-  sporting: { name: 'Sporting', short: 'SCP', color: 'var(--l-sporting)' },
-  porto:    { name: 'Porto',    short: 'FCP', color: 'var(--l-porto)' },
-  benfica:  { name: 'Benfica',  short: 'SLB', color: 'var(--l-benfica)' },
-  others:   { name: 'Restantes', short: 'RES', color: 'var(--l-others)' },
+  sporting: { name: 'Sporting', short: 'SCP', color: 'var(--d-sporting)' },
+  porto:    { name: 'Porto',    short: 'FCP', color: 'var(--d-porto)' },
+  benfica:  { name: 'Benfica',  short: 'SLB', color: 'var(--d-benfica)' },
+  others:   { name: 'Restantes', short: 'RES', color: 'var(--d-others)' },
 };
 const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 
@@ -85,11 +85,11 @@ function setupEpocaDropdown(epocas, selected, onSelect) {
 
   function renderMenu() {
     menu.innerHTML = epocas.map(e => `
-      <button type="button" class="l-epoca-option${e === selected ? ' active' : ''}" data-epoca="${e}" role="option" aria-selected="${e === selected}">
+      <button type="button" class="d-epoca-option${e === selected ? ' active' : ''}" data-epoca="${e}" role="option" aria-selected="${e === selected}">
         ${e === selected ? '✓' : ''} ÉPOCA ${e}
       </button>
     `).join('');
-    menu.querySelectorAll('.l-epoca-option').forEach(btn => {
+    menu.querySelectorAll('.d-epoca-option').forEach(btn => {
       btn.addEventListener('click', () => {
         selected = btn.dataset.epoca;
         renderTrigger();
@@ -113,7 +113,7 @@ function setupEpocaDropdown(epocas, selected, onSelect) {
     menu.classList.contains('hidden') ? openMenu() : closeMenu();
   });
   document.addEventListener('click', e => {
-    if (!e.target.closest('.l-epoca-dropdown')) closeMenu();
+    if (!e.target.closest('.d-epoca-dropdown')) closeMenu();
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeMenu();
@@ -290,7 +290,7 @@ function suspeitoResultsHtml(stats) {
       <h3>Vítima · por clube</h3>
       ${suspeitoRowsHtml(victimRows, id => CLUB_META[id].name)}
     </div>
-    <div class="s-card l-suspeito-incidents">
+    <div class="s-card d-suspeito-incidents">
       <h3>Incidentes (${incidents.length})</h3>
       ${incidents.length ? incidents.map(i => `
         <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${i.offenders.map(p => PAPERS_BY_ID[p] || p).join(', ')}</div>
@@ -340,7 +340,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
 
   function legendMarkup() {
     const clubs = CLUB_KEYS.map(k => `<span><i style="background:${CLUB_META[k].color}"></i>${CLUB_META[k].name}</span>`).join('');
-    const noMajority = paperFilter ? '' : `<span><i style="background:var(--l-yellow)"></i>Inconclusivo</span>`;
+    const noMajority = paperFilter ? '' : `<span><i style="background:var(--d-yellow)"></i>Inconclusivo</span>`;
     return `${clubs}${noMajority}<span>🚨 Atenção</span>`;
   }
 
@@ -348,11 +348,11 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
     const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
     if (paperFilter && !focusClub) {
       const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
-      panelEl.innerHTML = `<div class="l-day-hint">${PAPERS_BY_ID[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
+      panelEl.innerHTML = `<div class="d-day-hint">${PAPERS_BY_ID[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
       return;
     }
     const { hasMajority } = dayStats(day);
-    const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
+    const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--d-yellow)';
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
 
@@ -364,7 +364,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
         <div>
           ${cover}
           <div class="dp-name">${PAPERS_BY_ID[id]}</div>
-          <div class="dp-club" style="color:${club ? CLUB_META[club].color : 'var(--l-muted)'}">${club ? CLUB_META[club].short : '—'}</div>
+          <div class="dp-club" style="color:${club ? CLUB_META[club].color : 'var(--d-muted)'}">${club ? CLUB_META[club].short : '—'}</div>
         </div>
       `;
     }).join('');
@@ -372,17 +372,17 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
     const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 
     panelEl.innerHTML = `
-      <div class="l-day-body">
+      <div class="d-day-body">
         <div>
-          <div class="l-day-title">${dateLabel}</div>
-          <div class="l-day-winner" style="color:${color}">${winnerLabel}</div>
-          ${pulse ? `<div class="l-day-alert">🚨 ${pulse.map(m => CLUB_META[m].name).join(' e ')} jogou ontem e não foi mencionado por todos</div>` : ''}
+          <div class="d-day-title">${dateLabel}</div>
+          <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
+          ${pulse ? `<div class="d-day-alert">🚨 ${pulse.map(m => CLUB_META[m].name).join(' e ')} jogou ontem e não foi mencionado por todos</div>` : ''}
         </div>
-        <div class="l-day-papers">${papersHtml}</div>
+        <div class="d-day-papers">${papersHtml}</div>
       </div>
     `;
 
-    panelEl.querySelectorAll('.l-day-papers img').forEach(img => {
+    panelEl.querySelectorAll('.d-day-papers img').forEach(img => {
       img.addEventListener('click', () => openCoverModal(img.dataset.full, img.alt));
     });
 
@@ -400,7 +400,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
       btn.classList.toggle('active', ids[i] === paperFilter);
     });
     legendEl.innerHTML = legendMarkup();
-    panelEl.innerHTML = '<div class="l-day-hint">toca num dia →</div>';
+    panelEl.innerHTML = '<div class="d-day-hint">toca num dia →</div>';
 
     const byMonth = new Map();
     days.forEach(d => {
@@ -434,12 +434,12 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
         cell.dataset.date = day.date;
         if (paperFilter && !focusClub) {
           cell.className = 'cal-day no-data';
-          cell.style.background = 'var(--l-panel2)';
+          cell.style.background = 'var(--d-panel2)';
           cell.dataset.tip = `${day.date} · sem votos de ${PAPERS_BY_ID[paperFilter]}`;
         } else {
           const { unanimous, hasMajority } = dayStats(day);
           cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
-          cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--l-yellow)';
+          cell.style.background = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--d-yellow)';
           cell.dataset.tip = `${day.date} · ${(paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo'}`;
           const pulse = pulseFor(day, matchesByDate);
           if (pulse) cell.innerHTML = '<div class="pulse">🚨</div>';
@@ -479,7 +479,7 @@ function renderBarcode(days, onSelect) {
 
   Object.keys(PAPERS_BY_ID).forEach(paper => {
     const row = document.createElement('div');
-    row.className = 'l-barcode-row';
+    row.className = 'd-barcode-row';
     row.innerHTML = `<span class="bc-label">${PAPERS_BY_ID[paper]}</span>`;
 
     const strip = document.createElement('div');
@@ -489,7 +489,7 @@ function renderBarcode(days, onSelect) {
       const stripe = document.createElement('i');
       stripe.className = 'bc-day';
       stripe.dataset.date = day.date;
-      stripe.style.background = club ? CLUB_META[club].color : 'var(--l-panel2)';
+      stripe.style.background = club ? CLUB_META[club].color : 'var(--d-panel2)';
       stripe.dataset.tip = `${day.date} \u00b7 ${club ? CLUB_META[club].name : 'sem capa'}`;
       stripe.addEventListener('click', () => onSelect(day.date));
       strip.appendChild(stripe);
@@ -512,7 +512,7 @@ function renderBarcode(days, onSelect) {
 
 // Renders one verdict card — the crowd's ("latest") or the model's ("ai").
 // Both sections have the same markup under a different id prefix and share the
-// .l-latest* styles; only the source of `club` and the unit label differ.
+// .d-latest* styles; only the source of `club` and the unit label differ.
 function renderVerdict(id, data, unit) {
   if (!data) return;
   document.getElementById(id).classList.remove('hidden');
@@ -528,7 +528,7 @@ function renderVerdict(id, data, unit) {
   if (coversEl) renderVerdictCovers(coversEl, data.covers);
 
   const winnerEl = document.getElementById(`${id}-winner`);
-  const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--l-yellow)';
+  const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--d-yellow)';
   winnerEl.textContent = data.hasMajority ? CLUB_META[data.winner].name : 'Empate técnico';
   winnerEl.style.color = winnerColor;
   fitTextToContainer(winnerEl, 4.5, 1);
@@ -571,13 +571,13 @@ function renderAiDiffs(rows) {
 
   const draw = () => {
     if (!openMonth) {
-      panel.innerHTML = `<div class="l-ai-months">${months.map(aiMonthCard).join('')}</div>`;
+      panel.innerHTML = `<div class="d-ai-months">${months.map(aiMonthCard).join('')}</div>`;
       return;
     }
     const m = months.find(x => x.key === openMonth);
     panel.innerHTML = `
-      <button class="l-ai-back" type="button">← ${m.label} · ${m.items.length} capas</button>
-      <div class="l-ai-grid">${m.items.map(aiDiffCard).join('')}</div>`;
+      <button class="d-ai-back" type="button">← ${m.label} · ${m.items.length} capas</button>
+      <div class="d-ai-grid">${m.items.map(aiDiffCard).join('')}</div>`;
   };
 
   const label = () => panel.classList.contains('hidden')
@@ -595,12 +595,12 @@ function renderAiDiffs(rows) {
 
   // One listener for the whole panel — it can hold a few hundred covers.
   panel.addEventListener('click', e => {
-    if (e.target.closest('.l-ai-back')) { openMonth = null; draw(); return; }
-    const month = e.target.closest('.l-ai-month');
+    if (e.target.closest('.d-ai-back')) { openMonth = null; draw(); return; }
+    const month = e.target.closest('.d-ai-month');
     if (month) { openMonth = month.dataset.key; draw(); return; }
     // The whole card is the target, caption included — half a card that opens
     // the cover and half that does nothing is just a broken-feeling card.
-    const card = e.target.closest('.l-ai-diff');
+    const card = e.target.closest('.d-ai-diff');
     if (card) openCoverModal(card.dataset.url, card.dataset.paper);
   });
 }
@@ -623,12 +623,12 @@ function groupDiffsByMonth(diffs) {
 // The fanned three-cover stack from Histórico's month picker.
 function aiMonthCard({ key, label, items }) {
   const stack = items.slice(0, 3)
-    .map((r, i) => `<span class="l-ai-bc bc-${i}"><img src="${r.thumb_url}" alt="" loading="lazy" /></span>`)
+    .map((r, i) => `<span class="d-ai-bc bc-${i}"><img src="${r.thumb_url}" alt="" loading="lazy" /></span>`)
     .join('');
   return `
-    <button class="l-ai-month" type="button" data-key="${key}">
-      <span class="l-ai-stack">${stack}<span class="l-ai-count">${items.length}</span></span>
-      <span class="l-ai-mlabel">${label}</span>
+    <button class="d-ai-month" type="button" data-key="${key}">
+      <span class="d-ai-stack">${stack}<span class="d-ai-count">${items.length}</span></span>
+      <span class="d-ai-mlabel">${label}</span>
     </button>`;
 }
 
@@ -642,7 +642,7 @@ function aiDiffCard(r) {
   const side = (tag, k) =>
     `<span class="ad-v" style="background:${CLUB_META[k].color}"><i>${tag}</i>${CLUB_META[k].short}</span>`;
   return `
-    <figure class="l-ai-diff" data-url="${r.url}" data-paper="${paper}">
+    <figure class="d-ai-diff" data-url="${r.url}" data-paper="${paper}">
       <img src="${r.thumb_url}" alt="${paper}" loading="lazy" />
       <figcaption>
         <div class="ad-date">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]}</div>
@@ -669,7 +669,7 @@ function renderVerdictCovers(coversEl, covers) {
 }
 
 // The averages are generated offline by scripts/avg_cover.py and committed
-// under landing/avg/, so this is a plain static fetch with no endpoint behind
+// under dashboard/avg/, so this is a plain static fetch with no endpoint behind
 // it. Both sections stay hidden if the files aren't there.
 async function renderAvgCovers() {
   let counts;
@@ -683,7 +683,7 @@ async function renderAvgCovers() {
   if (!papers.length) return;
 
   const card = (key, label) => `
-    <figure class="l-avg-card">
+    <figure class="d-avg-card">
       <img src="/avg/${key}.jpg" alt="Capa m\u00e9dia \u2014 ${label}" loading="lazy" />
       <figcaption>${label}<span>m\u00e9dia de ${counts[key]} capas</span></figcaption>
     </figure>`;
@@ -773,7 +773,7 @@ function renderComments(list) {
   el.innerHTML = '';
   if (!list.length) {
     const empty = document.createElement('p');
-    empty.className = 'l-comments-empty';
+    empty.className = 'd-comments-empty';
     empty.textContent = 'Ainda ninguém disse nada. Começa tu.';
     el.appendChild(empty);
     return;
@@ -785,23 +785,23 @@ function renderComments(list) {
 // stranger wrote. Do not switch it to innerHTML to match the rest of the file.
 function commentEl(c) {
   const row = document.createElement('article');
-  row.className = 'l-comment';
+  row.className = 'd-comment';
 
   const who = document.createElement('span');
-  who.className = 'l-comment-who';
+  who.className = 'd-comment-who';
   who.textContent = c.author;
 
   const when = document.createElement('span');
-  when.className = 'l-comment-when';
+  when.className = 'd-comment-when';
   when.textContent = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' })
     .format(new Date(c.created_at.replace(' ', 'T') + 'Z'));
 
   const meta = document.createElement('div');
-  meta.className = 'l-comment-meta';
+  meta.className = 'd-comment-meta';
   meta.append(who, when);
 
   const body = document.createElement('p');
-  body.className = 'l-comment-body';
+  body.className = 'd-comment-body';
   body.textContent = c.body;
 
   row.append(meta, body);
@@ -815,12 +815,12 @@ function renderCommentAuth() {
   if (session) {
     const send = document.createElement('button');
     send.type = 'submit';
-    send.className = 'l-cta l-cta-small';
+    send.className = 'd-cta d-cta-small';
     send.textContent = 'Comentar →';
 
     const out = document.createElement('button');
     out.type = 'button';
-    out.className = 'l-comments-signout';
+    out.className = 'd-comments-signout';
     out.textContent = 'sair';
     out.addEventListener('click', () => { setSession(null); renderCommentAuth(); });
 
@@ -829,7 +829,7 @@ function renderCommentAuth() {
   }
 
   const hint = document.createElement('span');
-  hint.className = 'l-comments-hint';
+  hint.className = 'd-comments-hint';
   hint.textContent = 'Entra para comentar';
   const slot = document.createElement('div');
   el.append(hint, slot);
@@ -897,7 +897,7 @@ async function submitComment(e) {
 
   bodyEl.value = '';
   const list = document.getElementById('comments-list');
-  list.querySelector('.l-comments-empty')?.remove();
+  list.querySelector('.d-comments-empty')?.remove();
   list.appendChild(commentEl(data));
   renderCommentAuth();
 }

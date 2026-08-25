@@ -4,7 +4,7 @@ export const API_URL         = '/api';
 export const SWIPE_THRESHOLD = 80;
 export const ROTATION_FACTOR = 0.08;
 
-// Matches landing's club colors exactly (landing/landing.css :root) —
+// Matches the dashboard's club colors exactly (dashboard/dashboard.css :root) —
 // keep this in sync with app/style.css's --keep/--reject/--favorite/--skip.
 export const FEEDBACK_COLORS = {
   left:  [220, 38,  38],  // Benfica  #dc2626

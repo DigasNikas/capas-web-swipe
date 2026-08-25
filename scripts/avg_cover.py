@@ -7,7 +7,7 @@ razor sharp; the headlines move around and dissolve into a ghost. That is what
 each paper looks like with the individual days averaged out.
 
 Runs locally, not in the Worker: it downloads ~1250 full-res JPEGs. Output goes
-to landing/avg/ and is committed, so the page needs no backend for this.
+to dashboard/avg/ and is committed, so the page needs no backend for this.
 
     python3 -m venv .venv && .venv/bin/pip install numpy pillow
     .venv/bin/python scripts/avg_cover.py
@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image
 
 STATS = "https://capas.digasnikas.com/api/stats"
-OUT = os.path.join(os.path.dirname(__file__), "..", "landing", "avg")
+OUT = os.path.join(os.path.dirname(__file__), "..", "dashboard", "avg")
 PAPERS = ("abola", "ojogo", "record")
 CLUBS = ("benfica", "porto", "sporting", "others")
 

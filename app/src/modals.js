@@ -48,7 +48,7 @@ export function closeInstrucoes() {
   });
 }
 
-// Fullscreen cover viewer — same pattern as landing/landing.js's own
+// Fullscreen cover viewer — same pattern as dashboard/dashboard.js's own
 // openCoverModal/closeCoverModal. Sits above the account modal (higher
 // z-index), so it's a standalone overlay, not tied to modalOverlay/.modal.
 export function openCoverModal(url, name) {
