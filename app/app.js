@@ -2,7 +2,7 @@ import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
   leaderboardModal, instrucoesModal, accountModal, modalOverlay,
-  coverModal, definicoesModal,
+  coverModal, definicoesModal, userDetailPanel,
 } from '/src/dom.js';
 import { groupByDate } from '/src/dates.js';
 import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
@@ -13,7 +13,7 @@ import {
 } from '/src/cards.js';
 import { updateProgress } from '/src/ui.js';
 import { openInstrucoes, closeInstrucoes, addSwipeDownToClose, closeCoverModal } from '/src/modals.js';
-import { openLeaderboard, closeLeaderboard } from '/src/leaderboard.js';
+import { openLeaderboard, closeLeaderboard, closeUserDetail } from '/src/leaderboard.js';
 import { openAccount, closeAccount } from '/src/account.js';
 import { openDefinicoes, closeDefinicoes, handleSettingChange, applyTheme } from '/src/settings.js';
 
@@ -87,10 +87,13 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 
 // Whichever modal is on top, if any — cover-modal sits above the bottom
 // sheets (z-index 200 vs 60), so it takes priority when both are open.
+// user-detail-panel (70) is checked before leaderboardModal (60) for the
+// same reason: it can be open while Classificação still is, underneath it.
 function openModal() {
   if (!coverModal.classList.contains('hidden'))      return { close: closeCoverModal };
   if (!accountModal.classList.contains('hidden'))     return { close: closeAccount };
   if (!definicoesModal.classList.contains('hidden'))  return { close: closeDefinicoes };
+  if (!userDetailPanel.classList.contains('hidden'))  return { close: closeUserDetail };
   if (!leaderboardModal.classList.contains('hidden')) return { close: closeLeaderboard };
   if (!instrucoesModal.classList.contains('hidden'))  return { close: closeInstrucoes };
   return null;

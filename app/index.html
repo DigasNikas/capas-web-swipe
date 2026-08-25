@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=32" />
+  <link rel="stylesheet" href="/style.css?v=33" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%23ffd60a'/><path d='M16 9l5 3.6-2 6.4h-6l-2-6.4Z' fill='%230a0a0f'/></svg>">
 </head>
 <body>
@@ -126,19 +126,25 @@
         </div>
         <div id="leaderboard-me"></div>
         <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      </div>
+    </div>
 
-        <div id="leaderboard-detail" class="hidden">
-          <div id="lb-detail-nav">
-            <button id="btn-lb-back" class="btn-back">‹ Voltar</button>
-            <span id="lb-detail-name"></span>
-          </div>
-          <div class="lb-detail-stats">
-            <div class="acc-stat"><div id="lb-current-streak" class="acc-stat-value">–</div><div class="acc-stat-label">Sequência atual</div></div>
-            <div class="acc-stat"><div id="lb-best-streak" class="acc-stat-value">–</div><div class="acc-stat-label">Melhor sequência</div></div>
-          </div>
-          <div class="acc-section-title">Votos por clube</div>
-          <div id="lb-detail-breakdown" class="acc-breakdown"></div>
+    <!-- User Detail Panel — leaderboard row drill-down. Its own standalone
+         overlay layered above Classificação (like #cover-modal is above
+         everything), not nested inside it — Classificação stays open
+         underneath rather than being replaced. -->
+    <div id="user-detail-panel" class="hidden">
+      <div class="udp-content">
+        <div id="lb-detail-nav">
+          <button id="btn-lb-back" class="btn-back">‹ Voltar</button>
+          <span id="lb-detail-name"></span>
         </div>
+        <div class="lb-detail-stats">
+          <div class="acc-stat"><div id="lb-current-streak" class="acc-stat-value">–</div><div class="acc-stat-label">Sequência atual</div></div>
+          <div class="acc-stat"><div id="lb-best-streak" class="acc-stat-value">–</div><div class="acc-stat-label">Melhor sequência</div></div>
+        </div>
+        <div class="acc-section-title">Votos por clube</div>
+        <div id="lb-detail-breakdown" class="acc-breakdown"></div>
       </div>
     </div>
 
