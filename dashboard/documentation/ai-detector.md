@@ -151,3 +151,30 @@ Random Forest scores byte-for-byte the same accuracy under both splits (62.1%) �
 
 The one number that *doesn't* move is the one that matters most: `others` recall stays near-zero for Random Forest (2%→7%) and the MLP (0%→0%) regardless of split strategy. If the chronological result had been an artifact of test-set imbalance, stratifying would have fixed it — it didn't, which is stronger evidence that these two models specifically default to `benfica` (the largest class) whenever unsure, independent of how the test set happens to be composed. Logistic Regression, Linear SVM and Naive Bayes all keep `others` recall in the 25–28% range under stratification too, versus these two collapsing toward 0% — the margin models and linear model spread their mistakes across classes instead of defaulting to the majority one.
 
+### Results — per newspaper
+
+The archive only ever has three newspapers in it — A Bola, Record, O Jogo — and each is itself a fixed template: same layout, same fonts, same colour scheme on every issue. Pooling all three for training means a model can shortcut on "which paper is this" instead of "what does this cover say", since paper and club aren't independent (O Jogo, for one, runs Porto far more often than the other two). `--per-newspaper` removes that shortcut entirely: it trains and tests seven fresh models per paper, using only that paper's own covers, so a model can only possibly be reading the photo and headline, never the masthead.
+
+| Newspaper | Covers | Train | Test | Test-set split (sporting/benfica/porto/others) | Majority baseline |
+|---|---|---|---|---|---|
+| A Bola | 525 | 420 | 105 | 28 / 50 / 4 / 23 | 47.6% (benfica) |
+| O Jogo | 509 | 407 | 102 | 5 / 11 / 58 / 28 | 56.9% (porto) |
+| Record | 521 | 416 | 105 | 40 / 49 / 2 / 14 | 46.7% (benfica) |
+
+**Accuracy by model × newspaper:**
+
+| Model | A Bola | O Jogo | Record |
+|---|---|---|---|
+| Logistic Regression | 69.5% | 54.9% | **82.9%** |
+| Small MLP (PyTorch) | 68.6% | **57.8%** | 81.9% |
+| Linear SVM | 64.8% | 50.0% | 79.0% |
+| Naive Bayes | 61.9% | 51.0% | 78.1% |
+| Random Forest | 61.0% | 55.9% | 78.1% |
+| k-Nearest Neighbours | 56.2% | 53.9% | 62.9% |
+| Decision Tree | 43.8% | 47.1% | 58.1% |
+
+Splitting by newspaper is not free — every paper's training set shrinks from 1,244 pooled covers down to ~410–420 — but two of the three still come out ahead of the pooled chronological run (best pooled: 62.1%). Record jumps to **82.9%**, a +20.8pp gain, and A Bola to 69.5%, +7.4pp; O Jogo's best model (57.8%) actually lands *below* the pooled number, and barely above its own 56.9% majority-class baseline — for O Jogo specifically, none of these seven pixel-only models find much real signal, isolated or not (its test set isn't the pooled one, so this isn't a strict like-for-like comparison, but the standalone number stands on its own regardless).
+
+That gap also reframes the `others`-recall collapse from the two split-strategy runs above. Looked at per newspaper, Random Forest and the MLP get **exactly 0% recall on whichever class is numerically smallest in that paper's own test set** — porto in A Bola (4 covers) and Record (2 covers), sporting in O Jogo (5 covers) — regardless of what that class is actually called. So it was never really `others` these two models struggle with; it's whichever label is rarest in front of them. High-capacity, high-accuracy models here default to the safe majority guess the moment a class gets thin, which the pooled runs happened to always make `others` (the pooled archive's own rarest label) — same underlying mechanism, a coincidence of which label that turned out to be.
+
+
