@@ -681,7 +681,20 @@ body {
 }
 
 @media (max-width: 760px) {
-  .l-header-right { text-align: left; }
+  /* Header order on mobile: title, then the AO VIVO/época cluster, then
+     Entrar - was Entrar, title, AO VIVO (source/desktop order). display:
+     contents drops .l-header-right's own box so its children (Entrar,
+     title, tagline) become direct flex items of .l-header alongside
+     .l-header-left, letting `order` reshuffle across that former
+     boundary. Title/tagline/header-left get flex-basis: 100% so each
+     takes its own full row; Entrar (kept at its natural button width)
+     then has zero space left on that row and wraps to a row of its own. */
+  .l-header-right { display: contents; }
+  .l-title      { order: 1; flex-basis: 100%; text-align: left; }
+  .l-tagline    { order: 2; flex-basis: 100%; text-align: left; }
+  .l-header-left { order: 3; flex-basis: 100%; }
+  .l-header-right .l-cta { order: 4; }
+
   .l-comments { padding: 16px; }
   .l-comments-list { max-height: 260px; }
   .l-brief { grid-template-columns: 1fr; }
