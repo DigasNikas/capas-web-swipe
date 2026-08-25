@@ -16,6 +16,12 @@ name: Backfill AI (Daily Batch)
 # GitHub emails you (Settings → Notifications → Actions) when a scheduled
 # workflow run fails — that email is the "you're done, delete this file"
 # signal.
+#
+# Paused 2026-08-25 → 2026-09-01: the routine scrape-time classification had
+# just gotten starved of quota by an earlier unbounded manual backfill run,
+# so this gives it a clean week to catch up on its own before this resumes
+# competing for the same daily allowance. Self-resuming — nothing to
+# remember, the guard step below just no-ops until the date passes.
 
 on:
   schedule:
@@ -26,9 +32,22 @@ jobs:
   backfill:
     runs-on: ubuntu-latest
     steps:
+      - name: Check pause window
+        id: pause
+        run: |
+          resume="2026-09-01"
+          today=$(date -u +%Y-%m-%d)
+          if [[ "$today" < "$resume" ]]; then
+            echo "::notice::Paused until $resume (today is $today) — skipping this run."
+            echo "paused=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "paused=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # See scrape.yml for why -f is gone and the browser UA is here — same
       # Bot Fight Mode coin flip on this endpoint.
       - name: Classify up to 24 covers (3 calls x 8)
+        if: steps.pause.outputs.paused == 'false'
         run: |
           remaining=unknown
           for i in 1 2 3; do
@@ -44,7 +63,7 @@ jobs:
           echo "remaining=$remaining" >> "$GITHUB_ENV"
 
       - name: Fail on purpose once the backlog is cleared
-        if: env.remaining == '0'
+        if: steps.pause.outputs.paused == 'false' && env.remaining == '0'
         run: |
           echo "::error::Backfill complete — remaining is 0. Delete .github/workflows/backfill-ai-daily.yml, its job is done."
           exit 1
