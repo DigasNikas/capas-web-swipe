@@ -460,7 +460,13 @@ body {
    top border reading as the only divider between verdict and comments. */
 #latest { margin-bottom: 0; }
 #latest .d-latest-inner { border-bottom: none; }
-.d-latest-left { padding: 24px 26px; }
+/* min-width:0 for the same reason .d-latest-right has it below: a grid item
+   otherwise refuses to shrink past its content's natural width, and
+   #latest-title's white-space:nowrap makes that natural width the whole
+   unshrunk headline. Without it the column — and the whole card, and the
+   page — grows past the viewport on narrow screens instead of #latest-title
+   ever getting the chance to shrink into fitTextToContainer's clamp. */
+.d-latest-left { min-width: 0; padding: 24px 26px; }
 #latest-title { white-space: nowrap; overflow: hidden; }
 .d-latest-desc { font-size: 0.82rem; color: var(--d-muted); line-height: 1.5; margin-top: 6px; }
 .d-latest-date { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--d-muted); letter-spacing: 0.1em; margin-top: 14px; text-transform: uppercase; }
