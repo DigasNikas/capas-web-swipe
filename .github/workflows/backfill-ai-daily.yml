@@ -1,0 +1,50 @@
+name: Backfill AI (Daily Batch)
+
+# Temporary, self-deleting: clears the historical AI-classification backlog
+# (1,183 covers as of 2026-08-25) a little at a time, capped well under the
+# 10,000-neurons/day free Workers AI allowance the routine daily scrape also
+# draws from — see /documentation#ai-detector and #scraping. Runs after the
+# 05-08 UTC scrape window, not during it, so the routine 3-cover
+# classification always gets first crack at the day's quota.
+#
+# No cursor needed between days: /api/backfill-ai always selects
+# `WHERE ai_club IS NULL OR ai_headline IS NULL` — a classified cover drops
+# out of that set on its own, so each day's run just continues wherever
+# yesterday's left off.
+#
+# The last step fails ON PURPOSE once the backlog actually hits zero.
+# GitHub emails you (Settings → Notifications → Actions) when a scheduled
+# workflow run fails — that email is the "you're done, delete this file"
+# signal.
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      # See scrape.yml for why -f is gone and the browser UA is here — same
+      # Bot Fight Mode coin flip on this endpoint.
+      - name: Classify up to 24 covers (3 calls x 8)
+        run: |
+          remaining=unknown
+          for i in 1 2 3; do
+            code=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+              -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
+              -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+              "https://capas.digasnikas.com/api/backfill-ai")
+            echo "call $i: HTTP $code"
+            cat response.json; echo
+            remaining=$(python3 -c "import json; print(json.load(open('response.json')).get('remaining','unknown'))" 2>/dev/null || echo unknown)
+            sleep 2
+          done
+          echo "remaining=$remaining" >> "$GITHUB_ENV"
+
+      - name: Fail on purpose once the backlog is cleared
+        if: env.remaining == '0'
+        run: |
+          echo "::error::Backfill complete — remaining is 0. Delete .github/workflows/backfill-ai-daily.yml, its job is done."
+          exit 1
