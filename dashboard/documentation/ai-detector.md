@@ -65,3 +65,19 @@ The section sits between the community verdict and the comments — the conversa
 ## Cost
 
 ~$0.0006 per cover ($0.27/M input + $0.85/M output tokens). Three covers a day is roughly **€0.65/year**; classifying the entire archive is a **one-off €0.75**. The backfill exists to give the "concorda com a comunidade em X% das N capas" line a denominator worth quoting — the section itself only ever shows today.
+
+## A classic-ML exercise, for comparison
+
+`scripts/train_classic_classifier.py` is not part of this feature and doesn't touch D1 or `ai_club` — it's a separate, deliberately old-school exercise sitting next to it: no pretraining, no transfer learning, no OCR, the shape a first ML course teaches before reaching for anything smarter.
+
+The pipeline is the whole point of how plain it is: fetch `(cover URL, crowd-voted club)` pairs from `/api/stats`, resize each cover to 32×32 and flatten it to a raw pixel vector — that's the entire feature-engineering step, no hand-built features — and fit `sklearn.linear_model.LogisticRegression` on the result. The split is chronological (train on the older 80%, test on the most recent 20%) rather than random, for the same reason `avg_cover.py`'s alignment matters: covers share a masthead template within a stretch of dates, so a random split would let near-duplicate examples leak between train and test and flatter the score.
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install numpy pillow scikit-learn
+.venv/bin/python scripts/train_classic_classifier.py
+.venv/bin/python scripts/train_classic_classifier.py --limit 200   # quick run
+```
+
+It prints accuracy, per-class precision/recall/F1, and a confusion matrix — same shape as `eval-ai.mjs`'s own report, so the two are directly comparable. A 200-cover quick run landed at **75% accuracy**, which sounds close to the zero-shot model's 77% archive-wide — but the test slice at that sample size is only 40 covers (2 of them `others`), too small for the per-class numbers to mean much. The real comparison is a full run against the whole labelled archive, not this one.
+
+Worth being honest about the ceiling here: the model choice section above found the signal is the headline *text*, and a model that can't read is working from strictly less information than one that can — so a lower plateau than the zero-shot model, once measured on the full archive, would be the expected outcome of skipping OCR entirely, not a bug in the exercise.
