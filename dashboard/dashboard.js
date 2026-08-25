@@ -767,12 +767,21 @@ async function renderAvgCovers() {
 }
 
 function fitTextToContainer(el, maxRem = 4.5, minRem = 1.6) {
-  let size = maxRem;
-  el.style.fontSize = `${size}rem`;
-  while (el.scrollWidth > el.clientWidth && size > minRem) {
-    size -= 0.15;
+  const shrink = () => {
+    let size = maxRem;
     el.style.fontSize = `${size}rem`;
-  }
+    while (el.scrollWidth > el.clientWidth && size > minRem) {
+      size -= 0.15;
+      el.style.fontSize = `${size}rem`;
+    }
+  };
+  shrink();
+  // Inter Tight is a Google Fonts webfont. If it's still loading the first
+  // time shrink() runs, scrollWidth is measured against the fallback font's
+  // (usually narrower) metrics — the loop can exit early "fitting" a size
+  // that overflows once the real, wider font swaps in a moment later with
+  // no re-check. Re-run once every font on the page has actually loaded.
+  document.fonts?.ready.then(shrink);
 }
 
 function openCoverModal(url, name) {
