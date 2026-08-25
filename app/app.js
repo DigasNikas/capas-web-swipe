@@ -9,7 +9,7 @@ import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '
 import {
   renderStack, advanceToNextPendingGroup, deactivateSwipeMode, activateSwipeMode,
   triggerAction, goToCalendarDate, clearSwipeFeedback, hidePill,
-  goToOldestPending, goToLatestPending,
+  goToNextPendingDay, goToToday,
 } from '/src/cards.js';
 import { updateProgress } from '/src/ui.js';
 import { openInstrucoes, closeInstrucoes, addSwipeDownToClose, closeCoverModal } from '/src/modals.js';
@@ -123,8 +123,8 @@ document.addEventListener('keydown', e => {
 
 document.getElementById('cal-prev').addEventListener('click', prevMonth);
 document.getElementById('cal-next').addEventListener('click', nextMonth);
-document.getElementById('cal-jump-oldest').addEventListener('click', goToOldestPending);
-document.getElementById('cal-jump-latest').addEventListener('click', goToLatestPending);
+document.getElementById('cal-jump-next').addEventListener('click', goToNextPendingDay);
+document.getElementById('cal-jump-today').addEventListener('click', goToToday);
 
 // ── Cross-device sync ─────────────────────────────────────────────────────
 let lastActivityAt = Date.now();

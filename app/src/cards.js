@@ -333,23 +333,19 @@ export function triggerAction(direction) {
   commitSwipe(card, direction);
 }
 
-// dateGroups is newest-first, so "oldest still pending" is the highest
-// index with an unsaved id and "latest still pending" (today, or the
-// closest day to it) is the lowest — same scan advanceToNextPendingGroup
-// does, just not stopping at the first hit.
-function pendingDateGroups() {
+// dateGroups is newest-first, so the first entry with an unsaved id is the
+// day still needing a vote closest to today — same scan
+// advanceToNextPendingGroup does, just returning the date instead of
+// mutating state.queue directly.
+export function goToNextPendingDay() {
   const savedIds = new Set(state.catalogue.map(e => e.id));
-  return state.dateGroups.filter(g => g.ids.some(id => !savedIds.has(id)));
+  const pending = state.dateGroups.find(g => g.ids.some(id => !savedIds.has(id)));
+  if (pending) goToCalendarDate(pending.date);
 }
 
-export function goToOldestPending() {
-  const pending = pendingDateGroups();
-  if (pending.length) goToCalendarDate(pending[pending.length - 1].date);
-}
-
-export function goToLatestPending() {
-  const pending = pendingDateGroups();
-  if (pending.length) goToCalendarDate(pending[0].date);
+export function goToToday() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (state.dateGroups.some(g => g.date === todayStr)) goToCalendarDate(todayStr);
 }
 
 export function goToCalendarDate(dateStr) {
