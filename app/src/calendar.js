@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { calMonthLabel, calGrid, calJumpOldest, calJumpLatest } from './dom.js';
+import { calMonthLabel, calGrid, calJumpNext, calJumpToday } from './dom.js';
 import { formatDate } from './dates.js';
 
 const CAL_HEADERS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -23,11 +23,11 @@ export function renderCalendar() {
   const activeDate  = state.dateGroups[state.groupIndex]?.date;
   const allDates    = new Set(state.dateGroups.map(g => g.date));
 
-  // Nothing to jump to once every day is voted — grey both out rather than
-  // leave them clickable no-ops.
-  const anyPending = state.dateGroups.some(g => !completedDates.has(g.date));
-  calJumpOldest.disabled = !anyPending;
-  calJumpLatest.disabled = !anyPending;
+  // Grey out rather than leave a clickable no-op: « once every day is
+  // voted, » when today has no cover in the archive yet.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  calJumpNext.disabled  = !state.dateGroups.some(g => !completedDates.has(g.date));
+  calJumpToday.disabled = !allDates.has(todayStr);
 
   calMonthLabel.textContent = new Date(calViewYear, calViewMonth, 1)
     .toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });

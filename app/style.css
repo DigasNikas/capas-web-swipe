@@ -582,14 +582,16 @@ header h1 {
   justify-content: center;
 }
 .cal-nav-btn:hover { border-color: var(--accent); }
+.cal-nav-btn:disabled { opacity: 0.35; cursor: default; border-color: var(--border); }
+.cal-nav-btn:disabled:hover { border-color: var(--border); }
 
-/* Below the grid, not beside the month nav above it — this jumps between
-   days that still need votes, unrelated to which month is on screen. */
+/* Below the grid, not beside the month nav above it — jumps between the next
+   day still needing a vote and today, unrelated to which month is on
+   screen. Same look as #calendar-nav above the grid, on purpose. */
 #calendar-jump {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
   margin-top: 10px;
 }
 #cal-jump-label {
@@ -600,12 +602,6 @@ header h1 {
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.cal-jump-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-  border-color: var(--border);
-}
-.cal-jump-btn:disabled:hover { border-color: var(--border); }
 
 #calendar-grid {
   display: grid;
