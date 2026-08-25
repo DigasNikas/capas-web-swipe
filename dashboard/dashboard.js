@@ -11,6 +11,14 @@ const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 
 const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
+// "A Bola", "A Bola e Record", "A Bola, O Jogo e Record" — every separator a
+// comma except the last, which is "e". Plain join(' e ') only reads right up
+// to two items; three or more chains "e" between every pair instead.
+function joinList(items) {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
+}
+
 // Local getters in, local getters out — mixing in toISOString() (UTC)
 // here silently shifted this back an extra day in any positive-UTC-offset
 // timezone (e.g. Europe/Lisbon in summer): local midnight on the 10th is
@@ -293,7 +301,7 @@ function suspeitoResultsHtml(stats) {
     <div class="s-card d-suspeito-incidents">
       <h3>Incidentes (${incidents.length})</h3>
       ${incidents.length ? incidents.map(i => `
-        <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${i.offenders.map(p => PAPERS_BY_ID[p] || p).join(', ')}</div>
+        <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${joinList(i.offenders.map(p => PAPERS_BY_ID[p] || p))}</div>
       `).join('') : '<div class="s-empty">Sem incidentes nesta época.</div>'}
     </div>
   `;
@@ -376,7 +384,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
         <div>
           <div class="d-day-title">${dateLabel}</div>
           <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
-          ${pulse ? `<div class="d-day-alert">🚨 ${pulse.map(m => CLUB_META[m].name).join(' e ')} jogou ontem e não foi mencionado por todos</div>` : ''}
+          ${pulse ? `<div class="d-day-alert">🚨 ${joinList(pulse.map(m => CLUB_META[m].name))} jogou ontem e não foi mencionado por todos</div>` : ''}
         </div>
         <div class="d-day-papers">${papersHtml}</div>
       </div>
