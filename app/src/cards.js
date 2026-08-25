@@ -363,6 +363,13 @@ export function goToCalendarDate(dateStr) {
   clearSwipeFeedback();
   hidePill();
 
+  // Keeps the grid itself in sync with the jump — a cell click lands on a
+  // day already on screen, but « / » (goToNextPendingDay/goToToday) can
+  // land on a different month entirely, and without this the grid would
+  // still show the old month with the old day highlighted .active.
+  syncCalToActiveDate();
+  renderCalendar();
+
   renderStack();
   updateProgress();
 }
