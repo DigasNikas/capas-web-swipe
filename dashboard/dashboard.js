@@ -633,7 +633,10 @@ function aiPaperRow(c) {
   if (c.headline) {
     const why = document.createElement('span');
     why.className = 'd-ai-paper-why';
-    why.textContent = `"${c.headline}"`;
+    // Some headlines are themselves a quote ("É sempre o mesmo
+    // beneficiário") and the model copies the page's own quote marks —
+    // strip those before adding ours, or they double up.
+    why.textContent = `"${c.headline.replace(/^["']+|["']+$/g, '')}"`;
     row.append(why);
   }
 
