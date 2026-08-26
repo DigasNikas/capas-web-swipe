@@ -8,7 +8,9 @@
  *   ... node scripts/eval-ai.mjs --all         # every labelled cover, ~579 calls
  *
  * The token needs Workers AI · Read. Everything else is public: the labels come
- * from /api/stats and the covers from R2's public URLs, so no D1 credentials.
+ * from /api/stats and the covers from R2's public URLs, so no D1 credentials —
+ * unless SAMPLE_FILE points at a pre-built sample (see eval-ai.yml), which
+ * skips /api/stats entirely.
  *
  * Each call costs neurons against the same 10,000/day free allowance the live
  * scrape uses. The default sample of 40 is a few percent of a day's budget; the
@@ -21,11 +23,18 @@
  * the point of the script is to run outside the Worker. PROMPT and parseAnswer
  * are imported, which is the part that has to stay identical.
  */
+import { readFileSync } from "node:fs";
 import { MODEL, PROMPT, CLUBS, parseAnswer, toBase64 } from "../api/lib/ai.js";
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const STATS = process.env.CAPAS_STATS ?? "https://capas.digasnikas.com/api/stats";
+// capas.digasnikas.com sits behind Cloudflare Bot Fight Mode and can reject
+// every GitHub-runner request in a run, not just an occasional one — when
+// that's happening, SAMPLE_FILE takes a pre-built `[{club, url}, ...]` JSON
+// array (see eval-ai.yml's sample_json input) instead of fetching /api/stats
+// and re-deriving the evenly-spaced sample from it.
+const SAMPLE_FILE = process.env.SAMPLE_FILE;
 
 if (!ACCOUNT || !TOKEN) {
   console.error("Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN (Workers AI · Read).");
@@ -64,16 +73,22 @@ async function fetchJson(url) {
   }
 }
 
-const { rows } = await fetchJson(STATS);
-const labelled = rows.filter(r => r.club);
-const size = process.argv.includes("--all")
-  ? labelled.length
-  : Math.min(Number(flag("n", 40)), labelled.length);
+let sample;
+if (SAMPLE_FILE) {
+  sample = JSON.parse(readFileSync(SAMPLE_FILE, "utf8"));
+} else {
+  const { rows } = await fetchJson(STATS);
+  const labelled = rows.filter(r => r.club);
+  const size = process.argv.includes("--all")
+    ? labelled.length
+    : Math.min(Number(flag("n", 40)), labelled.length);
 
-// Evenly spaced through the archive rather than random: two runs then score the
-// same covers, so a difference in the number is the prompt and not the sample.
-const sample = Array.from({ length: size }, (_, i) =>
-  labelled[Math.floor((i * labelled.length) / size)]);
+  // Evenly spaced through the archive rather than random: two runs then score
+  // the same covers, so a difference in the number is the prompt and not the
+  // sample.
+  sample = Array.from({ length: size }, (_, i) =>
+    labelled[Math.floor((i * labelled.length) / size)]);
+}
 
 async function classify(url) {
   const img = await browserFetch(url).then(r => r.arrayBuffer());
@@ -102,14 +117,14 @@ const misses = [];
 let scored = 0;
 let abstained = 0;
 
-console.log(`${size} covers, ${MODEL}\n`);
+console.log(`${sample.length} covers, ${MODEL}\n`);
 
 for (const [i, row] of sample.entries()) {
   let club, headline;
   try {
     ({ club, headline } = await classify(row.url));
   } catch (err) {
-    console.error(`\nStopped at ${i} of ${size}: ${err.message}`);
+    console.error(`\nStopped at ${i} of ${sample.length}: ${err.message}`);
     break;
   }
 
