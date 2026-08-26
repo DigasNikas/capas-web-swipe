@@ -13,6 +13,7 @@ or its 77% archive-wide agreement; the point here is the exercise itself.
     .venv/bin/python scripts/train_classic_classifier.py
     .venv/bin/python scripts/train_classic_classifier.py --limit 200   # quick run
     .venv/bin/python scripts/train_classic_classifier.py --per-newspaper
+    .venv/bin/python scripts/train_classic_classifier.py --residual
 """
 import argparse
 import io
@@ -124,28 +125,56 @@ def evaluate(name, y_test, pred):
     return acc
 
 
-def split_data(X, y, mode):
+def split_data(X, y, papers, mode):
+    """Splits X, y and each row's newspaper together, three parallel arrays
+    cut the same way — papers is needed downstream by --residual, which has
+    to know which newspaper's own training-set mean to subtract from which
+    row."""
     if mode == "stratified":
         # Random, but each class keeps its overall proportion in both halves
         # — the textbook default. Still a random split under the hood, so
         # it carries the same leakage risk chronological avoids: covers
         # share a masthead template within a stretch of dates, and this can
         # put near-duplicate examples on both sides of the split.
-        return train_test_split(X, y, test_size=0.2, stratify=y, random_state=0)
+        return train_test_split(X, y, papers, test_size=0.2, stratify=y, random_state=0)
     # Chronological — train on the older 80%, test on the most recent 20%.
     # Immune to that leakage, and the honest version of the real question,
     # "can this predict a cover it's never seen," since training only ever
     # sees the past — at the cost of the test set's class balance being
     # whatever the most recent stretch happens to be.
     split = int(len(X) * 0.8)
-    return X[:split], X[split:], y[:split], y[split:]
+    return X[:split], X[split:], y[:split], y[split:], papers[:split], papers[split:]
 
 
-def run_experiment(title, X, y, split_mode):
+def apply_residual(X_train, papers_train, X_test, papers_test):
+    """Subtract each newspaper's own mean cover — computed from the training
+    rows only, the test rows never contribute — from every vector of that
+    newspaper. Same idea as the dashboard's "a capa média" (masthead stays
+    sharp, headlines dissolve into a ghost), computed fresh in this SIZE x
+    SIZE pixel space rather than reused from dashboard/avg/*.jpg: those are
+    built in a different, aligned 620px coordinate frame (avg_cover.py
+    shifts each cover to line up masthead position across two scrape eras),
+    and subtracting an aligned average from an unaligned cover here would
+    misregister by however far that cover's own shift was — worse than no
+    subtraction at all for the covers that need the biggest shift. Recomputing
+    per split keeps everything in one consistent, if cruder, coordinate frame.
+    """
+    Xtr, Xte = X_train.copy(), X_test.copy()
+    for paper in np.unique(papers_train):
+        mean = X_train[papers_train == paper].mean(axis=0)
+        Xtr[papers_train == paper] -= mean
+        Xte[papers_test == paper] -= mean
+    return Xtr, Xte
+
+
+def run_experiment(title, X, y, papers, split_mode, residual):
     """Split, fit every model, evaluate. Shared by the pooled run and each
     per-newspaper run — same models, same split logic, different rows."""
-    X_train, X_test, y_train, y_test = split_data(X, y, split_mode)
-    print(f"\n### {title} — split={split_mode}  train={len(X_train)}  test={len(X_test)}")
+    X_train, X_test, y_train, y_test, papers_train, papers_test = split_data(X, y, papers, split_mode)
+    if residual:
+        X_train, X_test = apply_residual(X_train, papers_train, X_test, papers_test)
+    tag = f"split={split_mode}" + (" residual" if residual else "")
+    print(f"\n### {title} — {tag}  train={len(X_train)}  test={len(X_test)}")
 
     results = []
     for name, clf in MODELS.items():
@@ -181,6 +210,10 @@ def main():
                           "newspapers together. Controls for each paper's own masthead/layout: pooled "
                           "training can let a model shortcut on 'which paper is this' (which correlates "
                           "with club) rather than actually reading the cover")
+    ap.add_argument("--residual", action="store_true",
+                     help="subtract each newspaper's own average cover (mean of the training rows only) "
+                          "from every vector before fitting — isolates whatever varies day to day from the "
+                          "fixed masthead/layout, the same idea as the dashboard's 'a capa média' feature")
     args = ap.parse_args()
 
     rows = json.loads(fetch(STATS))["rows"]
@@ -199,22 +232,24 @@ def main():
     if not args.per_newspaper:
         X = np.stack([v for v, _, _ in kept])
         y = np.array([c for _, c, _ in kept])
-        run_experiment("Pooled (all newspapers)", X, y, args.split)
+        papers = np.array([p for _, _, p in kept])
+        run_experiment("Pooled (all newspapers)", X, y, papers, args.split, args.residual)
         return
 
-    papers = sorted({p for _, _, p in kept})
+    newspapers = sorted({p for _, _, p in kept})
     per_paper_results = {}
-    for paper in papers:
+    for paper in newspapers:
         subset = [(v, c) for v, c, p in kept if p == paper]
         X = np.stack([v for v, _ in subset])
         y = np.array([c for _, c in subset])
-        per_paper_results[paper] = run_experiment(paper, X, y, args.split)
+        papers = np.full(len(X), paper)
+        per_paper_results[paper] = run_experiment(paper, X, y, papers, args.split, args.residual)
 
-    model_names = list(per_paper_results[papers[0]].keys())
+    model_names = list(per_paper_results[newspapers[0]].keys())
     print("\n=== accuracy by model x newspaper ===")
-    print(f"{'':34}" + "".join(f"{p:>10}" for p in papers))
+    print(f"{'':34}" + "".join(f"{p:>10}" for p in newspapers))
     for name in model_names:
-        print(f"{name:34}" + "".join(f"{per_paper_results[p][name]:9.1%} " for p in papers))
+        print(f"{name:34}" + "".join(f"{per_paper_results[p][name]:9.1%} " for p in newspapers))
 
 
 if __name__ == "__main__":
