@@ -37,7 +37,23 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : process.argv[i + 1];
 };
 
-const { rows } = await fetch(STATS).then(r => r.json());
+// Cloudflare Bot Fight Mode challenges a UA-less fetch on both endpoints
+// (same coin flip documented in scrape.yml / backfill-ai-daily.yml) — a
+// browser UA is enough to pass every time so far.
+const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const browserFetch = url => fetch(url, { headers: { "User-Agent": BROWSER_UA } });
+
+async function fetchJson(url) {
+  const res = await browserFetch(url);
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`${url} did not return JSON (HTTP ${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
+const { rows } = await fetchJson(STATS);
 const labelled = rows.filter(r => r.club);
 const size = process.argv.includes("--all")
   ? labelled.length
@@ -49,7 +65,7 @@ const sample = Array.from({ length: size }, (_, i) =>
   labelled[Math.floor((i * labelled.length) / size)]);
 
 async function classify(url) {
-  const img = await fetch(url).then(r => r.arrayBuffer());
+  const img = await browserFetch(url).then(r => r.arrayBuffer());
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
