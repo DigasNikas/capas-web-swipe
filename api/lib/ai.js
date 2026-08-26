@@ -34,15 +34,8 @@ export const PROMPT =
   "\n" +
   "Ignore these. They are on every edition and say nothing about the day:\n" +
   "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n" +
-  "- small boxes and side rails for a DIFFERENT, separate story elsewhere on the page — even one headed SPORTING, FC PORTO or BENFICA\n" +
+  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA\n" +
   "- teasers, adverts, cartoons and results bars along the edges\n" +
-  "\n" +
-  "Many covers lead with a person, not a club name: a player, coach, president or agent, in a " +
-  "transfer, quote, or injury story. That story is still about a specific club — it is not " +
-  "'others' just because the headline itself is only a name. Read the subheadline, caption, or a " +
-  "page-reference tag ('BENFICA P.2 a 4') sitting right next to that same headline or photo; it " +
-  "usually names the club the person is joining, leaving, managing, or playing for. Answer " +
-  "'others' only when nothing in that main story's own text names a club.\n" +
   "\n" +
   "How the clubs are named on these pages:\n" +
   "- benfica: Benfica, SLB, Aguias, Encarnados, da Luz\n" +
@@ -54,7 +47,7 @@ export const PROMPT =
   "\n" +
   "Reply in exactly three lines:\n" +
   "HEADLINE: <the biggest headline, copied>\n" +
-  "WHY: <the one detail that decided it — a name, nickname, kit colour word, or the club named next to the main story>\n" +
+  "WHY: <the one detail that decided it — a name, nickname or kit colour word from the headline or photo>\n" +
   "ANSWER: <benfica|sporting|porto|others>";
 
 // btoa needs a binary string; spreading a 300 KB Uint8Array into
