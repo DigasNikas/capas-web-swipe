@@ -11,3 +11,4 @@ Local tooling, not deployed. Every script has a matching one-click GitHub Action
 | `avg_cover.py` | Pixel-wise mean of every cover → `dashboard/avg/` (numpy + pillow) | Regenerate A Capa Média |
 | `import_matches.py` | Import match dates into D1 (football-data.org + api-sports.io) | Import Match Dates |
 | `train_classic_classifier.py` | Classic-ML exercise: flatten covers to pixel vectors, fit 6 classic scikit-learn models + one from-scratch PyTorch MLP on the crowd's own labels, `--split chronological/stratified`, `--per-newspaper` and `--residual` toggles, report accuracy/precision/recall per model. Not a production model, no GitHub Action | — |
+| `build_vectorize_index.py` | Embed every crowd-labelled cover with CLIP (local, via transformers — no external API) and upsert into the `capas-cover-embeddings` Vectorize index (512 dims, cosine), metadata: club/newspaper/date/url. Nothing reads this index yet | — |
