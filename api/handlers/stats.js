@@ -26,7 +26,7 @@ export async function handleStats(env) {
   const { results: rows } = await env.DB
     .prepare(`
       SELECT ac.cover_id, ac.newspaper, ac.date, ac.club, ac.votes_club, ac.votes_total,
-             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline
+             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline, c.ai_why
       FROM analytics_covers ac
       JOIN covers c ON c.id = ac.cover_id
       ORDER BY ac.date ASC
@@ -71,9 +71,13 @@ export async function handleStats(env) {
         // the same club as the crowd, across every cover it has classified.
         agreement: labelled.filter(r => r.ai_club === r.club).length / labelled.length,
         labelled: labelled.length,
-        // headline: the biggest headline the model read on that page — its
-        // justification for the club it named, shown next to the verdict.
-        covers: aiRows.map(r => ({ ...cover(r), club: r.ai_club, human_club: r.club, headline: r.ai_headline || null })),
+        // headline: the biggest headline the model read on that page. why: the
+        // one-line reason it gave for the club. Both are its justification,
+        // shown next to the verdict.
+        covers: aiRows.map(r => ({
+          ...cover(r), club: r.ai_club, human_club: r.club,
+          headline: r.ai_headline || null, why: r.ai_why || null,
+        })),
       };
     }
   }

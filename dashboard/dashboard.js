@@ -612,9 +612,9 @@ function renderAi(latestAi, latest, rows) {
   renderAiDiffs(rows);
 }
 
-// textContent throughout — c.headline is copied verbatim off a newspaper page
-// by the model, not text this codebase controls, so it gets the same
-// treatment as a comment a stranger wrote.
+// textContent throughout — c.headline and c.why are copied verbatim off a
+// newspaper page by the model, not text this codebase controls, so they get
+// the same treatment as a comment a stranger wrote.
 function aiPaperRow(c) {
   const row = document.createElement('div');
   row.className = 'd-ai-paper';
@@ -631,12 +631,21 @@ function aiPaperRow(c) {
   row.append(name, club);
 
   if (c.headline) {
-    const why = document.createElement('span');
-    why.className = 'd-ai-paper-why';
+    const headline = document.createElement('span');
+    headline.className = 'd-ai-paper-headline';
     // Some headlines are themselves a quote ("É sempre o mesmo
     // beneficiário") and the model copies the page's own quote marks —
     // strip those before adding ours, or they double up.
-    why.textContent = `"${c.headline.replace(/^["']+|["']+$/g, '')}"`;
+    headline.textContent = `"${c.headline.replace(/^["']+|["']+$/g, '')}"`;
+    row.append(headline);
+  }
+
+  // Older covers were classified before the prompt asked for this, so it's
+  // absent for most of the archive until the backfill catches up.
+  if (c.why) {
+    const why = document.createElement('span');
+    why.className = 'd-ai-paper-why';
+    why.textContent = `→ ${c.why}`;
     row.append(why);
   }
 

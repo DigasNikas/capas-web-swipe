@@ -45,8 +45,9 @@ export const PROMPT =
   "Braga, Guimaraes or another club, another sport (cycling, futsal), " +
   "or a transfer round-up with no single club on top\n" +
   "\n" +
-  "Reply in exactly two lines:\n" +
+  "Reply in exactly three lines:\n" +
   "HEADLINE: <the biggest headline, copied>\n" +
+  "WHY: <the one detail that decided it — a name, nickname or kit colour word from the headline or photo>\n" +
   "ANSWER: <benfica|sporting|porto|others>";
 
 // btoa needs a binary string; spreading a 300 KB Uint8Array into
@@ -70,7 +71,7 @@ export function parseAnswer(text) {
   const raw = String(text ?? "");
   const lower = raw.toLowerCase();
   const marker = lower.lastIndexOf("answer:");
-  if (marker === -1) return { club: null, headline: null };
+  if (marker === -1) return { club: null, headline: null, why: null };
 
   const tail = lower.slice(marker + "answer:".length);
   let club = null;
@@ -80,10 +81,17 @@ export function parseAnswer(text) {
     if (i !== -1 && i < at) { at = i; club = c; }
   }
 
-  // What the model says it read. Stored so a wrong label can be diagnosed with
-  // one SQL query instead of by opening the image and guessing what it saw.
-  const head = raw.slice(0, marker).match(/headline:\s*(.+)/i);
-  return { club, headline: head ? head[1].trim().slice(0, 200) : null };
+  // What the model says it read, and why it landed on that club. Stored so a
+  // wrong label can be diagnosed with one SQL query instead of by opening the
+  // image and guessing what it saw.
+  const before = raw.slice(0, marker);
+  const head = before.match(/headline:\s*(.+)/i);
+  const why = before.match(/why:\s*(.+)/i);
+  return {
+    club,
+    headline: head ? head[1].trim().slice(0, 200) : null,
+    why: why ? why[1].trim().slice(0, 200) : null,
+  };
 }
 
 export async function classifyCover(env, buffer, contentType = "image/jpeg") {
@@ -112,14 +120,15 @@ export async function classifyAndStore(env, coverId, r2Key) {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
 
-    const { club, headline } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType);
+    const { club, headline, why } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType);
     if (!club) return null;
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ? WHERE id = ?")
-      // Empty string, not null: ai_headline being NULL is what marks a cover as
-      // classified by an older prompt and puts it back in the backfill queue.
-      .bind(club, headline ?? "", coverId)
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ? WHERE id = ?")
+      // Empty string, not null: ai_headline/ai_why being NULL is what marks a
+      // cover as classified by an older prompt and puts it back in the
+      // backfill queue.
+      .bind(club, headline ?? "", why ?? "", coverId)
       .run();
     return club;
   } catch (err) {

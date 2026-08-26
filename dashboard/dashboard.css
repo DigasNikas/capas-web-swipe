@@ -500,7 +500,8 @@ body {
 .d-ai-paper { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .d-ai-paper-name { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--d-muted); text-transform: uppercase; }
 .d-ai-paper-club { font-weight: 800; text-transform: uppercase; }
-.d-ai-paper-why { flex-basis: 100%; font-size: 0.75rem; color: var(--d-muted); font-style: italic; }
+.d-ai-paper-headline { flex-basis: 100%; font-size: 0.75rem; color: var(--d-muted); font-style: italic; }
+.d-ai-paper-why { flex-basis: 100%; font-size: 0.7rem; color: var(--d-yellow); }
 .d-ai-vs { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--d-yellow); color: var(--d-yellow); }
 .d-ai-vs.disagrees { background: rgba(255,255,255,0.05); border-left-color: var(--d-muted); color: var(--d-muted); }
 
