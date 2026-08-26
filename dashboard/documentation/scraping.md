@@ -46,12 +46,12 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
 
 # One-off: backfill thumb_url for covers that predate thumbnails.
-# Processes 25 per call — loop until "remaining" hits 0.
+# Processes 25 per call; loop until "remaining" hits 0.
 until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 
 # One-off: classify covers that predate the AI detector.
-# Processes 8 per call, newest first — safe to Ctrl-C once the sample is big enough.
+# Processes 8 per call, newest first; safe to Ctrl-C once the sample is big enough.
 until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-ai" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
