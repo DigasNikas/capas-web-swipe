@@ -51,12 +51,13 @@ CREATE TABLE IF NOT EXISTS analytics_covers (
 
 -- Dashboard comments, scoped to a single cover day. Reads always filter on
 -- the newest date in analytics_covers, so a comment stops being reachable the
--- moment tomorrow's covers land. No email column by design — the dashboard
--- must never be able to correlate a comment with an app account.
+-- moment tomorrow's covers land. No separate email column, but `author`
+-- embeds the email's local-part (below) — a comment is correlatable to an
+-- app account, by design, matching the identifier the leaderboard shows.
 CREATE TABLE IF NOT EXISTS comments (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   date       TEXT NOT NULL,            -- 'YYYY-MM-DD', the cover day
-  author     TEXT NOT NULL,            -- Google given_name, first word only
+  author     TEXT NOT NULL,            -- "Given - localpart", e.g. "Diogo - dlimanic"
   author_sub TEXT NOT NULL,            -- opaque Google subject id, for rate limits
   body       TEXT NOT NULL,            -- <= 240 chars, plain text
   created_at TEXT DEFAULT (datetime('now'))
