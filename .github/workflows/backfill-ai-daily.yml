@@ -1,16 +1,23 @@
 name: Backfill AI (Daily Batch)
 
 # Temporary, self-deleting: clears the historical AI-classification backlog
-# (1,183 covers as of 2026-08-25) a little at a time, capped well under the
-# 10,000-neurons/day free Workers AI allowance the routine daily scrape also
-# draws from — see /documentation#ai-detector and #scraping. Runs after the
-# 05-08 UTC scrape window, not during it, so the routine 3-cover
-# classification always gets first crack at the day's quota.
+# a little at a time, capped well under the 10,000-neurons/day free Workers AI
+# allowance the routine daily scrape also draws from — see
+# /documentation#ai-detector and #scraping. Runs after the 05-08 UTC scrape
+# window, not during it, so the routine 3-cover classification always gets
+# first crack at the day's quota.
+#
+# Backlog was 1,183 covers as of 2026-08-25. The 2026-08-26 ai_why column
+# reset that to the whole archive (every existing row is missing it) — same
+# shape of change as when ai_headline was added, just bigger. Don't loop
+# `/api/backfill-ai` to `remaining:0` by hand while that's true; this workflow's
+# own 24-covers/day cap exists so a schema change like that can't repeat the
+# quota-starvation incident below on its own.
 #
 # No cursor needed between days: /api/backfill-ai always selects
-# `WHERE ai_club IS NULL OR ai_headline IS NULL` — a classified cover drops
-# out of that set on its own, so each day's run just continues wherever
-# yesterday's left off.
+# `WHERE ai_club IS NULL OR ai_headline IS NULL OR ai_why IS NULL` — a fully
+# classified cover drops out of that set on its own, so each day's run just
+# continues wherever yesterday's left off.
 #
 # The last step fails ON PURPOSE once the backlog actually hits zero.
 # GitHub emails you (Settings → Notifications → Actions) when a scheduled
