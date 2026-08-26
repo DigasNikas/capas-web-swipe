@@ -37,11 +37,22 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : process.argv[i + 1];
 };
 
-// Cloudflare Bot Fight Mode challenges a UA-less fetch on both endpoints
-// (same coin flip documented in scrape.yml / backfill-ai-daily.yml) — a
-// browser UA is enough to pass every time so far.
+// Cloudflare Bot Fight Mode challenges GitHub's runners on both endpoints — a
+// per-request coin flip (same one documented in scrape.yml /
+// backfill-ai-daily.yml), not something a UA header alone reliably beats.
+// A retry is the actual fix for a coin flip: without one, one flaky image
+// among 80 kills the whole run (classify() below throws on a bad fetch, and
+// the caller stops the loop on the first error).
 const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
-const browserFetch = url => fetch(url, { headers: { "User-Agent": BROWSER_UA } });
+async function browserFetch(url, attempts = 3) {
+  let res;
+  for (let i = 0; i < attempts; i++) {
+    res = await fetch(url, { headers: { "User-Agent": BROWSER_UA } });
+    if (res.ok) return res;
+    if (i < attempts - 1) await new Promise(r => setTimeout(r, 800 * (i + 1)));
+  }
+  return res; // still not ok after `attempts` tries — let the caller report it
+}
 
 async function fetchJson(url) {
   const res = await browserFetch(url);
