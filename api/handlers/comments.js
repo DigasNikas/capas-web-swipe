@@ -92,5 +92,9 @@ async function verifyGoogleToken(token) {
 
   // First name only — enough to be human, less exposing than the full name.
   const name = (t.given_name || t.name || "").trim().split(/\s+/)[0] || "Anónimo";
-  return { sub: t.sub, name: name.slice(0, 24) };
+  // Same identifier the app's leaderboard uses (email local-part) — first
+  // names collide, this doesn't.
+  const localPart = String(t.email || "").split("@")[0];
+  const author = localPart ? `${name} - ${localPart}` : name;
+  return { sub: t.sub, name: author.slice(0, 40) };
 }

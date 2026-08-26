@@ -560,22 +560,22 @@ function renderBarcode(days, onSelect) {
   };
 }
 
-// Renders one verdict card — the crowd's ("latest") or the model's ("ai").
-// Both sections have the same markup under a different id prefix and share the
-// .d-latest* styles; only the source of `club` and the unit label differ.
+// Shared by both verdict cards: unhide the section, fit the title, stamp the
+// input date. What each card shows below that differs — see renderVerdict
+// and renderAi.
+function renderVerdictHeader(id, date) {
+  document.getElementById(id).classList.remove('hidden');
+  fitTextToContainer(document.getElementById(`${id}-title`), 2.6, 1);
+  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById(`${id}-date`).textContent = `INPUT · ${dateLabel.toUpperCase()}`;
+}
+
+// The crowd's verdict card ("Hoje é dia de quem?") — covers, one rolled-up
+// winner, a confidence bar.
 function renderVerdict(id, data, unit) {
   if (!data) return;
-  document.getElementById(id).classList.remove('hidden');
-
-  fitTextToContainer(document.getElementById(`${id}-title`), 2.6, 1);
-
-  const dateLabel = new Date(data.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
-  document.getElementById(`${id}-date`).textContent = `INPUT · ${dateLabel.toUpperCase()}`;
-
-  // Only the crowd's card shows the covers — the model's section sits right
-  // below it and would just repeat the same three thumbnails.
-  const coversEl = document.getElementById(`${id}-covers`);
-  if (coversEl) renderVerdictCovers(coversEl, data.covers);
+  renderVerdictHeader(id, data.date);
+  renderVerdictCovers(document.getElementById(`${id}-covers`), data.covers);
 
   const winnerEl = document.getElementById(`${id}-winner`);
   const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--d-yellow)';
@@ -589,13 +589,20 @@ function renderVerdict(id, data, unit) {
   document.getElementById(`${id}-conf-label`).textContent = `${pct}% ${unit}`;
 }
 
+// The model's card ("E a máquina, que diz?") — the covers already showed
+// above in "Hoje é dia de quem?", so this one skips straight to what the
+// model called each paper, and the headline it read to get there.
 function renderAi(latestAi, latest, rows) {
-  renderVerdict('ai', latestAi, 'dos jornais');
   if (!latestAi) return;
+  renderVerdictHeader('ai', latestAi.date);
 
   const pct = Math.round(latestAi.agreement * 100);
   document.getElementById('ai-agreement').textContent =
     `Concorda com a comunidade em ${pct}% das ${latestAi.labelled} capas já analisadas.`;
+
+  const papersEl = document.getElementById('ai-papers');
+  papersEl.innerHTML = '';
+  latestAi.covers.forEach(c => papersEl.appendChild(aiPaperRow(c)));
 
   const same = latest && latest.winner === latestAi.winner;
   const verdictEl = document.getElementById('ai-vs-human');
@@ -603,6 +610,34 @@ function renderAi(latestAi, latest, rows) {
   verdictEl.classList.toggle('disagrees', !same);
 
   renderAiDiffs(rows);
+}
+
+// textContent throughout — c.headline is copied verbatim off a newspaper page
+// by the model, not text this codebase controls, so it gets the same
+// treatment as a comment a stranger wrote.
+function aiPaperRow(c) {
+  const row = document.createElement('div');
+  row.className = 'd-ai-paper';
+
+  const name = document.createElement('span');
+  name.className = 'd-ai-paper-name';
+  name.textContent = c.name;
+
+  const club = document.createElement('span');
+  club.className = 'd-ai-paper-club';
+  club.style.color = CLUB_META[c.club].color;
+  club.textContent = CLUB_META[c.club].name;
+
+  row.append(name, club);
+
+  if (c.headline) {
+    const why = document.createElement('span');
+    why.className = 'd-ai-paper-why';
+    why.textContent = `"${c.headline}"`;
+    row.append(why);
+  }
+
+  return row;
 }
 
 // The other 13%: every cover the model and the crowd read differently. Same
