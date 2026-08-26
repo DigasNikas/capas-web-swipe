@@ -29,21 +29,83 @@ Both Pages projects git-connect to this repo/branch and deploy on every push. On
 
 ## D1 schema
 
-**`covers`**: one row per newspaper per day. `url` is the full-res image. `thumb_url` is a generated 220px WebP thumbnail, nullable; `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed, and `/api/backfill-thumbs` fills them in. Thumbnails feed small on-screen previews (dashboard calendar, catalogue grid); the swipe card and cover modal always use the full-res `url`.
+### `covers`
 
-`ai_club` is the model's guess for that cover, nullable and absent until classified (backfill with `/api/backfill-ai`). `ai_headline` is the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. A NULL `ai_headline` also marks a cover as classified by an older prompt, which is how the backfill knows to re-label it. Both columns sit on `covers` rather than beside the votes: neither is a vote and neither has a user attached to it.
+One row per newspaper per day.
 
-**`swipes`**: one row per user per cover, upserted on re-swipe.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER, PK | |
+| `newspaper` | TEXT | `record` / `abola` / `ojogo` |
+| `date` | TEXT | `YYYY-MM-DD` |
+| `r2_key` | TEXT | R2 object key, e.g. `2026/04/25/record_2026-04-25.jpg` |
+| `url` | TEXT | full-res public URL |
+| `thumb_url` | TEXT, nullable | generated 220px WebP thumbnail. `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed; `/api/backfill-thumbs` fills it in. Feeds small on-screen previews (dashboard calendar, catalogue grid) — the swipe card and cover modal always use the full-res `url` |
+| `ai_club` | TEXT, nullable | zero-shot model guess, null until classified (backfill with `/api/backfill-ai`) |
+| `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt, which is how the backfill knows to re-label it |
+| `created_at` | TEXT | defaults to now |
 
-**`matches`**: match dates for Sporting, Benfica and Porto, used to highlight the calendar. See [Match dates](#match-dates).
-
-**`analytics_covers`**: one row per cover with ≥1 vote, holding the winning club and vote counts, refreshed on every swipe. It is never joined with `swipes` or `user_email`. That rule is what keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, and joins `covers` only for image URLs and `ai_club`, columns with no user attached to them.
-
-**`comments`**: ephemeral, scoped to a single cover day. Reads always filter on the newest date in `analytics_covers`, so a comment stops being reachable the moment tomorrow's covers land — the nightly delete in `index.js` is only housekeeping on top of that. `author` is the commenter's Google first name plus their email's local-part (`Diogo - dlimanic`), the same identifier the app's leaderboard shows, so a dashboard comment is one lookup away from the app account that posted it. `author_sub` is the opaque Google subject id used only for the daily rate limit (`MAX_PER_DAY`, `COOLDOWN_S` in `comments.js`) and never shown.
-
-`ai_club` and `ai_headline` were added after the fact. An existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
+Unique on `(newspaper, date)`. `ai_club`/`ai_headline` sit on `covers` rather than beside the votes: neither is a vote and neither has a user attached to it. Both were added after the fact — an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
 
 ```sql
 ALTER TABLE covers ADD COLUMN ai_club TEXT;
 ALTER TABLE covers ADD COLUMN ai_headline TEXT;
 ```
+
+### `swipes`
+
+One row per user per cover, upserted on re-swipe.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER, PK | |
+| `user_email` | TEXT | from the `Cf-Access-Authenticated-User-Email` header |
+| `cover_id` | INTEGER, FK → `covers.id` | |
+| `decision` | TEXT | `sporting` / `benfica` / `porto` / `others` |
+| `is_favorite` | INTEGER (0/1) | personal bookmark, unrelated to `decision` |
+| `swiped_at` | TEXT | defaults to now |
+
+Unique on `(user_email, cover_id)`.
+
+### `matches`
+
+Match dates for Sporting, Benfica and Porto, used to highlight the calendar. See [Match dates](#match-dates).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER, PK | |
+| `club` | TEXT | `sporting` / `benfica` / `porto` |
+| `match_date` | TEXT | `YYYY-MM-DD` |
+
+Unique on `(club, match_date)`.
+
+### `analytics_covers`
+
+One row per cover with ≥1 vote, holding the winning club and vote counts, refreshed on every swipe.
+
+| Column | Type | Notes |
+|---|---|---|
+| `cover_id` | INTEGER, PK, FK → `covers.id` | |
+| `newspaper` | TEXT | |
+| `date` | TEXT | |
+| `club` | TEXT | winning decision for this cover |
+| `votes_club` | INTEGER | votes for the winning club |
+| `votes_total` | INTEGER | |
+| `updated_at` | TEXT | defaults to now |
+
+Never joined with `swipes` or `user_email`. That rule is what keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, and joins `covers` only for image URLs and `ai_club`, columns with no user attached to them.
+
+### `comments`
+
+Ephemeral, scoped to a single cover day.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER, PK | |
+| `date` | TEXT | the cover day, `YYYY-MM-DD` |
+| `author` | TEXT | `"Given - localpart"`, e.g. `Diogo - dlimanic` — first name plus the commenter's email local-part, the same identifier the app's leaderboard shows |
+| `author_sub` | TEXT | opaque Google subject id, used only for the daily rate limit (`MAX_PER_DAY`, `COOLDOWN_S` in `comments.js`) and never shown |
+| `body` | TEXT | ≤ 240 chars, plain text |
+| `created_at` | TEXT | defaults to now |
+
+Reads always filter on the newest date in `analytics_covers`, so a comment stops being reachable the moment tomorrow's covers land — the nightly delete in `index.js` is only housekeeping on top of that. `author` embeds the email's local-part, so a comment is correlatable to an app account, by design.
