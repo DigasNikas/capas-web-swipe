@@ -1,6 +1,6 @@
 # Classic Classifiers
 
-`scripts/train_classic_classifier.py` is a separate, deliberately old-school exercise: no pretraining, no transfer learning, no OCR, the shape a first ML course teaches before reaching for anything smarter. It doesn't touch D1 or `ai_club`, and isn't meant to compete with the zero-shot model (see [AI Detector](#ai-detector)).
+`scripts/train_classic_classifier.py` is a separate, deliberately old-school exercise: no pretraining, no transfer learning, no OCR, the shape a first ML course teaches before reaching for anything smarter. It doesn't touch D1 or `ai_club`, and isn't meant to compete with the zero-shot model (see [Multimodal](#multimodal)).
 
 The experiment below runs seven classifiers (logistic regression, k-nearest neighbours, a decision tree, a random forest, a linear SVM, naive Bayes, and an optional small from-scratch PyTorch MLP) on the same input, so the comparison is about the algorithm, not the data.
 
@@ -40,7 +40,7 @@ Fetch `(cover URL, crowd-voted club)` pairs from `/api/stats`, resize each cover
 | Linear SVM | 54.3% | 0.49 |
 | Decision Tree | 43.7% | 0.43 |
 
-Every model clears the 35.7% baseline, so all seven learn something from raw pixels alone, roughly which club's mean colour palette a cover looks closest to. All seven land well below the zero-shot model's agreement (see [AI Detector](#ai-detector)): the real signal is headline text, and none of these seven can read.
+Every model clears the 35.7% baseline, so all seven learn something from raw pixels alone, roughly which club's mean colour palette a cover looks closest to. All seven land well below the zero-shot model's agreement (see [Multimodal](#multimodal)): the real signal is headline text, and none of these seven can read.
 
 **Recall per class:**
 

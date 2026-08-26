@@ -31,7 +31,7 @@ Every script in `scripts/` has a matching one-click workflow under **Actions**:
 - **Scrape Newspaper Covers (Date Range)**: trigger with `start` and `end` in `YYYYMMDD` format
 - **Scrape Newspaper Covers (Full Month)**: trigger with `year` and `month`; wraps `scrape_month.sh`
 - **Regenerate A Capa Média**: no inputs. Runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed. See [Archive views](#archive-views)
-- **Evaluate AI Prompt**: trigger with a sample size or "score everything". Wraps `eval-ai.mjs` and prints its report to the run log. See [AI Detector](#ai-detector)
+- **Evaluate AI Prompt**: trigger with a sample size or "score everything". Wraps `eval-ai.mjs` and prints its report to the run log. See [Multimodal](#multimodal)
 - **Import Match Dates**: trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead. Wraps `import_matches.py`. See [Match dates](#match-dates)
 
 The three scrape workflows and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `eval-ai` and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has. `eval-ai`'s token additionally needs **Workers AI · Read**, which the deploy token may not carry.

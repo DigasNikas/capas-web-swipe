@@ -1,6 +1,6 @@
-# AI Detector
+# Multimodal
 
-The dashboard's second verdict card. Same layout and arithmetic as "Hoje é dia de quem?", over the same three covers, except the club comes from a vision model reading the front page instead of from votes.
+Powers the dashboard's **AI Detector** card ("E a máquina, que diz?"): the second verdict card, same layout and arithmetic as "Hoje é dia de quem?", over the same three covers, except the club comes from a vision model reading the front page instead of from votes.
 
 **Zero-shot.** The model is shown the cover and asked which club the page is about. Nothing is trained on this archive; crowd-labelled covers are used only as a benchmark.
 

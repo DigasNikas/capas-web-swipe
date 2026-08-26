@@ -8,7 +8,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers (capasjornais.pt, falling back to sapo.pt; see [Scraping](#scraping)) and stores them in **R2** (images) and **D1** (metadata).
 2. **`capas.digasnikas.com`** is the public dashboard page. It shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table. No login required.
-3. The same three covers are also read by a **vision model** (Workers AI, zero-shot, no training) and shown side by side with the crowd's verdict in the dashboard's "Detetor AI" section. See [AI Detector](#ai-detector).
+3. The same three covers are also read by a **vision model** (Workers AI, zero-shot, no training) and shown side by side with the crowd's verdict in the dashboard's "Detetor AI" section. See [Multimodal](#multimodal).
 4. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access**. The Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
 5. Everything past login lives on that subdomain. "Conta" opens as a bottom-sheet modal over the swipe app, the same pattern as the leaderboard and Instruções modals, with no page navigation. It shows a user's own stats, leaderboard rank, and swipe history. Access is configured as a multi-domain application, so signing in on one host authenticates the other too.
 

@@ -79,6 +79,15 @@
   nav a.active { color: var(--yellow); font-weight: 700; background: var(--panel2); }
   nav a.section { padding-left: 38px; font-size: 0.75rem; color: var(--muted); }
   nav a.section:hover { color: var(--text); }
+  nav .nav-group {
+    margin-top: 10px;
+    padding: 8px 22px 2px;
+    font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
 
   main { flex: 1; min-width: 0; padding: 28px 40px 80px; max-width: 860px; }
 
@@ -165,8 +174,10 @@ const CHAPTERS = [
   { id: "frontend", title: "Frontend" },
   { id: "api", title: "API" },
   { id: "scraping", title: "Scraping" },
-  { id: "ai-detector", title: "AI Detector" },
-  { id: "classic-classifiers", title: "Classic Classifiers" },
+  { id: "multimodal", title: "Multimodal", group: "AI" },
+  { id: "classic-classifiers", title: "Classic Classifiers", group: "AI" },
+  { id: "image-embeddings", title: "Image Embeddings", group: "AI" },
+  { id: "rag", title: "RAG", group: "AI" },
   { id: "archive-views", title: "Archive views" },
   { id: "match-dates", title: "Match dates" },
   { id: "deployment", title: "Deployment" },
@@ -342,10 +353,19 @@ function parseHash() {
 }
 
 function renderNav(activeId, sections) {
+  let openGroup = null;
   nav.innerHTML = CHAPTERS.map((c) => {
+    // A group label above the first chapter of each run of chapters sharing
+    // a `group` — chapters must sit adjacent in CHAPTERS for this to render
+    // as one group instead of repeating the label.
+    let groupLabel = "";
+    if (c.group !== openGroup) {
+      openGroup = c.group;
+      if (c.group) groupLabel = `<div class="nav-group">${c.group}</div>`;
+    }
     const link = `<a href="#${c.id}" class="${c.id === activeId ? "active" : ""}">${c.title}</a>`;
-    if (c.id !== activeId || sections.length === 0) return link;
-    return link + sections.map((s) => `<a class="section" href="#${c.id}/${s.slug}">${s.text.replace(/`/g, "")}</a>`).join("");
+    if (c.id !== activeId || sections.length === 0) return groupLabel + link;
+    return groupLabel + link + sections.map((s) => `<a class="section" href="#${c.id}/${s.slug}">${s.text.replace(/`/g, "")}</a>`).join("");
   }).join("");
 }
 
