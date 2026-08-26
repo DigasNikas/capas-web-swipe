@@ -10,8 +10,6 @@ python3 -m venv .venv && .venv/bin/pip install numpy pillow scikit-learn
 .venv/bin/python scripts/train_classic_classifier.py
 .venv/bin/python scripts/train_classic_classifier.py --limit 200   # quick run
 .venv/bin/python scripts/train_classic_classifier.py --per-newspaper
-.venv/bin/python scripts/train_classic_classifier.py --residual
-.venv/bin/python scripts/train_classic_classifier.py --residual --per-newspaper
 ```
 
 Each model gets the same report (accuracy, per-class precision/recall/F1, confusion matrix, the same shape as `eval-ai.mjs`'s own output) followed by a summary table ranked by accuracy.
@@ -137,54 +135,3 @@ Same per-newspaper isolation, `--split stratified` instead of the date cutoff. S
 Same shape as the chronological per-newspaper run. A Bola (70.5% vs 69.5%) and Record (78.1% vs 82.9%) land in the same range either way, so neither result was a fluke of the date cutoff. O Jogo is the one that moves: its best model now clears its own baseline by +6.9pp (53.9%→60.8%) instead of the chronological run's +0.9pp. O Jogo isn't signal-free after all; its most recent covers just happened to be an unusually hard stretch for these models.
 
 The two-smallest-classes collapse replicates too. Random Forest and the MLP again land at 0% recall on each paper's rarest pair: porto and others in A Bola, sporting and benfica in O Jogo (bar the MLP's 6% on benfica, one correct guess out of 16), porto and others in Record. Two split strategies, six newspaper-scoped training runs, the same models defaulting to the majority class every time a label gets thin.
-
-## Experiment 2 — Avg-cover residual
-
-The dashboard's "a capa média" feature (`avg_cover.py`) averages every cover per newspaper: the masthead survives sharp because it's identical every day, headlines and photos blur into a ghost because they move around. The hypothesis: subtract that average before flattening, and the classifier's fixed 3,072-feature budget stops being spent on the part of the page that never changes.
-
-`--residual` doesn't reuse `dashboard/avg/{newspaper}.jpg` directly. Those images are built in a different, *aligned* coordinate frame — `avg_cover.py` cross-correlates each cover's row-brightness profile against a reference and shifts it before stacking, because the archive spans two scrapes and the masthead sits roughly 70px apart between them. Subtracting that aligned average from an individual cover here, which is never shifted, would misregister by however far that specific cover's own offset is — worse than no subtraction for exactly the covers that need the biggest shift. Instead, `--residual` recomputes each newspaper's mean fresh, in this script's own unaligned 32×32 space, **from the training rows only** — the test rows never contribute to the average that gets subtracted from them.
-
-### Results: chronological split, pooled
-
-Same 1,564 covers (the archive grew by a handful since Experiment 1 ran), same split, same six sklearn models, `--residual` against the unmodified baseline.
-
-| Model | Raw pixels | Residual | Δ |
-|---|---|---|---|
-| Random Forest | 62.3% | 60.7% | −1.6pp |
-| Naive Bayes | 61.0% | 58.8% | −2.2pp |
-| k-Nearest Neighbours | 57.5% | 47.0% | **−10.5pp** |
-| Logistic Regression | 56.9% | 49.8% | −7.1pp |
-| Linear SVM | 54.3% | 49.2% | −5.1pp |
-| Decision Tree | 45.0% | 41.5% | −3.5pp |
-
-Every model got worse. Not marginally — k-Nearest Neighbours lost over ten points, and it's the model most directly sensitive to this: subtracting a mean doesn't change *distances between* points as long as the same mean is subtracted from everything, so a real accuracy drop this size points at something systematic, not noise.
-
-The likely cause is the same masthead-position drift the two-paragraph explanation above exists to warn about, just showing up from the other direction. Each cover here is still resized to 32×32 independently, with no cross-cover alignment — exactly like Experiment 1. The newspaper's own mean is therefore a *blurry, slightly misregistered* template (covers from the two scrape eras don't stack on exactly the same pixel rows), and subtracting a misaligned blur from a sharp individual image doesn't cancel a fixed masthead so much as print a faint ghost edge of it into every vector — structured noise at exactly the boundaries (masthead edge, box borders) that used to be a stable, exploitable signal for "which paper is this," which several of these models were apparently leaning on more than expected. `others` recall barely moved (e.g. Naive Bayes 26%→26%) while the other three classes all got worse — consistent with paper-identity signal being damaged rather than headline signal being clarified.
-
-**Verdict:** subtracting a naive, unaligned average doesn't help and measurably hurts. Worth trying with `avg_cover.py`'s own alignment logic ported into this script — so the subtracted template and the cover being classified are in the same registered frame — before concluding the residual idea itself is dead; this experiment only rules out the unaligned version of it.
-
-### Results: per newspaper
-
-`--per-newspaper --residual` — same isolation as Experiment 1's per-newspaper run (each paper trains and tests on only its own covers), now with the training-set mean subtracted.
-
-| Newspaper | Train | Test |
-|---|---|---|
-| A Bola | 422 | 106 |
-| O Jogo | 409 | 103 |
-| Record | 419 | 105 |
-
-| Model | A Bola raw → residual | O Jogo raw → residual | Record raw → residual |
-|---|---|---|---|
-| Logistic Regression | 68.9% → 67.9% | 55.3% → 55.3% | 83.8% → 84.8% |
-| k-Nearest Neighbours | 55.7% → 55.7% | 54.4% → 54.4% | 63.8% → 63.8% |
-| Decision Tree | 39.6% → 39.6% | 45.6% → 45.6% | 56.2% → 56.2% |
-| Random Forest | 61.3% → 61.3% | 58.3% → 58.3% | 75.2% → 75.2% |
-| Linear SVM | 65.1% → 65.1% | 51.5% → 50.5% | 80.0% → 80.0% |
-| Naive Bayes | 61.3% → 61.3% | 50.5% → 50.5% | 78.1% → 78.1% |
-
-Four of six models are **bit-for-bit identical**, and the other two move by ≤1pp. That's not the residual failing to matter — it's the residual being mathematically unable to matter here, for a reason worth understanding rather than a coincidence:
-
-- **k-Nearest Neighbours, Decision Tree, Random Forest, Naive Bayes are all invariant to a uniform shift.** Subtracting a constant vector from every row (train and test alike) doesn't change the *distance* between any two rows, so k-NN's predictions can't change. Tree splits are threshold comparisons on individual features; shifting a feature by a constant just shifts the optimal threshold by the same constant, giving an identical tree. GaussianNB compares `x` against each class's fitted mean `μ_c`; subtract the same constant from `x` and from every `μ_c` and `x − μ_c` is unchanged. None of these four ever had a chance of moving, in exact arithmetic.
-- **Logistic Regression and Linear SVM aren't exactly invariant** — L2 regularization penalizes the weight vector, and an iterative solver (`liblinear`; the "failed to converge" warning shows up in this script's own output) can land in a slightly different place depending on where it starts. That's the entire ±1pp.
-
-This is the piece that actually explains the pooled result above, not just a second data point. Pooling subtracts a *different* mean from each newspaper's rows before combining them into one training set — not a single uniform shift, but three different ones layered into the same space. That changes the distance between an A Bola row and an O Jogo row, which is exactly the "which paper is this" signal several models leaned on, and exactly the mechanism the pooled section attributes the accuracy drop to. Isolated per newspaper, the shift is uniform, so four of six models are mathematically shielded from it, and the two that aren't move by noise. The pooled experiment isn't measuring "does removing the masthead help or hurt" so much as "what happens when you shift three different subsets of a pooled dataset by three different amounts" — a different question, and evidently a worse one.
