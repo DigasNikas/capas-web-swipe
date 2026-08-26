@@ -54,7 +54,7 @@ Every model clears the 35.7% baseline, so all seven learn *something* from raw p
 | Random Forest | 67% | 88% | 73% | 2% |
 | Small MLP (PyTorch) | 70% | 93% | 63% | **0%** |
 
-`others` collapses for every model, worst for the two that scored *highest* on accuracy (Random Forest 2%, the MLP 0%, both learning to guess `benfica` whenever unsure, since it's the largest class). This is the same failure shape the zero-shot model's first prompt had (see "Scoring, and what the first prompt got wrong" in [AI Detector](#ai-detector): 39% recall on `others`, over-calling Sporting and Porto). There the fix was rewording the prompt to give `others` an actual definition. There's no prompt to reword here: `others` has no consistent visual signature across four different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up), so a model that can't read the headline has nothing to grab onto for that class. From a different angle, that confirms the earlier zero-shot fix was solving a real problem rather than an artifact of one bad prompt.
+`others` collapses for every model, worst for the two that scored *highest* on accuracy (Random Forest 2%, the MLP 0%, both learning to guess `benfica` whenever unsure, since it's the largest class). The zero-shot model (see [AI Detector](#ai-detector)) has the same weak spot, for a related reason: `others` has no consistent visual signature across four different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up). There, the model can still read the headline text and often name the actual story; a pixel-only model that can't read has nothing else to grab onto for that class.
 
 ### Results: stratified split
 
