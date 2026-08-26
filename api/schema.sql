@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS covers (
   thumb_url  TEXT,                    -- generated 220px WebP thumbnail (nullable, backfilled)
   ai_club    TEXT,                    -- zero-shot model guess (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_club TEXT
   ai_headline TEXT,                   -- headline the model quoted back, so a wrong guess is debuggable: ALTER TABLE covers ADD COLUMN ai_headline TEXT
+  ai_why     TEXT,                    -- one-line reason the model gave for the club (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_why TEXT
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE (newspaper, date)
 );

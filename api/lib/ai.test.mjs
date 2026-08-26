@@ -8,10 +8,16 @@
 import assert from "node:assert";
 import { parseAnswer } from "./ai.js";
 
-// Happy path.
+// Happy path, old two-line shape (no WHY: line) — why comes back null.
 assert.deepEqual(
   parseAnswer("HEADLINE: MEIO BILHETE\nANSWER: benfica"),
-  { club: "benfica", headline: "MEIO BILHETE" },
+  { club: "benfica", headline: "MEIO BILHETE", why: null },
+);
+
+// Happy path, current three-line shape.
+assert.deepEqual(
+  parseAnswer("HEADLINE: MEIO BILHETE\nWHY: Benfica named in the headline\nANSWER: benfica"),
+  { club: "benfica", headline: "MEIO BILHETE", why: "Benfica named in the headline" },
 );
 
 // Case and stray punctuation around the club word.
@@ -21,7 +27,7 @@ assert.equal(parseAnswer("HEADLINE: X\nAnswer: **Sporting**").club, "sporting");
 // answered benfica here, because benfica is first in CLUBS.
 assert.deepEqual(
   parseAnswer("The page is dominated by a Sporting win over Porto."),
-  { club: null, headline: null },
+  { club: null, headline: null, why: null },
 );
 
 // Truncated before the marker — max_tokens ran out. Same rule: no label.
@@ -41,8 +47,8 @@ assert.equal(
 );
 
 // Junk in, null out — never throw, the daily scrape depends on it.
-assert.deepEqual(parseAnswer(null), { club: null, headline: null });
-assert.deepEqual(parseAnswer(undefined), { club: null, headline: null });
+assert.deepEqual(parseAnswer(null), { club: null, headline: null, why: null });
+assert.deepEqual(parseAnswer(undefined), { club: null, headline: null, why: null });
 assert.equal(parseAnswer("ANSWER: liverpool").club, null);
 
 console.log("ai parser ok");

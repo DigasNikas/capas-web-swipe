@@ -17,7 +17,9 @@ Picked by benchmarking against 30 randomly sampled crowd-labelled covers. The sa
 Two things drive that gap, and both shaped the implementation:
 
 - **Covers are decided by the headline text, not by kit colours.** At 220px the Portuguese headline is unreadable: that is the 67%→53% drop in the table above. So the classifier fetches the full-res original back out of R2 instead of reusing the thumbnail the rest of the site runs on.
-- **Making the model quote the headline before answering is worth ~7 points.** The prompt asks for the headline first and an `ANSWER: <club>` line second, so the reply arrives as prose and is parsed back down to one of four keys. A reply with no `ANSWER:` line produces no label; the parser never guesses.
+- **Making the model quote the headline before answering is worth ~7 points.** The prompt asks for the headline first and an `ANSWER: <club>` line last, so the reply arrives as prose and is parsed back down to one of four keys. A reply with no `ANSWER:` line produces no label; the parser never guesses.
+
+The prompt now asks for a third line between those two — `WHY: <the one detail that decided it>` — stored as `ai_why` and shown next to the model's call in the dashboard's AI card, so the justification isn't just the headline it read but the actual reason it named that club. Added after the benchmark below was run, so the agreement numbers on this page are from the two-line version; re-run `scripts/eval-ai.mjs` before trusting them against the current prompt.
 
 > Agreement is *agreement with the crowd*, not correctness. Some disagreements ("rui costa seduz ríos") are covers the model read right and the vote read wrong. The number means "how often the machine and the room land in the same place", which is what the page claims. Most covers carry a single vote, so the crowd side is thin too.
 

@@ -43,13 +43,15 @@ One row per newspaper per day.
 | `thumb_url` | TEXT, nullable | generated 220px WebP thumbnail. `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed; `/api/backfill-thumbs` fills it in. Feeds small on-screen previews (dashboard calendar, catalogue grid) — the swipe card and cover modal always use the full-res `url` |
 | `ai_club` | TEXT, nullable | zero-shot model guess, null until classified (backfill with `/api/backfill-ai`) |
 | `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt, which is how the backfill knows to re-label it |
+| `ai_why` | TEXT, nullable | the one-line reason the model gave for the club — a name, nickname or kit colour word it leaned on. Same null-means-reclassify rule as `ai_headline` |
 | `created_at` | TEXT | defaults to now |
 
-Unique on `(newspaper, date)`. `ai_club`/`ai_headline` sit on `covers` rather than beside the votes: neither is a vote and neither has a user attached to it. Both were added after the fact — an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
+Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All three were added after the fact — an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
 
 ```sql
 ALTER TABLE covers ADD COLUMN ai_club TEXT;
 ALTER TABLE covers ADD COLUMN ai_headline TEXT;
+ALTER TABLE covers ADD COLUMN ai_why TEXT;
 ```
 
 ### `swipes`
