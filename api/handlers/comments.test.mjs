@@ -9,7 +9,10 @@ import assert from "node:assert";
 import { handlePostComment } from "./comments.js";
 
 const CLIENT_ID = "107331929504-16jvt0ml8gago9iofrd2sqtg1barsob6.apps.googleusercontent.com";
-const GOOD = { aud: CLIENT_ID, sub: "u1", given_name: "Diogo", name: "Diogo Nicolau" };
+const GOOD = {
+  aud: CLIENT_ID, sub: "u1", given_name: "Diogo", name: "Diogo Nicolau",
+  email: "dlimanic@protonmail.com",
+};
 
 // D1 stub: routes on the SQL text, since the handler only issues three queries.
 function fakeEnv({ latest = "2026-08-23", n = 0, since = 9999 } = {}) {
@@ -68,11 +71,18 @@ assert.equal(await status("olá", fakeEnv({ n: 1, since: 30 })), 429, "30s coold
 // No covers scraped yet -> nothing to comment on.
 assert.equal(await status("olá", fakeEnv({ latest: null })), 409, "no cover day -> 409");
 
-// Happy path: server picks the date, stores the opaque sub, first name only.
+// Happy path: server picks the date, stores the opaque sub, and the author is
+// first name plus the email's local-part — same identifier the app's
+// leaderboard uses, so two Diogos don't read as the same person.
 const env = fakeEnv({ n: 1, since: 120 });
 const res = await handlePostComment(req("  capas fracas  "), env);
 assert.equal(res.status, 201);
-assert.deepEqual(env.DB.inserted[0], ["2026-08-23", "Diogo", "u1", "capas fracas"]);
-assert.equal((await res.json()).author, "Diogo");
+assert.deepEqual(env.DB.inserted[0], ["2026-08-23", "Diogo - dlimanic", "u1", "capas fracas"]);
+assert.equal((await res.json()).author, "Diogo - dlimanic");
+
+// No email on the token (older or scope-limited clients) -> first name alone.
+stubGoogle({ aud: CLIENT_ID, sub: "u2", given_name: "Ana" });
+const res2 = await handlePostComment(req("boa capa"), fakeEnv({ n: 1, since: 120 }));
+assert.equal((await res2.json()).author, "Ana");
 
 console.log("ok");
