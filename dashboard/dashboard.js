@@ -572,28 +572,21 @@ function renderVerdict(id, data, unit) {
   const dateLabel = new Date(data.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
   document.getElementById(`${id}-date`).textContent = `INPUT · ${dateLabel.toUpperCase()}`;
 
-  // The crowd's card shows its own covers; the model's card shows the same
-  // three with its own per-paper guess instead (`data.covers[].club` is
-  // `ai_club` there) — that is the model's actual result, not a single
-  // rolled-up winner.
+  // Only the crowd's card shows the covers — the model's section sits right
+  // below it and would just repeat the same three thumbnails.
   const coversEl = document.getElementById(`${id}-covers`);
   if (coversEl) renderVerdictCovers(coversEl, data.covers);
 
-  const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--d-yellow)';
   const winnerEl = document.getElementById(`${id}-winner`);
-  if (winnerEl) {
-    winnerEl.textContent = data.hasMajority ? CLUB_META[data.winner].name : 'Empate técnico';
-    winnerEl.style.color = winnerColor;
-    fitTextToContainer(winnerEl, 4.5, 1);
-  }
+  const winnerColor = data.hasMajority ? CLUB_META[data.winner].color : 'var(--d-yellow)';
+  winnerEl.textContent = data.hasMajority ? CLUB_META[data.winner].name : 'Empate técnico';
+  winnerEl.style.color = winnerColor;
+  fitTextToContainer(winnerEl, 4.5, 1);
 
-  const confFill = document.getElementById(`${id}-conf-fill`);
-  if (confFill) {
-    const pct = Math.round(data.confidence * 100);
-    confFill.style.width = `${pct}%`;
-    confFill.style.background = winnerColor;
-    document.getElementById(`${id}-conf-label`).textContent = `${pct}% ${unit}`;
-  }
+  const pct = Math.round(data.confidence * 100);
+  document.getElementById(`${id}-conf-fill`).style.width = `${pct}%`;
+  document.getElementById(`${id}-conf-fill`).style.background = winnerColor;
+  document.getElementById(`${id}-conf-label`).textContent = `${pct}% ${unit}`;
 }
 
 function renderAi(latestAi, latest, rows) {

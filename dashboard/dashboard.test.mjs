@@ -20,10 +20,9 @@ assert.ok(wanted.length > 10, 'no getElementById calls found — did the file mo
 const missing = wanted.filter(id => !ids.has(id));
 assert.deepStrictEqual(missing, [], `dashboard.js reads ids that index.html does not define: ${missing}`);
 
-// renderVerdict() is shared by the crowd's card and the model's; both show
-// their own per-paper verdict as a covers strip. Guard the pair so a future
-// edit can't drop one silently.
+// renderVerdict() is shared by the crowd's card and the model's, and only the
+// crowd's shows thumbnails. Guard the pair so a future edit can't half-remove it.
 assert.ok(ids.has('latest-covers'), 'the crowd verdict lost its covers strip');
-assert.ok(ids.has('ai-covers'), 'the model verdict lost its per-cover covers strip');
+assert.ok(!ids.has('ai-covers'), 'the model verdict should not repeat the covers');
 
 console.log(`ok — ${wanted.length} ids resolved`);
