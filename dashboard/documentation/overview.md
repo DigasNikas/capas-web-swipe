@@ -19,7 +19,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 | Dashboard hosting | Cloudflare Pages (`capas-dashboard`) | Serves `dashboard/` at `capas.digasnikas.com`. Public |
 | App hosting | Cloudflare Pages (`capas-app`) | Serves `app/` at `app.capas.digasnikas.com`, behind Access. One page: the swipe app, with account, leaderboard and instructions as modals. |
 | Worker | Cloudflare Workers | API + scheduled scraper, routed on both hostnames' `/api/*` |
-| Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics |
+| Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics, comments |
 | Image storage | Cloudflare R2 | Full-res covers + generated thumbnails |
 | Image processing | Cloudflare Images (Workers binding) | Generates a 220px WebP thumbnail per cover at scrape time (free tier: 5,000 transformations/month) |
 | Cover classification | Workers AI (`AI` binding) | Reads each cover and guesses the club it is about. Zero-shot, no training. ~$0.0006/cover |
@@ -38,6 +38,8 @@ Both Pages projects git-connect to this repo/branch and deploy on every push. On
 **`matches`**: match dates for Sporting, Benfica and Porto, used to highlight the calendar. See [Match dates](#match-dates).
 
 **`analytics_covers`**: one row per cover with ≥1 vote, holding the winning club and vote counts, refreshed on every swipe. It is never joined with `swipes` or `user_email`. That rule is what keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, and joins `covers` only for image URLs and `ai_club`, columns with no user attached to them.
+
+**`comments`**: ephemeral, scoped to a single cover day. Reads always filter on the newest date in `analytics_covers`, so a comment stops being reachable the moment tomorrow's covers land — the nightly delete in `index.js` is only housekeeping on top of that. `author` is the commenter's Google first name plus their email's local-part (`Diogo - dlimanic`), the same identifier the app's leaderboard shows, so a dashboard comment is one lookup away from the app account that posted it. `author_sub` is the opaque Google subject id used only for the daily rate limit (`MAX_PER_DAY`, `COOLDOWN_S` in `comments.js`) and never shown.
 
 `ai_club` and `ai_headline` were added after the fact. An existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
 
