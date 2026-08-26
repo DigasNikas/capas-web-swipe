@@ -31,6 +31,4 @@ Needs a Cloudflare API token with **Vectorize · Write**, a separate permission 
 
 Populated: **1,564 vectors**, confirmed against the live index (`vectorCount: 1564`, `dimensions: 512`). A query using a cover's own embedding returns itself first (`score 0.9999988`), then mostly same-newspaper covers, with some cross-club and cross-newspaper matches mixed in: consistent with what the classic-classifier experiments already showed about what raw visual similarity picks up on (layout and masthead more than headline content).
 
-[RAG](#rag) now reads from this index at classification time, once
-`CLIP_SPACE_URL`/`CLIP_SPACE_KEY` are set — see that chapter for the
-retrieval side.
+Nothing reads from the index yet. This is the embedding step only.
