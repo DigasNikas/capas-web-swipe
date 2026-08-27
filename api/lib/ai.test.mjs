@@ -69,4 +69,23 @@ assert.equal(buildFewShotBlock([{ metadata: {} }, { metadata: { club: null } }])
   assert.ok(block.includes("weak prior"), "carries the layout-bias caveat");
 }
 
+// Self-vote leakage: a cover already in the index matches itself at
+// ~0.99999. That near-identical hit must never leak its own crowd vote back
+// into its own few-shot context (backfill-ai and eval-ai.mjs --rag both
+// re-classify covers already in the index).
+assert.equal(
+  buildFewShotBlock([{ metadata: { club: "benfica" }, score: 0.99999 }]),
+  "",
+  "a near-identical self-match alone produces no few-shot block",
+);
+{
+  const block = buildFewShotBlock([
+    { metadata: { club: "benfica" }, score: 0.99999 },
+    { metadata: { club: "sporting" }, score: 0.87 },
+    { metadata: { club: "porto" }, score: 0.81 },
+  ]);
+  assert.ok(!block.includes("benfica"), "self-match's club is excluded, not just deprioritized");
+  assert.ok(block.includes("sporting, porto"), "genuinely different matches still count");
+}
+
 console.log("ai.js self-check ok");
