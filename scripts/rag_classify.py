@@ -31,7 +31,10 @@ Two modes:
 
 The Cloudflare token needs Workers AI · Read and Vectorize · Read. Live mode
 additionally needs ADMIN_SECRET (the Worker's own bearer token, not a
-Cloudflare token) for /rag-candidates and /reclassify-rag.
+Cloudflare token) for /rag-candidates and /reclassify-rag. HF_TOKEN is
+optional: unset, the CLIP weight download is unauthenticated (works fine,
+just the lower rate limit + slower download HuggingFace applies to anonymous
+requests); set, it's passed straight to from_pretrained().
 
 PROMPT, MODEL, CLUBS, RAG_TOP_K and the few-shot block's exact wording are
 copied from api/lib/ai.js rather than shared — Python can't import a JS
@@ -61,6 +64,7 @@ CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 5
 STATS = os.environ.get("CAPAS_STATS", "https://capas.digasnikas.com/api/stats")
 API_BASE = os.environ.get("CAPAS_API", "https://capas.digasnikas.com/api")
+HF_TOKEN = os.environ.get("HF_TOKEN")  # optional: higher HF Hub rate limits, faster weight downloads
 
 # Copied verbatim from api/lib/ai.js's PROMPT — keep in sync by hand.
 PROMPT = (
@@ -209,8 +213,8 @@ def classify_via_llama(image_bytes, few_shot_text):
 
 def load_clip():
     print(f"loading {CLIP_MODEL_NAME}...")
-    model = CLIPModel.from_pretrained(CLIP_MODEL_NAME)
-    processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
+    model = CLIPModel.from_pretrained(CLIP_MODEL_NAME, token=HF_TOKEN)
+    processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME, token=HF_TOKEN)
     model.eval()
     print("model loaded")
     return model, processor
