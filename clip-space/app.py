@@ -31,8 +31,9 @@ print("model loaded")
 
 
 def embed(image: Image.Image) -> list[float]:
-    """CLIP's image projection, L2-normalized. get_image_features() returns
-    the projected (1, 512) embedding; this is the pooled output."""
+    """CLIP's image projection, L2-normalized. In transformers==4.44.2,
+    get_image_features() returns a bare (1, 512) tensor, not an object with
+    .pooler_output attribute (that wrapping occurs in newer versions)."""
     inputs = processor(images=image, return_tensors="pt")
     with torch.no_grad():
         out = model.get_image_features(**inputs)
