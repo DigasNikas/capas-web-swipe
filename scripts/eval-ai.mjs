@@ -6,10 +6,11 @@
  *   CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... node scripts/eval-ai.mjs
  *   ... node scripts/eval-ai.mjs --n 80        # bigger sample
  *   ... node scripts/eval-ai.mjs --all         # every labelled cover, ~579 calls
- *   ... CLIP_SPACE_URL=... CLIP_SPACE_KEY=... node scripts/eval-ai.mjs --rag
- *       # scores the RAG-augmented prompt instead of the bare one — run both
- *       # ways on the same sample and compare agreement%. Needs a token with
- *       # Vectorize · Read on top of the Workers AI · Read above.
+ *
+ * This scores the bare zero-shot PROMPT only. For the RAG-augmented version,
+ * see scripts/rag_classify.py --eval — that one needs a local CLIP embedding
+ * step this script can't do (Node has no CLIP model), so the RAG measurement
+ * lives in Python now, not here.
  *
  * The token needs Workers AI · Read. Everything else is public: the labels come
  * from /api/stats and the covers from R2's public URLs, so no D1 credentials —
@@ -28,7 +29,7 @@
  * are imported, which is the part that has to stay identical.
  */
 import { readFileSync } from "node:fs";
-import { MODEL, PROMPT, CLUBS, parseAnswer, toBase64, RAG_TOP_K, buildFewShotBlock } from "../api/lib/ai.js";
+import { MODEL, PROMPT, CLUBS, parseAnswer, toBase64 } from "../api/lib/ai.js";
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -43,40 +44,6 @@ const SAMPLE_FILE = process.env.SAMPLE_FILE;
 if (!ACCOUNT || !TOKEN) {
   console.error("Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN (Workers AI · Read).");
   process.exit(1);
-}
-
-const RAG = process.argv.includes("--rag");
-const SPACE_URL = process.env.CLIP_SPACE_URL;
-const SPACE_KEY = process.env.CLIP_SPACE_KEY;
-
-if (RAG && (!SPACE_URL || !SPACE_KEY)) {
-  console.error("--rag also needs CLIP_SPACE_URL and CLIP_SPACE_KEY (same values as the Worker's secrets), " +
-    "and CLOUDFLARE_API_TOKEN needs Vectorize · Read on top of Workers AI · Read.");
-  process.exit(1);
-}
-
-async function embedViaSpace(img) {
-  const res = await fetch(SPACE_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/octet-stream", "X-Api-Key": SPACE_KEY },
-    body: img,
-  });
-  if (!res.ok) throw new Error(`Space embed HTTP ${res.status}: ${await res.text()}`);
-  const { embedding } = await res.json();
-  return embedding;
-}
-
-async function queryVectorize(vector) {
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/vectorize/v2/indexes/capas-cover-embeddings/query`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ vector, topK: RAG_TOP_K, returnMetadata: "all" }),
-    },
-  ).then(r => r.json());
-  if (!res.success) throw new Error(`Vectorize query failed: ${JSON.stringify(res.errors)}`);
-  return res.result.matches;
 }
 
 const flag = (name, fallback) => {
@@ -130,14 +97,6 @@ if (SAMPLE_FILE) {
 
 async function classify(url) {
   const img = await browserFetch(url).then(r => r.arrayBuffer());
-
-  let promptText = PROMPT;
-  if (RAG) {
-    const vector = await embedViaSpace(img);
-    const matches = await queryVectorize(vector);
-    promptText = buildFewShotBlock(matches) + PROMPT;
-  }
-
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
@@ -145,7 +104,7 @@ async function classify(url) {
       messages: [{
         role: "user",
         content: [
-          { type: "text", text: promptText },
+          { type: "text", text: PROMPT },
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(img)}` } },
         ],
       }],
@@ -163,7 +122,7 @@ const misses = [];
 let scored = 0;
 let abstained = 0;
 
-console.log(`${sample.length} covers, ${MODEL}${RAG ? " + RAG few-shot" : ""}\n`);
+console.log(`${sample.length} covers, ${MODEL}\n`);
 
 for (const [i, row] of sample.entries()) {
   let club, headline;

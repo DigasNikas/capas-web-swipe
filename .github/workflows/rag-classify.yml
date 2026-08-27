@@ -1,0 +1,33 @@
+name: RAG Reclassify
+
+# Manual (workflow_dispatch) only, on purpose, for now: backfill-ai-daily.yml
+# is currently paused (see that file) after an earlier unbounded backfill run
+# starved the routine scrape-time classification of its Workers AI neuron
+# quota for a week. This workflow draws from the same 10,000/day free
+# allowance, so it stays manual until there's confidence it can run daily
+# without repeating that. Promote to a `schedule:` cron once that's true —
+# see scripts/rag_classify.py's docstring for the full picture.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "How many recent covers to reclassify"
+        required: false
+        default: "10"
+
+jobs:
+  reclassify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pillow torch transformers
+      - name: Reclassify recent covers with RAG few-shot context
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+        run: python3 scripts/rag_classify.py --limit "${{ inputs.limit }}"
