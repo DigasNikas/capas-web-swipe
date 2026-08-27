@@ -24,9 +24,16 @@ once the backfill has actually caught the archive up.
     python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
     CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py
     ... scripts/build_vectorize_index.py --limit 50   # quick run
+    ... scripts/build_vectorize_index.py --cover-id 1234   # one cover only
 
 Runs weekly via .github/workflows/build-vectorize.yml (full re-embed each
-time — Vectorize upsert overwrites by id, so this stays idempotent).
+time — Vectorize upsert overwrites by id, so this stays idempotent). Also
+runs on-demand, one cover at a time, via .github/workflows/vectorize-one-cover.yml
+(--cover-id), fired by the Worker's handleSwipe the moment a cover gets its
+first crowd vote — see api/lib/github.js and api/handlers/swipes.js. The
+weekly full run stays as the safety net for anything a missed dispatch
+leaves behind, or a vote flip that changes a cover's label after its first
+upsert.
 HF_TOKEN is optional: unset, the weight download is anonymous (works fine,
 just the lower unauthenticated rate limit).
 """
@@ -117,13 +124,21 @@ def main():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, help="embed only the N most recent labelled covers (faster iteration)")
+    ap.add_argument("--cover-id", type=int, help="embed just this one cover_id (the first-vote GitHub Actions trigger)")
     args = ap.parse_args()
 
     rows = json.loads(fetch(STATS))["rows"]
     rows = [r for r in rows if r["club"] in CLUBS]
-    rows.sort(key=lambda r: r["date"])
-    if args.limit:
-        rows = rows[-args.limit:]
+
+    if args.cover_id:
+        rows = [r for r in rows if r["cover_id"] == args.cover_id]
+        if not rows:
+            print(f"cover_id {args.cover_id} has no crowd vote yet — nothing to embed.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        rows.sort(key=lambda r: r["date"])
+        if args.limit:
+            rows = rows[-args.limit:]
     print(f"{len(rows)} labelled covers")
 
     print(f"loading {MODEL_NAME} (first run downloads ~600MB)...")

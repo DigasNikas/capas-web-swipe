@@ -19,6 +19,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `ai.js` | Cover classification: Llama4 zero-shot, optionally handed a RAG few-shot block computed elsewhere |
 | `ai.test.mjs` | Self-check for the `ANSWER:` parser. Run `node api/lib/ai.test.mjs` |
 | `email.js` | Outbound mail for `/notify` |
+| `github.js` | Fires `repository_dispatch` events (scrape done, cover's first vote) so GitHub Actions can react |
 
 ## `handlers/`
 

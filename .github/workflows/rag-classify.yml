@@ -1,15 +1,19 @@
 name: RAG Reclassify
 
-# Manual (workflow_dispatch) only, on purpose, for now: an earlier
-# unbounded backfill run once starved the routine scrape-time
+# Triggered automatically by repository_dispatch (event type
+# scrape-completed), fired from the Worker's scheduled() handler right
+# after each day's scrape finishes — see api/lib/github.js and
+# api/index.js. /rag-candidates only ever returns covers still missing
+# ai_club, so this stays a small, bounded, self-converging batch (default
+# limit 10 — a normal day adds 3 covers, one per newspaper) rather than the
+# unbounded backfill that once starved the routine scrape-time
 # classification of its Workers AI neuron quota for a week (the
-# zero-shot-only backfill-ai endpoint that caused it has since been
-# removed). This workflow draws from the same 10,000/day free allowance,
-# so it stays manual until there's confidence it can run daily without
-# repeating that. Promote to a `schedule:` cron once that's true — see
-# scripts/rag_classify.py's docstring for the full picture.
+# zero-shot-only backfill-ai endpoint that caused that has since been
+# removed). Also runnable by hand via workflow_dispatch.
 
 on:
+  repository_dispatch:
+    types: [scrape-completed]
   workflow_dispatch:
     inputs:
       limit:
@@ -32,4 +36,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python3 scripts/rag_classify.py --limit "${{ inputs.limit }}"
+        # inputs.limit is only set on workflow_dispatch — repository_dispatch
+        # (the daily scrape-completed trigger) has no `inputs` context, so
+        # this falls back to the same default: 10.
+        run: python3 scripts/rag_classify.py --limit "${{ inputs.limit || '10' }}"

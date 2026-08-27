@@ -11,10 +11,17 @@
  *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
+ *
+ * Optional env vars:
+ *   GH_DISPATCH_TOKEN — GitHub PAT (repo scope) used to fire repository_dispatch
+ *                        events (scrape-completed, cover-first-vote) that trigger
+ *                        rag-classify.yml / vectorize-one-cover.yml. Unset, those
+ *                        dispatches are silently skipped — see lib/github.js.
  */
 
 import { CORS } from "./lib/http.js";
 import { NEWSPAPERS, scrapeNewspaper } from "./lib/scraper.js";
+import { dispatchGithubEvent } from "./lib/github.js";
 import { handleCovers } from "./handlers/covers.js";
 import { handleGetMatches } from "./handlers/matches.js";
 import { handleGetSwipes, handleSwipe, handleToggleFavorite } from "./handlers/swipes.js";
@@ -31,9 +38,13 @@ import { handleGetComments, handlePostComment, handleDeleteComment } from "./han
 export default {
   async scheduled(event, env, ctx) {
     const today = new Date();
-    for (const newspaper of NEWSPAPERS) {
-      ctx.waitUntil(scrapeNewspaper(newspaper, today, env));
-    }
+    // Independent catches, same as the old per-newspaper waitUntil: one
+    // newspaper's failure must not stop the others, or the dispatch below.
+    const scrapes = NEWSPAPERS.map(newspaper =>
+      scrapeNewspaper(newspaper, today, env)
+        .catch(err => console.error(`Scrape failed for ${newspaper.slug}: ${err}`))
+    );
+    ctx.waitUntil(Promise.all(scrapes).then(() => dispatchGithubEvent(env, "scrape-completed")));
     // Comments are already unreachable once a newer day exists — this just
     // stops the table growing.
     ctx.waitUntil(env.DB.prepare("DELETE FROM comments WHERE date < date('now','-2 days')").run());
@@ -52,7 +63,7 @@ export default {
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/user-stats")  return handleUserStats(request, env, url);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);
-    if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env);
+    if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env, ctx);
     if (method === "POST" && pathname === "/favorites")   return handleToggleFavorite(request, env);
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
