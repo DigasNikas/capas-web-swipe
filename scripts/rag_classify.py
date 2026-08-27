@@ -159,6 +159,17 @@ def build_few_shot_block(matches):
     )
 
 
+def rag_cover_ids_from_matches(matches):
+    """Mirrors api/lib/ai.js's ragCoverIdsFromMatches exactly — same filter
+    as build_few_shot_block above, kept as a separate pass for the same
+    reason: --eval mode wants the text and never the ids. A match's own id
+    is the cover_id build_vectorize_index.py upserted it under."""
+    return [
+        m["id"] for m in (matches or [])
+        if m.get("score", 0) < 0.999 and m.get("metadata", {}).get("club")
+    ]
+
+
 def parse_answer(text):
     """Mirrors api/lib/ai.js's parseAnswer exactly: last ANSWER: marker
     wins, club matched by position in the text after it (not CLUBS order),
@@ -224,11 +235,13 @@ def embed_and_retrieve(model, processor, image_bytes):
     """Embed and retrieve only, no Llama4 call — what live mode needs.
     /reclassify-rag is the one place that actually calls Llama4 for a live
     cover; calling classify_via_llama here too would mean paying for the
-    same classification twice per cover. Returns few_shot_text."""
+    same classification twice per cover. Returns (few_shot_text, cover_ids)
+    — cover_ids is what run_live sends on as ragCoverIds, for provenance;
+    --eval mode (rag_classify_one below) only ever uses the text half."""
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     vector = embed(model, processor, image)
     matches = query_vectorize(vector)
-    return build_few_shot_block(matches)
+    return build_few_shot_block(matches), rag_cover_ids_from_matches(matches)
 
 
 def rag_classify_one(model, processor, image_bytes):
@@ -236,7 +249,7 @@ def rag_classify_one(model, processor, image_bytes):
     classify. Used by --eval mode only, which needs the result locally to
     score against the crowd label and never touches the Worker at all.
     Returns (result_dict, few_shot_text)."""
-    few_shot = embed_and_retrieve(model, processor, image_bytes)
+    few_shot, _ = embed_and_retrieve(model, processor, image_bytes)
     result = classify_via_llama(image_bytes, few_shot)
     return result, few_shot
 
@@ -255,7 +268,7 @@ def run_live(model, processor, limit):
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
-            few_shot = embed_and_retrieve(model, processor, image_bytes)
+            few_shot, rag_cover_ids = embed_and_retrieve(model, processor, image_bytes)
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
             continue
@@ -263,10 +276,14 @@ def run_live(model, processor, limit):
         # The Worker's env.AI.run call is the one and only Llama4 call for
         # this cover — classifyAndStore does the classification and the D1
         # write together, and hands the club back so this loop can report it.
+        # ragCoverIds is stored as-is (ai_rag_covers), not read back here —
+        # it's provenance for later debugging, not something this loop uses.
         resp = json.loads(fetch(
             f"{API_BASE}/reclassify-rag",
             headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
-            data=json.dumps({"coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot}).encode("utf-8"),
+            data=json.dumps({
+                "coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot, "ragCoverIds": rag_cover_ids,
+            }).encode("utf-8"),
             method="POST",
         ))
 

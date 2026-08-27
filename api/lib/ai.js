@@ -128,6 +128,19 @@ export function buildFewShotBlock(matches) {
   );
 }
 
+// Same filter as buildFewShotBlock above (score < 0.999, has a club), kept
+// as a separate pass rather than returned alongside the text so a caller
+// that only wants the prompt block (classifyCover's callers) doesn't have
+// to thread ids through code that has no use for them. Vectorize's own
+// match id is the cover_id: build_vectorize_index.py upserts each vector
+// with `id: str(cover_id)`. Keep in sync with rag_cover_ids_from_matches
+// in scripts/rag_classify.py by hand, same as buildFewShotBlock's wording.
+export function ragCoverIdsFromMatches(matches) {
+  return (matches ?? [])
+    .filter(m => (m.score ?? 0) < 0.999 && m.metadata?.club)
+    .map(m => m.id);
+}
+
 // fewShot is a pre-built block (see buildFewShotBlock above), computed
 // upstream in scripts/rag_classify.py and threaded through /reclassify-rag —
 // this function itself never touches Vectorize or does any embedding. It
@@ -155,8 +168,12 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
 // Never throws: called from /reclassify-rag, an admin request that must not
 // blow up on one bad cover, and an unlabelled cover is simply absent from the
 // AI section until the next rag-classify.yml run retries it.
-// fewShot: see classifyCover above.
-export async function classifyAndStore(env, coverId, r2Key, fewShot = "") {
+// fewShot: see classifyCover above. ragCoverIds: the cover_ids the fewShot
+// block was built from (see ragCoverIdsFromMatches above), stored purely for
+// provenance — nothing reads ai_rag_covers back to build a prompt, it exists
+// so a bad classification can be traced to the covers that biased it instead
+// of re-deriving them by hand.
+export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCoverIds = []) {
   try {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
@@ -165,11 +182,12 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "") {
     if (!club) return null;
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ? WHERE id = ?")
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ? WHERE id = ?")
       // Empty string, not null: ai_headline/ai_why being NULL is what marks a
       // cover as classified by an older prompt and puts it back in the
-      // backfill queue.
-      .bind(club, headline ?? "", why ?? "", coverId)
+      // backfill queue. ai_rag_covers carries no such meaning, "[]" for no
+      // RAG context is just as valid a stored value as a populated array.
+      .bind(club, headline ?? "", why ?? "", JSON.stringify(ragCoverIds ?? []), coverId)
       .run();
     return club;
   } catch (err) {

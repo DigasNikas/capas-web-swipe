@@ -21,17 +21,26 @@ function too (dropping a match with score ≥ 0.999, a cover matching
 itself), so a cover already in the index never gets handed its own crowd
 vote when reclassified.
 
-Live mode stops there and POSTs the finished `fewShot` block to the
-Worker's `/reclassify-rag` admin endpoint, which does the one and only
-Llama4 call for that cover through `classifyAndStore`/`classifyCover`.
-`fewShot` is usually a populated block. It comes back `""` only when no
-similar covers were found yet (a thin archive, or a genuinely novel front
-page), and the cover still gets classified, just without the reference
-context. This is deliberately not called twice: `--eval` mode is the one
-exception, calling Llama4 directly via the Workers AI REST API because it
-scores against the crowd label locally and never touches the Worker at
-all. `api/lib/ai.js` itself never touches Vectorize or does any embedding;
-that whole step happens in Python, outside the Worker.
+Live mode stops there and POSTs the finished `fewShot` block, plus
+`ragCoverIds`, to the Worker's `/reclassify-rag` admin endpoint, which does
+the one and only Llama4 call for that cover through
+`classifyAndStore`/`classifyCover`. `fewShot` is usually a populated block.
+It comes back `""` only when no similar covers were found yet (a thin
+archive, or a genuinely novel front page), and the cover still gets
+classified, just without the reference context. This is deliberately not
+called twice: `--eval` mode is the one exception, calling Llama4 directly
+via the Workers AI REST API because it scores against the crowd label
+locally and never touches the Worker at all. `api/lib/ai.js` itself never
+touches Vectorize or does any embedding; that whole step happens in
+Python, outside the Worker.
+
+`ragCoverIds` is the same set of covers `fewShot`'s text was built from,
+their ids instead of their clubs (`ragCoverIdsFromMatches` in `ai.js`,
+`rag_cover_ids_from_matches` in `rag_classify.py`, same filter as the text
+so the two never drift apart). `classifyAndStore` writes it straight to
+`ai_rag_covers` as a JSON array alongside `ai_club`. Nothing reads that
+column back to build a prompt; it exists so a bad classification can be
+traced to the covers that biased it instead of re-deriving them by hand.
 
 The new cover's own embedding is never written back to the index at this
 point. It has no crowd vote yet, the same rule `build_vectorize_index.py`
