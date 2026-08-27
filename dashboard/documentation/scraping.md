@@ -49,12 +49,9 @@ curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrap
 # Processes 25 per call; loop until "remaining" hits 0.
 until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
-
-# One-off: classify covers that predate the AI detector.
-# Processes 8 per call, newest first; safe to Ctrl-C once the sample is big enough.
-until curl -s -X POST -H "Authorization: Bearer <secret>" \
-  "https://capas.digasnikas.com/api/backfill-ai" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
+
+Every cover gets classified at scrape time now (zero-shot, `classifyAndStore`) — there's no separate classification backfill anymore. See [RAG](#rag) for `scripts/rag_classify.py`, which reclassifies recent covers with a few-shot boost.
 
 ## Bulk backfill (full month)
 

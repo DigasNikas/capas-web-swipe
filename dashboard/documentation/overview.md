@@ -41,9 +41,9 @@ One row per newspaper per day.
 | `r2_key` | TEXT | R2 object key, e.g. `2026/04/25/record_2026-04-25.jpg` |
 | `url` | TEXT | full-res public URL |
 | `thumb_url` | TEXT, nullable | generated 220px WebP thumbnail. `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed; `/api/backfill-thumbs` fills it in. Feeds small on-screen previews (dashboard calendar, catalogue grid); the swipe card and cover modal always use the full-res `url` |
-| `ai_club` | TEXT, nullable | zero-shot model guess, null until classified (backfill with `/api/backfill-ai`) |
-| `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt, which is how the backfill knows to re-label it |
-| `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same null-means-reclassify rule as `ai_headline` |
+| `ai_club` | TEXT, nullable | zero-shot model guess, set at scrape time; null only if the model didn't answer |
+| `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt — no automatic re-labelling reads that marker anymore (see [RAG](#rag)'s Quota section for why the old backfill mechanism was removed), it's diagnostic only |
+| `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same older-prompt marker as `ai_headline` |
 | `created_at` | TEXT | defaults to now |
 
 Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All three were added after the fact: an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:

@@ -8,7 +8,7 @@ name: Build Vectorize Index
 
 on:
   schedule:
-    - cron: "0 10 * * 0"   # Sunday 10:00 UTC — clear of the scrape window and backfill-ai-daily
+    - cron: "0 10 * * 0"   # Sunday 10:00 UTC — clear of the daily scrape window
   workflow_dispatch:
 
 jobs:

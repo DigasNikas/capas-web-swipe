@@ -35,13 +35,13 @@ Latest run, 80 covers evenly spaced across the archive:
 
 `others` is the weak class: no consistent visual signature across four different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up). Run this before *and* after any `PROMPT` change: the number moves, sometimes the wrong way. It also prints a confusion matrix and every miss with the headline the model quoted, which is what says whether a wrong call misread a rail box or hit a genuinely ambiguous page.
 
-A prompt change only reaches covers that get classified again. `ai_headline`/`ai_why` missing is what marks a cover as classified by an older prompt, so `/api/backfill-ai` picks it up on its normal loop and replaces the label in place; `ai_club` doesn't need wiping first.
+A prompt change only reaches covers that get classified again. `ai_headline`/`ai_why` missing still marks a cover as classified by an older prompt, but nothing automatically sweeps that marker anymore — there's no classification backfill mechanism (removed for simplicity, see [RAG](#rag)'s Quota section). A prompt change reaches old covers only if `scripts/rag_classify.py` happens to touch them (most recent N by date) or via a manual D1 query.
 
 `node api/lib/ai.test.mjs` covers the parser, the part that turns a bad reply into a wrong label.
 
 ## Where it runs
 
-Classification happens at the end of a successful scrape, after the D1 insert, so the cover is kept whether or not the model has an opinion about it. `classifyAndStore` swallows its own errors: a model hiccup must never take down the daily scrape. An unclassified cover is absent from the AI section until a backfill picks it up.
+Classification happens at the end of a successful scrape, after the D1 insert, so the cover is kept whether or not the model has an opinion about it. `classifyAndStore` swallows its own errors: a model hiccup must never take down the daily scrape. An unclassified cover (the model didn't answer) is simply absent from the AI section — nothing retries it automatically.
 
 `/api/stats` returns a second `latestAi` block alongside `latest`. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latestAi` is `null` and the section stays hidden. Expect this for the first hour or so after a fresh day's covers land.
 
