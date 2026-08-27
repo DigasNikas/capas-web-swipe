@@ -1,4 +1,5 @@
 import { json } from "../lib/http.js";
+import { dispatchGithubEvent } from "../lib/github.js";
 
 export async function handleGetSwipes(request, env) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
@@ -29,7 +30,7 @@ export async function handleToggleFavorite(request, env) {
   return json({ ok: true });
 }
 
-export async function handleSwipe(request, env) {
+export async function handleSwipe(request, env, ctx) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
@@ -49,13 +50,21 @@ export async function handleSwipe(request, env) {
     .bind(userEmail, cover_id, decision)
     .run();
 
-  await refreshAnalytics(env, cover_id);
+  const isFirstVote = await refreshAnalytics(env, cover_id);
+  // A cover only becomes embeddable once it has a crowd label (see
+  // build_vectorize_index.py's CLUBS filter) — this is the moment that
+  // becomes true, so it's the right trigger for a single-vector Vectorize
+  // upsert instead of waiting for the weekly full re-embed.
+  if (isFirstVote) {
+    ctx.waitUntil(dispatchGithubEvent(env, "cover-first-vote", { cover_id }));
+  }
 
   return json({ ok: true });
 }
 
 // Keeps the public analytics_covers table (no user_email, safe to expose)
 // in sync with the winning decision for one cover, right after it changes.
+// Returns whether this was the cover's first-ever analytics_covers row.
 async function refreshAnalytics(env, coverId) {
   const { results } = await env.DB
     .prepare(`
@@ -66,10 +75,15 @@ async function refreshAnalytics(env, coverId) {
     `)
     .bind(coverId)
     .all();
-  if (results.length === 0) return;
+  if (results.length === 0) return false;
 
   const votesTotal = results.reduce((sum, r) => sum + r.votes, 0);
   const winner = results.sort((a, b) => b.votes - a.votes || b.last_at.localeCompare(a.last_at))[0];
+
+  const existing = await env.DB
+    .prepare("SELECT 1 FROM analytics_covers WHERE cover_id = ?")
+    .bind(coverId)
+    .first();
 
   await env.DB
     .prepare(`
@@ -81,4 +95,6 @@ async function refreshAnalytics(env, coverId) {
     `)
     .bind(coverId, winner.newspaper, winner.date, winner.decision, winner.votes, votesTotal)
     .run();
+
+  return !existing;
 }

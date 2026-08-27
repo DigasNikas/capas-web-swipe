@@ -1,10 +1,11 @@
 name: Build Vectorize Index
 
-# Weekly, not on every vote: scripts/build_vectorize_index.py re-embeds every
-# crowd-labelled cover (~1,700+ and growing), so this is a CPU-bound batch
-# job, not something to run per-swipe. Newly-voted covers stay out of
-# similarity search until the next run of this — see rag.md and
-# image-embeddings.md for why that's an accepted lag, not a bug.
+# Weekly full re-embed, kept as the safety net now that a cover's first vote
+# also fires a single-cover embed of its own (vectorize-one-cover.yml, via
+# repository_dispatch from api/handlers/swipes.js) — this run still re-embeds
+# every crowd-labelled cover (~1,700+ and growing), which is what catches a
+# missed dispatch or a later vote flip that changes a cover's label after
+# its first upsert. See rag.md and image-embeddings.md for more.
 
 on:
   schedule:
