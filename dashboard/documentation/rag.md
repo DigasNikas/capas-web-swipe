@@ -1,11 +1,11 @@
 # RAG
 
 K-nearest-neighbor retrieval from [Image Embeddings](#image-embeddings),
-folded into the zero-shot classifier's prompt as few-shot context. Runs
-outside the Worker, in `scripts/rag_classify.py`, via
-`.github/workflows/rag-classify.yml` — not live at scrape time. See
-[AI Detector](#ai-detector) for how this fits together with the routine
-zero-shot pass and what actually triggers this workflow now.
+folded into the classifier's prompt as few-shot context. Runs outside the
+Worker, in `scripts/rag_classify.py`, via
+`.github/workflows/rag-classify.yml` — not live at scrape time, and (see
+[AI Detector](#ai-detector)) the only place a cover gets classified at all
+now. There's no separate zero-shot pass anymore; this is the pass.
 
 ## What it does
 
@@ -23,14 +23,15 @@ reclassified.
 
 Live mode stops there and POSTs the finished `fewShot` block to the
 Worker's `/reclassify-rag` admin endpoint, which does the one and only
-Llama4 call for that cover through `classifyAndStore`/`classifyCover` —
-the same call the routine scrape-time path uses, just handed a pre-built
-`fewShot` string instead of the `""` default. Deliberately not called
-twice: `--eval` mode is the one exception that calls Llama4 directly via
-the Workers AI REST API itself, because it scores against the crowd label
-locally and never touches the Worker at all. `api/lib/ai.js` itself never
-touches Vectorize or does any embedding — that whole step happens in
-Python, outside the Worker.
+Llama4 call for that cover through `classifyAndStore`/`classifyCover`.
+`fewShot` is usually a populated block; it comes back `""` only when no
+similar covers were found yet (a thin archive, or a genuinely novel front
+page), and the cover still gets classified, just without the reference
+context. Deliberately not called twice: `--eval` mode is the one exception
+that calls Llama4 directly via the Workers AI REST API itself, because it
+scores against the crowd label locally and never touches the Worker at
+all. `api/lib/ai.js` itself never touches Vectorize or does any embedding —
+that whole step happens in Python, outside the Worker.
 
 The new cover's own embedding is never written back to the index at this
 point — it has no crowd vote yet, same rule `build_vectorize_index.py`
@@ -64,23 +65,29 @@ cold-start problem, matches this repo's existing automation shape
 
 ## Failure handling
 
-The live scrape-time classification (`classifyAndStore`, called from
-`scraper.js`) is completely unaffected by any of this — it always runs with
-`fewShot = ""`, exactly today's plain zero-shot behavior. RAG only ever
-touches a cover *after* it already has a baseline label, via the separate
-scheduled reclassification pass. If that pass or the Space idea it replaced
-ever breaks, the AI Detector section still gets same-day zero-shot labels
-from the routine scrape — RAG is strictly additive, never load-bearing for
-freshness.
+This used to be additive: a scrape-time zero-shot call gave every cover a
+same-day label regardless, and RAG only ever upgraded what that pass left
+blank. That call is gone now (see [AI Detector](#ai-detector)), so this
+pipeline is load-bearing. If `rag-classify.yml` breaks, or the
+`scrape-completed` dispatch that triggers it never lands
+(`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), a cover just sits with
+`ai_club IS NULL` until someone re-runs the workflow by hand. No fallback
+kicks in on its own.
+
+`/rag-candidates` staying self-converging is what makes that recoverable
+rather than a growing backlog: whenever the workflow does run again, it
+picks up every cover still missing `ai_club`, not just the newest few, so
+a stretch of missed days clears in a handful of runs instead of needing to
+be replayed one day at a time.
 
 ## Quota
 
-Reclassification calls Llama4 through the same Workers AI free allowance
-(10,000 neurons/day) the routine scrape-time classification shares. An
-earlier unbounded backfill run once starved that quota for a week (the
-zero-shot-only `backfill-ai` endpoint and its daily workflow that caused
-that have since been removed — `rag_classify.py` is the one
-classification-backfill mechanism now).
+Classification calls Llama4 through the Workers AI free allowance (10,000
+neurons/day) — the only classification path now, so it's the only thing
+drawing on that quota. An earlier unbounded backfill run once starved it
+for a week (the zero-shot-only `backfill-ai` endpoint and its daily
+workflow that caused that have since been removed — `rag_classify.py` is
+the one classification mechanism now, not just the backfill one).
 
 That history is why `rag-classify.yml` stayed `workflow_dispatch`-only for
 a while rather than scheduled. It's no longer manual-only: the Worker fires

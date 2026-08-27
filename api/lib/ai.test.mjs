@@ -46,7 +46,7 @@ assert.equal(
   "porto",
 );
 
-// Junk in, null out — never throw, the daily scrape depends on it.
+// Junk in, null out — never throw, rag-classify.yml's daily run depends on it.
 assert.deepEqual(parseAnswer(null), { club: null, headline: null, why: null });
 assert.deepEqual(parseAnswer(undefined), { club: null, headline: null, why: null });
 assert.equal(parseAnswer("ANSWER: liverpool").club, null);

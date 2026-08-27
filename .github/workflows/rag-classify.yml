@@ -3,13 +3,14 @@ name: RAG Reclassify
 # Triggered automatically by repository_dispatch (event type
 # scrape-completed), fired from the Worker's scheduled() handler right
 # after each day's scrape finishes — see api/lib/github.js and
-# api/index.js. /rag-candidates only ever returns covers still missing
-# ai_club, so this stays a small, bounded, self-converging batch (default
-# limit 10 — a normal day adds 3 covers, one per newspaper) rather than the
-# unbounded backfill that once starved the routine scrape-time
-# classification of its Workers AI neuron quota for a week (the
-# zero-shot-only backfill-ai endpoint that caused that has since been
-# removed). Also runnable by hand via workflow_dispatch.
+# api/index.js. Scraping no longer classifies anything itself, so this is
+# the only place a freshly-scraped cover gets its ai_club: /rag-candidates
+# returns covers still missing it, newest first, and a normal day only adds
+# 3 (one per newspaper) against the default limit of 10, so this stays
+# small and bounded rather than the unbounded backfill that once starved
+# the Workers AI neuron quota for a week (the zero-shot-only backfill-ai
+# endpoint that caused that has since been removed). Also runnable by hand
+# via workflow_dispatch, for a larger backlog.
 
 on:
   repository_dispatch:

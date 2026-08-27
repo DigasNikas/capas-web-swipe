@@ -8,7 +8,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 
 1. Every morning a **Cloudflare Worker** scrapes the front page of three newspapers (capasjornais.pt, falling back to sapo.pt; see [Scraping](#scraping)) and stores them in **R2** (images) and **D1** (metadata).
 2. **`capas.digasnikas.com`** is the public dashboard page. It shows crowd-sourced results (which club each newspaper favours, a calendar of daily winners, the latest classified day) from a dedicated analytics table. No login required.
-3. The same three covers are also read by a **vision model** (Workers AI, zero-shot, no training) and shown side by side with the crowd's verdict in the dashboard's "Detetor AI" section. See [AI Detector](#ai-detector).
+3. The same three covers are also read by a **vision model** (Workers AI, RAG-augmented, no training) and shown side by side with the crowd's verdict in the dashboard's "Detetor AI" section. See [AI Detector](#ai-detector).
 4. Clicking "Entrar" takes you to **`app.capas.digasnikas.com`**, a separate hostname behind **Cloudflare Access**. The Worker reads the `Cf-Access-Authenticated-User-Email` header to identify users and record their swipes.
 5. Everything past login lives on that subdomain. "Conta" opens as a bottom-sheet modal over the swipe app, the same pattern as the leaderboard and Instruções modals, with no page navigation. It shows a user's own stats, leaderboard rank, and swipe history. Access is configured as a multi-domain application, so signing in on one host authenticates the other too.
 
@@ -41,7 +41,7 @@ One row per newspaper per day.
 | `r2_key` | TEXT | R2 object key, e.g. `2026/04/25/record_2026-04-25.jpg` |
 | `url` | TEXT | full-res public URL |
 | `thumb_url` | TEXT, nullable | generated 220px WebP thumbnail. `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed; `/api/backfill-thumbs` fills it in. Feeds small on-screen previews (dashboard calendar, catalogue grid); the swipe card and cover modal always use the full-res `url` |
-| `ai_club` | TEXT, nullable | zero-shot model guess, set at scrape time; null only if the model didn't answer |
+| `ai_club` | TEXT, nullable | model guess, set by the RAG reclassify pass after the scrape (not at scrape time); null until that pass runs, or if the model didn't answer |
 | `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt — no automatic re-labelling reads that marker anymore (see [RAG](#rag)'s Quota section for why the old backfill mechanism was removed), it's diagnostic only |
 | `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same older-prompt marker as `ai_headline` |
 | `created_at` | TEXT | defaults to now |

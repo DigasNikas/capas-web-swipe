@@ -52,7 +52,7 @@ until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
 
-Every cover gets classified at scrape time now (zero-shot, `classifyAndStore`) — there's no separate classification backfill anymore. See [RAG](#rag) for `scripts/rag_classify.py`, which reclassifies recent covers with a few-shot boost.
+Scraping doesn't classify anything by itself. A cover scraped by any of these routes still needs `rag-classify.yml` to run before it gets an `ai_club` — automatic after the daily cron scrape, manual (`workflow_dispatch`, or `python3 scripts/rag_classify.py` directly) after a backfill like this one. See [AI Detector](#ai-detector).
 
 ## Bulk backfill (full month)
 

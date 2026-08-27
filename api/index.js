@@ -5,7 +5,7 @@
  *   COVERS_BUCKET  — R2 bucket
  *   DB             — D1 database
  *   IMAGES         — Cloudflare Images (thumbnail generation)
- *   AI             — Workers AI (zero-shot cover classification)
+ *   AI             — Workers AI (RAG-augmented cover classification, called from /reclassify-rag only — see lib/ai.js)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
  *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag and /notify endpoints
