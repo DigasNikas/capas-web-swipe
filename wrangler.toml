@@ -21,6 +21,7 @@ bucket_name = "capas-storage"
 binding       = "DB"
 database_name = "capas-db"
 database_id   = "a21b563d-6d8d-4355-af98-92045becf861"
+migrations_dir = "migrations"
 
 [images]
 binding = "IMAGES"

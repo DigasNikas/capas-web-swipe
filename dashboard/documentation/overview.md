@@ -47,7 +47,7 @@ One row per newspaper per day.
 | `ai_rag_covers` | TEXT, nullable | JSON array of `covers.id` values: which already-labelled covers the RAG few-shot block was built from for this classification, `"[]"` if none were found. Provenance only, nothing reads it back to build a prompt; see [RAG](#rag) |
 | `created_at` | TEXT | defaults to now |
 
-Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why`/`ai_rag_covers` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All four were added after the fact: an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
+Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why`/`ai_rag_covers` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All four were added after the fact, not in `covers`' original `CREATE TABLE`. `ai_club`/`ai_headline`/`ai_why` were applied to the production database by hand, before this project had any migration tooling; `ai_rag_covers` is the first column added through `wrangler d1 migrations` instead (see [Deployment](#deployment)). `schema.sql` carries all four for a fresh database:
 
 ```sql
 ALTER TABLE covers ADD COLUMN ai_club TEXT;
