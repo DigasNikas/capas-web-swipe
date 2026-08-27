@@ -8,7 +8,7 @@ behaviourally identical (see the "keep in sync by hand" notes in
 rag_classify.py). Not a coincidence these tests read almost line-for-line
 the same as the JS ones.
 """
-from rag_classify import build_few_shot_block, parse_answer
+from rag_classify import build_few_shot_block, parse_answer, rag_cover_ids_from_matches
 
 # --- parse_answer ---
 
@@ -59,5 +59,20 @@ block = build_few_shot_block([
 assert "benfica" not in block
 assert "sporting, porto" in block
 assert "weak prior" in block
+
+# --- rag_cover_ids_from_matches ---
+# Same filter as build_few_shot_block, so run it on the exact same inputs
+# above and check the ids line up with the matches that made it into block.
+
+assert rag_cover_ids_from_matches([]) == []
+assert rag_cover_ids_from_matches(None) == []
+assert rag_cover_ids_from_matches([{"id": "1", "metadata": {}}]) == []
+assert rag_cover_ids_from_matches([{"id": "1", "score": 0.99999, "metadata": {"club": "porto"}}]) == []
+
+assert rag_cover_ids_from_matches([
+    {"id": "1", "score": 0.99999, "metadata": {"club": "benfica"}},
+    {"id": "2", "score": 0.87, "metadata": {"club": "sporting"}},
+    {"id": "3", "score": 0.81, "metadata": {"club": "porto"}},
+]) == ["2", "3"]
 
 print("rag_classify.py self-check ok")

@@ -6,7 +6,7 @@
  * into a confident wrong label.
  */
 import assert from "node:assert";
-import { parseAnswer, buildFewShotBlock } from "./ai.js";
+import { parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches } from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
 assert.deepEqual(
@@ -87,5 +87,25 @@ assert.equal(
   assert.ok(!block.includes("benfica"), "self-match's club is excluded, not just deprioritized");
   assert.ok(block.includes("sporting, porto"), "genuinely different matches still count");
 }
+
+// ragCoverIdsFromMatches mirrors buildFewShotBlock's filter exactly — same
+// inputs should drop the same matches (no club, self-match at score >= 0.999).
+assert.deepEqual(ragCoverIdsFromMatches([]), []);
+assert.deepEqual(ragCoverIdsFromMatches(undefined), []);
+assert.deepEqual(ragCoverIdsFromMatches([{ id: "1", metadata: {} }]), []);
+assert.deepEqual(
+  ragCoverIdsFromMatches([{ id: "1", metadata: { club: "benfica" }, score: 0.99999 }]),
+  [],
+  "a near-identical self-match contributes no id, same as no club text",
+);
+assert.deepEqual(
+  ragCoverIdsFromMatches([
+    { id: "1", metadata: { club: "benfica" }, score: 0.99999 },
+    { id: "2", metadata: { club: "sporting" }, score: 0.87 },
+    { id: "3", metadata: { club: "porto" }, score: 0.81 },
+  ]),
+  ["2", "3"],
+  "ids line up with the same matches buildFewShotBlock's text is built from",
+);
 
 console.log("ai.js self-check ok");

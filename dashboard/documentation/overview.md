@@ -44,14 +44,16 @@ One row per newspaper per day.
 | `ai_club` | TEXT, nullable | model guess, set by the RAG reclassify pass after the scrape (not at scrape time); null until that pass runs, or if the model didn't answer |
 | `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt; no automatic re-labelling reads that marker anymore (see [RAG](#rag)'s Quota section for why the old backfill mechanism was removed), it's diagnostic only |
 | `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same older-prompt marker as `ai_headline` |
+| `ai_rag_covers` | TEXT, nullable | JSON array of `covers.id` values: which already-labelled covers the RAG few-shot block was built from for this classification, `"[]"` if none were found. Provenance only, nothing reads it back to build a prompt; see [RAG](#rag) |
 | `created_at` | TEXT | defaults to now |
 
-Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All three were added after the fact: an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
+Unique on `(newspaper, date)`. `ai_club`/`ai_headline`/`ai_why`/`ai_rag_covers` sit on `covers` rather than beside the votes: none of them is a vote and none has a user attached to it. All four were added after the fact: an existing database needs them applied by hand; `schema.sql` already has them for a fresh one:
 
 ```sql
 ALTER TABLE covers ADD COLUMN ai_club TEXT;
 ALTER TABLE covers ADD COLUMN ai_headline TEXT;
 ALTER TABLE covers ADD COLUMN ai_why TEXT;
+ALTER TABLE covers ADD COLUMN ai_rag_covers TEXT;
 ```
 
 ### `swipes`
