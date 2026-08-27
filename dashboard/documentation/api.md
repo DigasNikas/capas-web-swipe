@@ -16,7 +16,7 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `POST` | `/api/backfill-thumbs` | `capas.` | Bearer | One-off: generates `thumb_url` for 25 covers per call (Workers execution limits rule out doing 1000+ covers in one shot). Returns `{done, remaining}`; call repeatedly until `remaining` is 0 |
 | `GET`/`POST`/`DELETE` | `/api/comments` | either | - / Google | Ephemeral comments on the current day's covers; wiped when the covers change |
 | `POST` | `/api/notify` | `capas.` | Bearer | Send the daily notification mail |
-| `GET` | `/api/rag-candidates?limit=` | `capas.` | Bearer | Most recent N covers (id, r2_key, url), for `scripts/rag_classify.py` to embed. See [RAG](#rag) |
+| `GET` | `/api/rag-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `ai_club` (id, r2_key, url), newest first, for `scripts/rag_classify.py` to embed. Self-converging: repeated calls work through the backlog rather than reprocessing the same covers. See [RAG](#rag) |
 | `POST` | `/api/reclassify-rag` | `capas.` | Bearer | Classify one cover `{coverId, r2Key, fewShot}` with an externally-computed RAG few-shot block; the one Llama4 call for that cover. See [RAG](#rag) |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.

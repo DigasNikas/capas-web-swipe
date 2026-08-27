@@ -35,7 +35,7 @@ Latest run, 80 covers evenly spaced across the archive:
 
 `others` is the weak class: no consistent visual signature across four different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up). Run this before *and* after any `PROMPT` change: the number moves, sometimes the wrong way. It also prints a confusion matrix and every miss with the headline the model quoted, which is what says whether a wrong call misread a rail box or hit a genuinely ambiguous page.
 
-A prompt change only reaches covers that get classified again. `ai_headline`/`ai_why` missing still marks a cover as classified by an older prompt, but nothing automatically sweeps that marker anymore — there's no classification backfill mechanism (removed for simplicity, see [RAG](#rag)'s Quota section). A prompt change reaches old covers only if `scripts/rag_classify.py` happens to touch them (most recent N by date) or via a manual D1 query.
+A prompt change only reaches covers that get classified again. `ai_club`/`ai_headline`/`ai_why` are always written together by `classifyAndStore`, so `ai_club IS NULL` alone marks a cover as never classified (or reset — see [RAG](#rag)'s Quota section for `/rag-candidates`, which selects on exactly that and is self-converging across repeated runs). A prompt change on an already-classified archive still needs those three columns wiped by hand first (a manual D1 query) — nothing detects "classified, but by an older prompt" automatically.
 
 `node api/lib/ai.test.mjs` covers the parser, the part that turns a bad reply into a wrong label.
 

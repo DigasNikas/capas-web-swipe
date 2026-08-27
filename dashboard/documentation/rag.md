@@ -80,8 +80,15 @@ reason `rag-classify.yml` is `workflow_dispatch`-only for now, not
 scheduled, until there's confidence it can run daily without repeating
 that. (The zero-shot-only `backfill-ai` endpoint and its daily workflow
 that hit that incident have since been removed — `rag_classify.py` is the
-one classification-backfill mechanism now, and it only touches the most
-recent N covers by date, not a historical backlog.)
+one classification-backfill mechanism now.)
+
+`/rag-candidates` selects covers still missing `ai_club`, newest first, up
+to `limit` (capped at 50 server-side) — self-converging: each successful
+`/reclassify-rag` call removes that cover from the next call's set, so a
+full backlog gets cleared by running this repeatedly (by hand, or the
+workflow's own dispatch), not reprocessed from the top every time. Still
+bounded per call on purpose, for the same quota reason above — a full-archive
+backfill is many small runs, not one `--limit 1700` shot.
 
 ## Status
 
