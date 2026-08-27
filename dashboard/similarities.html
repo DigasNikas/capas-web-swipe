@@ -194,7 +194,9 @@ async function load(token) {
     return;
   }
   if (!res.ok) {
-    status.textContent = `Erro ${res.status}.`;
+    let detail = '';
+    try { detail = (await res.json()).error ?? ''; } catch { /* not JSON, no extra detail */ }
+    status.textContent = `Erro ${res.status}${detail ? `: ${detail}` : '.'}`;
     status.classList.add('error');
     return;
   }
