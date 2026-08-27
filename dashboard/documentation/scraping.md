@@ -27,14 +27,15 @@ Full-res framing differs slightly between the two (~960×1230 on capasjornais.pt
 
 Every script in `scripts/` has a matching one-click workflow under **Actions**:
 
-- **Scrape Newspaper Covers**: trigger with a `days` count (last N days)
-- **Scrape Newspaper Covers (Date Range)**: trigger with `start` and `end` in `YYYYMMDD` format
-- **Scrape Newspaper Covers (Full Month)**: trigger with `year` and `month`; wraps `scrape_month.sh`
+- **Scrape Newspaper Covers**: one workflow, three modes picked via the `mode` input — `days` (last N days), `range` (`start`/`end` in `YYYYMMDD`), `month` (`year`/`month`, wraps `scrape_month.sh`). Used to be three separate workflows; merged since they all just call `/api/scrape` with different query params
 - **Regenerate A Capa Média**: no inputs. Runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed. See [Archive views](#archive-views)
-- **Evaluate AI Prompt**: trigger with a sample size or "score everything". Wraps `eval-ai.mjs` and prints its report to the run log. See [Multimodal](#multimodal)
+- **RAG Reclassify**: trigger with a `limit` (how many recent covers). Wraps `rag_classify.py`, embedding + Vectorize retrieval + Llama4, outside the Worker. See [RAG](#rag)
+- **Build Vectorize Index**: weekly (Sunday 10:00 UTC) or manual. Wraps `build_vectorize_index.py`. See [Image Embeddings](#image-embeddings)
 - **Import Match Dates**: trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead. Wraps `import_matches.py`. See [Match dates](#match-dates)
 
-The three scrape workflows and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `eval-ai` and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has. `eval-ai`'s token additionally needs **Workers AI · Read**, which the deploy token may not carry.
+`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `build-vectorize`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has — `rag-classify`'s and `build-vectorize`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry.
+
+`scripts/eval-ai.mjs` (prompt scoring, see [Multimodal](#multimodal)) is deliberately not on this list — it used to run as a GitHub Action, removed because it never solved anything Bot Fight Mode didn't already fight against on a runner. Run it locally instead.
 
 ## Manual (curl)
 
@@ -61,4 +62,4 @@ For scraping large amounts of covers at once, use `scrape_month.sh`. It calls th
 ADMIN_SECRET=<secret> ./scripts/scrape_month.sh 2025 11
 ```
 
-Or trigger the **Scrape Newspaper Covers (Full Month)** Action instead of running it locally: same script, and subject to the same Bot Fight Mode 403 as the other two workflows.
+Or trigger **Scrape Newspaper Covers** with `mode: month` instead of running it locally: same script, and subject to the same Bot Fight Mode 403 as the other modes.
