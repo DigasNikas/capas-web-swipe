@@ -661,13 +661,6 @@ function renderAiDiffs(rows) {
   const diffs = rows.filter(r => r.ai_club && r.ai_club !== r.club).reverse();
   if (diffs.length === 0) return;
 
-  // ai_rag_covers stores cover_ids as strings, Vectorize's own match ids
-  // (see build_vectorize_index.py), so this is keyed the same way. Every row
-  // here already has a crowd vote, the same requirement a cover needs to be
-  // Vectorize-indexed in the first place, so a referenced id should normally
-  // resolve. renderDiffModal drops anything that doesn't, rather than assume it will.
-  ragRowsById = new Map(rows.map(r => [String(r.cover_id), r]));
-
   const btn = document.getElementById('btn-ai-diffs');
   const panel = document.getElementById('ai-diffs');
   const months = groupDiffsByMonth(diffs);
@@ -853,7 +846,6 @@ function openCoverModal(url, name) {
 // plus the verdict/headline/why that plain cover clicks elsewhere never need.
 let diffModalItems = null;
 let diffModalIndex = 0;
-let ragRowsById = null;
 
 function openAiDiffModal(items, index) {
   diffModalItems = items;
@@ -924,44 +916,6 @@ function renderDiffModal() {
     why.textContent = `→ ${r.ai_why}`;
     meta.append(why);
   }
-
-  appendRagButton(meta, r);
-}
-
-// ai_rag_covers only exists for covers classified after that column shipped
-// (see rag.md); most of the archive predates it and simply has no button
-// here, same as ai_why above for the older prompt. Ids that don't resolve
-// against ragRowsById (built from the same /api/stats rows this whole
-// section already has in memory) are dropped rather than shown as gaps.
-function appendRagButton(meta, r) {
-  let ragIds = [];
-  try { ragIds = JSON.parse(r.ai_rag_covers || '[]'); } catch { /* malformed, treat as none */ }
-  const ragCovers = ragIds.map(id => ragRowsById?.get(String(id))).filter(Boolean);
-  if (ragCovers.length === 0) return;
-
-  const label = shown => shown
-    ? 'Esconder ↑'
-    : `Capas semelhantes (RAG) · ${ragCovers.length} →`;
-
-  const panel = document.createElement('div');
-  panel.className = 'd-latest-covers cm-rag hidden';
-  renderVerdictCovers(panel, ragCovers.map(c => ({
-    thumb_url: c.thumb_url,
-    url: c.url,
-    name: PAPERS_BY_ID[c.newspaper],
-    club: c.club,
-  })));
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'd-cta d-cta-small cm-rag-btn';
-  btn.textContent = label(false);
-  btn.addEventListener('click', () => {
-    panel.classList.toggle('hidden');
-    btn.textContent = label(!panel.classList.contains('hidden'));
-  });
-
-  meta.append(btn, panel);
 }
 
 function closeCoverModal() {

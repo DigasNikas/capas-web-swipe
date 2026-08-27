@@ -26,7 +26,7 @@ export async function handleStats(env) {
   const { results: rows } = await env.DB
     .prepare(`
       SELECT ac.cover_id, ac.newspaper, ac.date, ac.club, ac.votes_club, ac.votes_total,
-             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline, c.ai_why, c.ai_rag_covers
+             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline, c.ai_why
       FROM analytics_covers ac
       JOIN covers c ON c.id = ac.cover_id
       ORDER BY ac.date ASC
