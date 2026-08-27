@@ -19,13 +19,16 @@ with score ≥ 0.999 — a cover matching itself) lives in this function too,
 so a cover already in the index never gets handed its own crowd vote when
 reclassified.
 
-It then calls Llama4 directly via the Workers AI REST API with that
-augmented prompt, and — in live mode — POSTs the parsed result to the
-Worker's `/reclassify-rag` admin endpoint, which writes it to D1 through
-the same `classifyAndStore`/`classifyCover` the routine scrape-time call
-uses, just handed a pre-built `fewShot` string instead of the `""` default.
-`api/lib/ai.js` itself never touches Vectorize or does any embedding — that
-whole step happens in Python, outside the Worker.
+Live mode stops there and POSTs the finished `fewShot` block to the
+Worker's `/reclassify-rag` admin endpoint, which does the one and only
+Llama4 call for that cover through `classifyAndStore`/`classifyCover` —
+the same call the routine scrape-time path uses, just handed a pre-built
+`fewShot` string instead of the `""` default. Deliberately not called
+twice: `--eval` mode is the one exception that calls Llama4 directly via
+the Workers AI REST API itself, because it scores against the crowd label
+locally and never touches the Worker at all. `api/lib/ai.js` itself never
+touches Vectorize or does any embedding — that whole step happens in
+Python, outside the Worker.
 
 The new cover's own embedding is never written back to the index at this
 point — it has no crowd vote yet, same rule `build_vectorize_index.py`
