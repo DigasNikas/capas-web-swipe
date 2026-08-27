@@ -1,0 +1,28 @@
+name: Build Vectorize Index
+
+# Weekly, not on every vote: scripts/build_vectorize_index.py re-embeds every
+# crowd-labelled cover (~1,700+ and growing), so this is a CPU-bound batch
+# job, not something to run per-swipe. Newly-voted covers stay out of
+# similarity search until the next run of this — see rag.md and
+# image-embeddings.md for why that's an accepted lag, not a bug.
+
+on:
+  schedule:
+    - cron: "0 10 * * 0"   # Sunday 10:00 UTC — clear of the scrape window and backfill-ai-daily
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pillow torch transformers
+      - name: Embed every crowd-labelled cover and upsert to Vectorize
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/build_vectorize_index.py
