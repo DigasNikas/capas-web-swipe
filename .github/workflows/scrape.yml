@@ -3,22 +3,42 @@ name: Scrape Newspaper Covers
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "What to scrape"
+        type: choice
+        options: [days, range, month]
+        default: days
       days:
-        description: "Number of days to scrape"
-        required: true
+        description: "mode=days: number of recent days (max 7)"
+        required: false
         default: "2"
+      start:
+        description: "mode=range: start date (YYYYMMDD, max 7-day span)"
+        required: false
+      end:
+        description: "mode=range: end date (YYYYMMDD, max 7-day span)"
+        required: false
+      year:
+        description: "mode=month: year (YYYY)"
+        required: false
+      month:
+        description: "mode=month: month (1-12)"
+        required: false
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       # Cloudflare Bot Fight Mode challenges GitHub's runners — they come from
       # Microsoft/Azure IPs, which it treats as datacenter bot traffic. On the
       # Free plan there is no per-path exemption, so this is a coin flip on the
       # UA heuristic. -f is gone on purpose: it hides the response body, which
       # is the only way to tell a Cloudflare challenge page (403, ~5 KB of
       # HTML) from the Worker rejecting the token (401, 12 bytes of text).
-      - name: Trigger scraper
+      - name: Scrape by days
+        if: inputs.mode == 'days'
         run: |
           code=$(curl -sS -o response.txt -w '%{http_code}' \
             -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
@@ -27,3 +47,22 @@ jobs:
           echo "HTTP $code"
           head -c 2000 response.txt
           test "$code" = "200"
+
+      - name: Scrape by date range
+        if: inputs.mode == 'range'
+        run: |
+          code=$(curl -sS -o response.txt -w '%{http_code}' \
+            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+            "https://capas.digasnikas.com/api/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}")
+          echo "HTTP $code"
+          head -c 2000 response.txt
+          test "$code" = "200"
+
+      # scripts/scrape_month.sh chunks the month into 7-day windows (the
+      # /api/scrape subrequest limit) and calls each one itself.
+      - name: Scrape full month
+        if: inputs.mode == 'month'
+        env:
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+        run: ./scripts/scrape_month.sh "${{ inputs.year }}" "${{ inputs.month }}"
