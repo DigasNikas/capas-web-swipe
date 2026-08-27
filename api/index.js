@@ -6,11 +6,15 @@
  *   DB             — D1 database
  *   IMAGES         — Cloudflare Images (thumbnail generation)
  *   AI             — Workers AI (zero-shot cover classification)
+ *   VECTORIZE      — Vectorize index capas-cover-embeddings (RAG few-shot retrieval)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
  *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-* and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
+ *   CLIP_SPACE_URL — HF Space /embed endpoint (RAG few-shot retrieval; classification
+ *                    degrades to plain zero-shot if unset)
+ *   CLIP_SPACE_KEY — shared secret sent as X-Api-Key to the Space
  */
 
 import { CORS } from "./lib/http.js";

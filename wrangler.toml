@@ -28,6 +28,10 @@ binding = "IMAGES"
 [ai]
 binding = "AI"
 
+[[vectorize]]
+binding    = "VECTORIZE"
+index_name = "capas-cover-embeddings"
+
 [observability]
 [observability.logs]
 enabled = true
