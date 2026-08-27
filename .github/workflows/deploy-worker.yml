@@ -5,6 +5,7 @@ on:
     paths:
       - "api/**"
       - "wrangler.toml"
+      - "migrations/**"
   workflow_dispatch:
 
 jobs:
@@ -19,6 +20,18 @@ jobs:
 
       - name: Install wrangler
         run: npm install -g wrangler
+
+      # Before the code deploy, not after: new code can write ai_rag_covers
+      # (or whatever the next migration adds) as soon as it's live, so the
+      # column has to exist first. --remote targets the production D1
+      # database, not wrangler's local dev copy. Already-applied migrations
+      # (tracked in D1's own d1_migrations table) are skipped, so this is
+      # safe to run on every deploy, not just ones that add a new file here.
+      - name: Apply D1 migrations
+        run: wrangler d1 migrations apply capas-db --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy
         run: wrangler deploy
