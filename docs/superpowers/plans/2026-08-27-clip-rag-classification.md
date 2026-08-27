@@ -749,7 +749,31 @@ curl https://<your-username>-capas-clip-embed.hf.space/
 Expected: `{"status":"ok"}` (first build can take a few minutes — it's
 installing `torch`).
 
-- [ ] **Step 5: Wire the Worker's secrets**
+- [ ] **Step 5: Measure — before wiring anything into production**
+
+`scripts/eval-ai.mjs --rag` talks to the Space and to Vectorize directly
+over REST — it does not go through the Worker, so this needs no
+`wrangler secret` and no deploy yet. Deliberately in this order: a leak-free
+number should decide whether the live path is worth turning on at all,
+not the other way round. (Final review, 2026-08-27: the self-vote-leakage
+fix landed in `buildFewShotBlock` before this step exists to run against —
+if you're reading this plan fresh, confirm that fix is in place first.)
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... node scripts/eval-ai.mjs --n 80 > /tmp/baseline.txt
+CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... CLIP_SPACE_URL=https://<your-username>-capas-clip-embed.hf.space/embed CLIP_SPACE_KEY=... node scripts/eval-ai.mjs --n 80 --rag > /tmp/rag.txt
+diff /tmp/baseline.txt /tmp/rag.txt
+```
+
+Compare the `agreement` line. This is what decides whether the few-shot
+context is worth keeping — update `dashboard/documentation/rag.md`'s
+Status section with the result either way. If the result doesn't justify
+it, stop here — the Space can stay built-but-unwired, nothing downstream
+depends on Steps 6-7.
+
+- [ ] **Step 6: Wire the Worker's secrets**
+
+Only once Step 5's number looks worth shipping:
 
 ```bash
 wrangler secret put CLIP_SPACE_URL
@@ -759,23 +783,11 @@ wrangler secret put CLIP_SPACE_KEY
 # paste: the same value set as SPACE_API_KEY in step 3
 ```
 
-- [ ] **Step 6: Create the Vectorize binding's index reference and deploy**
+- [ ] **Step 7: Deploy**
 
 The index (`capas-cover-embeddings`) already exists — this just deploys the
-Worker with the new binding from Task 2:
+Worker with the new `VECTORIZE` binding from Task 2:
 
 ```bash
 wrangler deploy
 ```
-
-- [ ] **Step 7: Measure**
-
-```bash
-CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... node scripts/eval-ai.mjs --n 80 > /tmp/baseline.txt
-CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... CLIP_SPACE_URL=... CLIP_SPACE_KEY=... node scripts/eval-ai.mjs --n 80 --rag > /tmp/rag.txt
-diff /tmp/baseline.txt /tmp/rag.txt
-```
-
-Compare the `agreement` line. This is what decides whether the few-shot
-context is worth keeping — update `dashboard/documentation/rag.md`'s
-Status section with the result either way.
