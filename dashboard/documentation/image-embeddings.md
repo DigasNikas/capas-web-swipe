@@ -20,6 +20,10 @@ Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deli
 
 ## Running it
 
+Weekly, via `.github/workflows/build-vectorize.yml` (Sunday 10:00 UTC, `workflow_dispatch` too for a manual run). A full re-embed each time — Vectorize's upsert overwrites by id, so re-running is idempotent, just CPU time. Newly-voted covers stay out of similarity search until the next run; that lag is accepted, not a bug.
+
+To run by hand instead:
+
 ```bash
 python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
 CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py

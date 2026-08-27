@@ -24,6 +24,11 @@ once the backfill has actually caught the archive up.
     python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
     CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py
     ... scripts/build_vectorize_index.py --limit 50   # quick run
+
+Runs weekly via .github/workflows/build-vectorize.yml (full re-embed each
+time — Vectorize upsert overwrites by id, so this stays idempotent).
+HF_TOKEN is optional: unset, the weight download is anonymous (works fine,
+just the lower unauthenticated rate limit).
 """
 import argparse
 import io
@@ -48,6 +53,7 @@ BATCH = 500  # vectors per upsert call; HTTP API caps a batch at 5,000
 
 ACCOUNT = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+HF_TOKEN = os.environ.get("HF_TOKEN")  # optional: higher HF Hub rate limits, faster weight downloads
 
 
 def fetch(url, tries=3):
@@ -121,8 +127,8 @@ def main():
     print(f"{len(rows)} labelled covers")
 
     print(f"loading {MODEL_NAME} (first run downloads ~600MB)...")
-    model = CLIPModel.from_pretrained(MODEL_NAME)
-    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    model = CLIPModel.from_pretrained(MODEL_NAME, token=HF_TOKEN)
+    processor = CLIPProcessor.from_pretrained(MODEL_NAME, token=HF_TOKEN)
     model.eval()
 
     batch, done, skipped = [], 0, 0
