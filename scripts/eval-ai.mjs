@@ -12,10 +12,14 @@
  * step this script can't do (Node has no CLIP model), so the RAG measurement
  * lives in Python now, not here.
  *
+ * Run locally, not as a GitHub Action — Cloudflare Bot Fight Mode makes a
+ * GitHub-runner run flaky enough (see SAMPLE_FILE below) that it wasn't
+ * worth keeping as one.
+ *
  * The token needs Workers AI · Read. Everything else is public: the labels come
  * from /api/stats and the covers from R2's public URLs, so no D1 credentials —
- * unless SAMPLE_FILE points at a pre-built sample (see eval-ai.yml), which
- * skips /api/stats entirely.
+ * unless SAMPLE_FILE points at a pre-built sample, which skips /api/stats
+ * entirely.
  *
  * Each call costs neurons against the same 10,000/day free allowance the live
  * scrape uses. The default sample of 40 is a few percent of a day's budget; the
@@ -35,10 +39,11 @@ const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const STATS = process.env.CAPAS_STATS ?? "https://capas.digasnikas.com/api/stats";
 // capas.digasnikas.com sits behind Cloudflare Bot Fight Mode and can reject
-// every GitHub-runner request in a run, not just an occasional one — when
-// that's happening, SAMPLE_FILE takes a pre-built `[{club, url}, ...]` JSON
-// array (see eval-ai.yml's sample_json input) instead of fetching /api/stats
-// and re-deriving the evenly-spaced sample from it.
+// every GitHub-runner request in a run, not just an occasional one — that's
+// the actual reason this doesn't run as a GitHub Action. SAMPLE_FILE takes
+// a pre-built `[{club, url}, ...]` JSON array instead of fetching
+// /api/stats and re-deriving the evenly-spaced sample from it, for anyone
+// who still wants to feed it a specific set of covers by hand.
 const SAMPLE_FILE = process.env.SAMPLE_FILE;
 
 if (!ACCOUNT || !TOKEN) {
