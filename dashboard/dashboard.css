@@ -649,6 +649,11 @@ body {
 .d-cover-modal-meta .cm-tag i { display: block; font-style: normal; font-size: 0.55rem; font-weight: 500; letter-spacing: 0.08em; opacity: 0.8; }
 .d-cover-modal-meta .cm-headline { font-size: 0.8rem; font-style: italic; color: var(--d-text); }
 .d-cover-modal-meta .cm-why { font-size: 0.75rem; color: var(--d-yellow); margin-top: 4px; }
+.d-cover-modal-meta .cm-rag-btn { margin-top: 10px; margin-bottom: 0; }
+/* .d-latest-covers already sizes/lays out the thumbnails; cm-rag only needs
+   the panel-specific spacing and a cap so 5 covers stay small inside the
+   modal's max-width instead of stretching it. */
+.d-cover-modal-meta .cm-rag { margin-top: 10px; max-width: 320px; margin-left: auto; margin-right: auto; }
 
 /* ── Comentários ────────────────────────────────────────────────────── */
 

@@ -48,6 +48,8 @@ Not in the scrape. `scrapeNewspaper` stores the cover and stops; `ai_club` stays
 
 Under the card, a button opens every cover the model and the crowd read differently. It navigates like the app's Histórico: a month picker, then that month's covers as portrait cards carrying both verdicts as colour blocks. No extra endpoint: `/api/stats` already returns `club` and `ai_club` per cover for the calendar, so it's a filter over rows already in memory.
 
+Opening one of those covers can also show the covers RAG actually used, when there are any: `/api/stats` returns `ai_rag_covers` alongside the rest, and the modal resolves those ids against the same rows already in memory (they're the same crowd-voted covers the calendar itself needs) rather than a second request. Covers classified before `ai_rag_covers` existed have nothing to resolve, so the button is simply absent for most of the archive. See [RAG](#rag) for what the column holds and why.
+
 ## Cost
 
 ~$0.0006 per cover ($0.27/M input + $0.85/M output tokens). Three covers a day is roughly €0.65/year; classifying the entire archive is a one-off €0.75.
