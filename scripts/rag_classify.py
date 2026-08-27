@@ -92,8 +92,13 @@ TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET")
 
 
-def fetch(url, headers=None, tries=3):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
+def fetch(url, headers=None, data=None, method=None, tries=3):
+    # Every call to capas.digasnikas.com has to go through this, GET or
+    # POST: it sits behind Cloudflare Bot Fight Mode, which challenges
+    # requests carrying Python's default urllib user-agent (a 403, not a
+    # 401 — nothing to do with ADMIN_SECRET). Same issue already documented
+    # in eval-ai.mjs and scrape.yml for their own runners.
+    req = urllib.request.Request(url, data=data, method=method, headers={"User-Agent": UA, **(headers or {})})
     for i in range(tries):
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
@@ -245,14 +250,12 @@ def run_live(model, processor, limit):
             print(f"  {c['newspaper']} {c['date']}: no answer, skipped")
             continue
 
-        req = urllib.request.Request(
+        fetch(
             f"{API_BASE}/reclassify-rag",
-            data=json.dumps({"coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot}).encode("utf-8"),
             headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
+            data=json.dumps({"coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot}).encode("utf-8"),
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=30) as r:
-            json.loads(r.read())
         tag = " (RAG)" if few_shot else " (no similar covers found)"
         print(f"  {c['newspaper']} {c['date']}: {result['club']}{tag}")
 
