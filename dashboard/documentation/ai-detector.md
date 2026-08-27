@@ -70,16 +70,19 @@ its embedding. A cover reaches it one of two ways:
   `.github/workflows/vectorize-one-cover.yml` picks that up and runs
   `scripts/build_vectorize_index.py --cover-id <id>`: embed that one cover
   with CLIP, upsert that one vector. Nothing else in the index is touched.
-- **The weekly full rebuild**, as the safety net. `build-vectorize.yml`
-  re-embeds every crowd-labelled cover on its own schedule regardless —
-  what catches a dispatch that never landed, or a cover whose label changed
-  because a later vote flipped the winning decision after its first-vote
-  embedding already went in. Vectorize's upsert overwrites by id, so
-  re-running the full batch is idempotent, just CPU time.
+That first-vote dispatch is the *only* automatic path into the index —
+there's no scheduled full rebuild behind it. A dispatch that never lands
+(`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup) or a cover whose label
+changes because a later vote flips the winning decision after its
+first-vote embedding already went in just stays stale until someone
+re-runs `build_vectorize_index.py` by hand — `vectorize-one-cover.yml`'s
+own `workflow_dispatch` for one cover, or the script directly for a batch.
+Vectorize's upsert overwrites by id, so any re-run is idempotent; the lag
+until someone runs it is accepted, not silently fixed.
 
 A cover is never embedded before it has a vote — that rule doesn't change
-with either trigger, only *when* an already-eligible cover actually makes
-it into the index.
+with any of this, only *when* an already-eligible cover actually makes it
+into the index.
 
 ## Reading the card
 

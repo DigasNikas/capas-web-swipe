@@ -29,11 +29,11 @@ Every script in `scripts/` has a matching one-click workflow under **Actions**:
 
 - **Scrape Newspaper Covers**: one workflow, three modes picked via the `mode` input — `days` (last N days), `range` (`start`/`end` in `YYYYMMDD`), `month` (`year`/`month`, wraps `scrape_month.sh`). Used to be three separate workflows; merged since they all just call `/api/scrape` with different query params
 - **Regenerate A Capa Média**: no inputs. Runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed. See [Archive views](#archive-views)
-- **RAG Reclassify**: trigger with a `limit` (how many recent covers). Wraps `rag_classify.py`, embedding + Vectorize retrieval + Llama4, outside the Worker. See [RAG](#rag)
-- **Build Vectorize Index**: weekly (Sunday 10:00 UTC) or manual. Wraps `build_vectorize_index.py`. See [Image Embeddings](#image-embeddings)
+- **RAG Reclassify**: also fires automatically after each day's scrape (`repository_dispatch`), or trigger by hand with a `limit` (how many recent covers). Wraps `rag_classify.py`, embedding + Vectorize retrieval + Llama4, outside the Worker. See [RAG](#rag)
+- **Vectorize One Cover**: fires automatically the moment a cover gets its first crowd vote (`repository_dispatch`), or trigger by hand with a `cover_id`. Wraps `build_vectorize_index.py --cover-id`. See [Image Embeddings](#image-embeddings)
 - **Import Match Dates**: trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead. Wraps `import_matches.py`. See [Match dates](#match-dates)
 
-`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `build-vectorize`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has — `rag-classify`'s and `build-vectorize`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry.
+`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `vectorize-one-cover`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has — `rag-classify`'s and `vectorize-one-cover`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry. The two automatic triggers additionally need `GH_DISPATCH_TOKEN` set on the Worker (`wrangler secret put GH_DISPATCH_TOKEN`, a GitHub PAT with `repo` scope) — see [AI Detector](#ai-detector).
 
 `scripts/eval-ai.mjs` (prompt scoring, see [Multimodal](#multimodal)) is deliberately not on this list — it used to run as a GitHub Action, removed because it never solved anything Bot Fight Mode didn't already fight against on a runner. Run it locally instead.
 

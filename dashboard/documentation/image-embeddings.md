@@ -20,10 +20,9 @@ Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deli
 
 ## Running it
 
-Two paths write to the index now — see [AI Detector](#ai-detector) for the trigger side of both:
+**One cover, on its first vote**, automatically — the only path that writes to the index without someone triggering it. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote (not on later votes), and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>` — embeds and upserts just that one vector. See [AI Detector](#ai-detector) for the trigger side.
 
-- **One cover, on its first vote.** `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote (not on later votes), and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>` — embeds and upserts just that one vector.
-- **Everything, weekly.** `.github/workflows/build-vectorize.yml` (Sunday 10:00 UTC, `workflow_dispatch` too) re-embeds every crowd-labelled cover regardless. This is the safety net: it catches a dispatch that never arrived, and a cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in. A full re-embed is idempotent either way — Vectorize's upsert overwrites by id, so re-running just costs CPU time.
+There's no scheduled full rebuild anymore — a cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in, or a cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), stays stale in the index until someone re-runs this by hand: `vectorize-one-cover.yml`'s own `workflow_dispatch` for one cover, or the script directly for a batch. Vectorize's upsert overwrites by id, so any re-run is idempotent — accepted lag, not silent data loss.
 
 To run either by hand:
 
