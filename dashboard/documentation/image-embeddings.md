@@ -20,9 +20,9 @@ Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deli
 
 ## Running it
 
-**One cover, on its first vote**, automatically — the only path that writes to the index without someone triggering it. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote (not on later votes), and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>` — embeds and upserts just that one vector. See [AI Detector](#ai-detector) for the trigger side.
+A cover writes to the index automatically on its first vote, and that's the only automatic path in. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote, not on later votes, and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>`: embeds and upserts just that one vector. See [AI Detector](#ai-detector) for the trigger side.
 
-There's no scheduled full rebuild anymore — a cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in, or a cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), stays stale in the index until someone re-runs this by hand: `vectorize-one-cover.yml`'s own `workflow_dispatch` for one cover, or the script directly for a batch. Vectorize's upsert overwrites by id, so any re-run is idempotent — accepted lag, not silent data loss.
+There's no scheduled full rebuild anymore. A cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in, or a cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), stays stale in the index until someone re-runs this by hand: `vectorize-one-cover.yml`'s own `workflow_dispatch` for one cover, or the script directly for a batch. Vectorize's upsert overwrites by id, so any re-run is idempotent, an accepted lag rather than silent data loss.
 
 To run either by hand:
 
@@ -38,6 +38,6 @@ Needs a Cloudflare API token with **Vectorize · Write**, a separate permission 
 
 Populated: **1,564 vectors**, confirmed against the live index (`vectorCount: 1564`, `dimensions: 512`). A query using a cover's own embedding returns itself first (`score 0.9999988`), then mostly same-newspaper covers, with some cross-club and cross-newspaper matches mixed in: consistent with what the classic-classifier experiments already showed about what raw visual similarity picks up on (layout and masthead more than headline content).
 
-[RAG](#rag) now reads from this index — not the Worker itself, but
-`scripts/rag_classify.py`, run on a schedule outside the Worker — see that
-chapter for the retrieval side and why.
+[RAG](#rag) now reads from this index, not the Worker itself but
+`scripts/rag_classify.py`, run outside the Worker via GitHub Actions. See
+that chapter for the retrieval side and why.
