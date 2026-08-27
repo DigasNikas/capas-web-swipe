@@ -94,12 +94,76 @@ export function parseAnswer(text) {
   };
 }
 
+// How many similar past covers to pull as few-shot context. Small on
+// purpose: enough to show a majority signal, small enough not to crowd out
+// the actual instructions.
+export const RAG_TOP_K = 5;
+
+// A cold Space can take a while to answer; this must never stall the scrape
+// past reason, so an unresponsive Space just means no few-shot context this
+// round, not a blocked classification.
+const EMBED_TIMEOUT_MS = 8000;
+
+// Embeds a cover the same way scripts/build_vectorize_index.py and
+// clip-space/app.py do — same model, same preprocessing — so the vector
+// this returns lands in the same space as capas-cover-embeddings. Never
+// throws: a cold/down/unauthorized Space just means no RAG context this
+// round, same "never block the scrape" contract as classifyAndStore below.
+export async function embedCover(env, buffer) {
+  if (!env.CLIP_SPACE_URL || !env.CLIP_SPACE_KEY) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
+  try {
+    const res = await fetch(env.CLIP_SPACE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream", "X-Api-Key": env.CLIP_SPACE_KEY },
+      body: buffer,
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const { embedding } = await res.json();
+    return Array.isArray(embedding) ? embedding : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Turns Vectorize matches into a short few-shot block, or "" if there's
+// nothing usable. The caveat line matters: image-embeddings.md's own
+// findings show raw CLIP similarity tracks newspaper layout as much as
+// subject, so this must read as a weak prior, not a verdict, or the model
+// will over-trust it.
+export function buildFewShotBlock(matches) {
+  const clubs = (matches ?? []).map(m => m.metadata?.club).filter(Boolean);
+  if (!clubs.length) return "";
+
+  return (
+    `Reference: ${clubs.length} visually similar past front pages from this archive ` +
+    `were crowd-labelled: ${clubs.join(", ")}. Visual similarity here tracks newspaper ` +
+    "layout as much as subject matter — treat this only as a weak prior, not a verdict.\n\n"
+  );
+}
+
 export async function classifyCover(env, buffer, contentType = "image/jpeg") {
+  let fewShot = "";
+  const vector = await embedCover(env, buffer);
+  if (vector && env.VECTORIZE) {
+    try {
+      const { matches } = await env.VECTORIZE.query(vector, { topK: RAG_TOP_K, returnMetadata: true });
+      fewShot = buildFewShotBlock(matches);
+    } catch {
+      fewShot = "";
+    }
+  }
+
   const res = await env.AI.run(MODEL, {
     messages: [{
       role: "user",
       content: [
-        { type: "text", text: PROMPT },
+        { type: "text", text: fewShot + PROMPT },
         { type: "image_url", image_url: { url: `data:${contentType};base64,${toBase64(buffer)}` } },
       ],
     }],

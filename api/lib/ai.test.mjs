@@ -6,7 +6,7 @@
  * into a confident wrong label.
  */
 import assert from "node:assert";
-import { parseAnswer } from "./ai.js";
+import { parseAnswer, buildFewShotBlock } from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
 assert.deepEqual(
@@ -51,4 +51,22 @@ assert.deepEqual(parseAnswer(null), { club: null, headline: null, why: null });
 assert.deepEqual(parseAnswer(undefined), { club: null, headline: null, why: null });
 assert.equal(parseAnswer("ANSWER: liverpool").club, null);
 
-console.log("ai parser ok");
+// No matches: no few-shot block, prompt stays exactly the zero-shot baseline.
+assert.equal(buildFewShotBlock([]), "");
+assert.equal(buildFewShotBlock(undefined), "");
+
+// Matches with no usable label are dropped, not counted as signal.
+assert.equal(buildFewShotBlock([{ metadata: {} }, { metadata: { club: null } }]), "");
+
+// Real matches: every club listed, in order, and the layout-bias caveat present.
+{
+  const block = buildFewShotBlock([
+    { metadata: { club: "sporting" } },
+    { metadata: { club: "sporting" } },
+    { metadata: { club: "benfica" } },
+  ]);
+  assert.ok(block.includes("sporting, sporting, benfica"), "lists every club in order");
+  assert.ok(block.includes("weak prior"), "carries the layout-bias caveat");
+}
+
+console.log("ai.js self-check ok");
