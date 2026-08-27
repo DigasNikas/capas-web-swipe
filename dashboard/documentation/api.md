@@ -18,5 +18,6 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `POST` | `/api/notify` | `capas.` | Bearer | Send the daily notification mail |
 | `GET` | `/api/rag-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `ai_club` (id, r2_key, url), newest first, for `scripts/rag_classify.py` to embed. Self-converging: repeated calls work through the backlog rather than reprocessing the same covers. See [RAG](#rag) |
 | `POST` | `/api/reclassify-rag` | `capas.` | Bearer | Classify one cover `{coverId, r2Key, fewShot, ragCoverIds}` with an externally-computed RAG few-shot block; the one Llama4 call for that cover. Stores `ragCoverIds` as `ai_rag_covers`, for provenance. See [RAG](#rag) |
+| `GET` | `/api/similarities` | `capas.` | Bearer | Every cover with `ai_rag_covers` recorded, plus the covers those ids resolve to. Powers `/similarities`, not restricted to voted covers like `/api/stats` |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.
