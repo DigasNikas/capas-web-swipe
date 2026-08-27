@@ -42,7 +42,7 @@ One row per newspaper per day.
 | `url` | TEXT | full-res public URL |
 | `thumb_url` | TEXT, nullable | generated 220px WebP thumbnail. `/api/covers` and `/api/stats` fall back to `url` for covers scraped before thumbnails existed; `/api/backfill-thumbs` fills it in. Feeds small on-screen previews (dashboard calendar, catalogue grid); the swipe card and cover modal always use the full-res `url` |
 | `ai_club` | TEXT, nullable | model guess, set by the RAG reclassify pass after the scrape (not at scrape time); null until that pass runs, or if the model didn't answer |
-| `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt — no automatic re-labelling reads that marker anymore (see [RAG](#rag)'s Quota section for why the old backfill mechanism was removed), it's diagnostic only |
+| `ai_headline` | TEXT, nullable | the headline the model quoted back while guessing, kept so a wrong label can be diagnosed with one query instead of by opening the image. Null also marks a cover as classified by an older prompt; no automatic re-labelling reads that marker anymore (see [RAG](#rag)'s Quota section for why the old backfill mechanism was removed), it's diagnostic only |
 | `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same older-prompt marker as `ai_headline` |
 | `created_at` | TEXT | defaults to now |
 

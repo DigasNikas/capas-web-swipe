@@ -25,17 +25,11 @@ Full-res framing differs slightly between the two (~960×1230 on capasjornais.pt
 
 > **Known failure:** the runner gets **403** with ~5 KB of HTML. The cause is Cloudflare **Bot Fight Mode** issuing a managed challenge, because GitHub's runners come from Microsoft/Azure IPs. Confirmed in `firewallEventsAdaptive`: `ruleId: bot_fight_mode`, `source: botFight`, `clientASNDescription: Microsoft Corporation`. A bad `ADMIN_SECRET` looks different: a wrong token returns a 12-byte `401`. The Free plan has no per-path exemption. Two fixes: publish the Worker on `workers.dev` and point the workflow there, or run the curl locally, which is not challenged.
 
-Every script in `scripts/` has a matching one-click workflow under **Actions**:
+Every script in `scripts/` has a matching one-click workflow under **Actions**. Scrape Newspaper Covers picks a mode via the `mode` input: `days` for the last N days, `range` for a `start`/`end` pair in `YYYYMMDD`, or `month` for a `year`/`month` pair that wraps `scrape_month.sh`. It used to be three separate workflows, merged since they all just call `/api/scrape` with different query params. Regenerate A Capa Média takes no inputs; it runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed (see [Archive views](#archive-views)). RAG Reclassify fires automatically after each day's scrape (`repository_dispatch`), or by hand with a `limit` for how many recent covers to process; it wraps `rag_classify.py`, embedding plus Vectorize retrieval plus Llama4, outside the Worker (see [RAG](#rag)). Vectorize One Cover fires automatically the moment a cover gets its first crowd vote (`repository_dispatch`), or by hand with a `cover_id`; it wraps `build_vectorize_index.py --cover-id` (see [Image Embeddings](#image-embeddings)). Import Match Dates takes a season year, or "list leagues" to print api-sports.io's league IDs instead of importing anything; it wraps `import_matches.py` (see [Match dates](#match-dates)).
 
-- **Scrape Newspaper Covers**: one workflow, three modes picked via the `mode` input — `days` (last N days), `range` (`start`/`end` in `YYYYMMDD`), `month` (`year`/`month`, wraps `scrape_month.sh`). Used to be three separate workflows; merged since they all just call `/api/scrape` with different query params
-- **Regenerate A Capa Média**: no inputs. Runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed. See [Archive views](#archive-views)
-- **RAG Reclassify**: also fires automatically after each day's scrape (`repository_dispatch`), or trigger by hand with a `limit` (how many recent covers). Wraps `rag_classify.py`, embedding + Vectorize retrieval + Llama4, outside the Worker. See [RAG](#rag)
-- **Vectorize One Cover**: fires automatically the moment a cover gets its first crowd vote (`repository_dispatch`), or trigger by hand with a `cover_id`. Wraps `build_vectorize_index.py --cover-id`. See [Image Embeddings](#image-embeddings)
-- **Import Match Dates**: trigger with a season year, or tick "list leagues" to print api-sports.io league IDs instead. Wraps `import_matches.py`. See [Match dates](#match-dates)
+`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (plus optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `vectorize-one-cover`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has: `rag-classify`'s and `vectorize-one-cover`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry. The two automatic triggers additionally need `GH_DISPATCH_TOKEN` set on the Worker (`wrangler secret put GH_DISPATCH_TOKEN`, a GitHub PAT with `repo` scope); see [AI Detector](#ai-detector).
 
-`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (+ optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `vectorize-one-cover`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has — `rag-classify`'s and `vectorize-one-cover`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry. The two automatic triggers additionally need `GH_DISPATCH_TOKEN` set on the Worker (`wrangler secret put GH_DISPATCH_TOKEN`, a GitHub PAT with `repo` scope) — see [AI Detector](#ai-detector).
-
-`scripts/eval-ai.mjs` (prompt scoring, see [Multimodal](#multimodal)) is deliberately not on this list — it used to run as a GitHub Action, removed because it never solved anything Bot Fight Mode didn't already fight against on a runner. Run it locally instead.
+`scripts/eval-ai.mjs` (prompt scoring, see [Multimodal](#multimodal)) is deliberately not on this list. It used to run as a GitHub Action, removed because it never solved anything Bot Fight Mode didn't already fight against on a runner. Run it locally instead.
 
 ## Manual (curl)
 
@@ -52,7 +46,7 @@ until curl -s -X POST -H "Authorization: Bearer <secret>" \
   "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 ```
 
-Scraping doesn't classify anything by itself. A cover scraped by any of these routes still needs `rag-classify.yml` to run before it gets an `ai_club` — automatic after the daily cron scrape, manual (`workflow_dispatch`, or `python3 scripts/rag_classify.py` directly) after a backfill like this one. See [AI Detector](#ai-detector).
+Scraping doesn't classify anything by itself. A cover scraped by any of these routes still needs `rag-classify.yml` to run before it gets an `ai_club`: automatic after the daily cron scrape, manual (`workflow_dispatch`, or `python3 scripts/rag_classify.py` directly) after a backfill like this one. See [AI Detector](#ai-detector).
 
 ## Bulk backfill (full month)
 
