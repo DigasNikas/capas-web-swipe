@@ -40,7 +40,7 @@ PROMPT, MODEL, CLUBS, RAG_TOP_K and the few-shot block's exact wording are
 copied from api/lib/ai.js rather than shared — Python can't import a JS
 module. Keep both copies identical by hand; a mismatch here means this
 script silently measures or produces something different from what the
-Worker's own zero-shot path would given the same inputs.
+Worker's own classifyCover would given the same inputs.
 """
 import argparse
 import base64

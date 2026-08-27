@@ -22,7 +22,7 @@
  * entirely.
  *
  * Each call costs neurons against the same 10,000/day free allowance the live
- * scrape uses. The default sample of 40 is a few percent of a day's budget; the
+ * RAG classification pass (rag-classify.yml) uses. The default sample of 40 is a few percent of a day's budget; the
  * full run is not. Run this before and after editing PROMPT — the first prompt
  * shipped at a benchmarked 87% and turned out to be 77% over the real archive,
  * which is what happens when a change is judged by eye.

@@ -128,10 +128,11 @@ export function buildFewShotBlock(matches) {
   );
 }
 
-// fewShot is "" for the routine scrape-time call (see scraper.js) and a
-// pre-built block (see buildFewShotBlock above) for the /reclassify-rag
-// admin path — either way this function itself never touches Vectorize or
-// does any embedding; that happens upstream, in Python.
+// fewShot is a pre-built block (see buildFewShotBlock above), computed
+// upstream in scripts/rag_classify.py and threaded through /reclassify-rag —
+// this function itself never touches Vectorize or does any embedding. It
+// comes back "" only when no similar covers were found yet, which still
+// classifies the cover, just without RAG context (see ai-detector.md).
 export async function classifyCover(env, buffer, contentType = "image/jpeg", fewShot = "") {
   const res = await env.AI.run(MODEL, {
     messages: [{
@@ -151,9 +152,10 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
   return parseAnswer(res?.response);
 }
 
-// Never throws: a model hiccup must not take down the daily scrape, and an
-// unlabelled cover is simply absent from the AI section until backfilled.
-// fewShot: see classifyCover above — "" for the routine scrape-time call.
+// Never throws: called from /reclassify-rag, an admin request that must not
+// blow up on one bad cover, and an unlabelled cover is simply absent from the
+// AI section until the next rag-classify.yml run retries it.
+// fewShot: see classifyCover above.
 export async function classifyAndStore(env, coverId, r2Key, fewShot = "") {
   try {
     const obj = await env.COVERS_BUCKET.get(r2Key);

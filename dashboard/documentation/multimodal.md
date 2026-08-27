@@ -1,8 +1,8 @@
 # Multimodal
 
-Powers the dashboard's **AI Detector** card ("E a máquina, que diz?"): the second verdict card, same layout and arithmetic as "Hoje é dia de quem?", over the same three covers, except the club comes from a vision model reading the front page instead of from votes. This is the default tier that runs on every cover — see [AI Detector](#ai-detector) for how it fits alongside the RAG fallback tier.
+Powers the dashboard's **AI Detector** card ("E a máquina, que diz?"): the second verdict card, same layout and arithmetic as "Hoje é dia de quem?", over the same three covers, except the club comes from a vision model reading the front page instead of from votes. This page documents the model and the prompt; [AI Detector](#ai-detector) covers where the call actually happens and [RAG](#rag) covers the context it's fed.
 
-**Zero-shot.** The model is shown the cover and asked which club the page is about. Nothing is trained on this archive; crowd-labelled covers are used only as a benchmark.
+**Zero-shot at heart.** The model is shown the cover and asked which club the page is about, no training on this archive. `scripts/eval-ai.mjs` still runs it exactly that way, bare, as a benchmark. Live classification doesn't: every real call goes through `scripts/rag_classify.py` and gets a few-shot block from [RAG](#rag) prepended first, empty only when the archive has nothing similar yet. Same model, same prompt, same parser either way — RAG only ever adds a paragraph in front of it.
 
 ## Model
 
@@ -41,9 +41,9 @@ A prompt change only reaches covers that get classified again. `ai_club`/`ai_hea
 
 ## Where it runs
 
-Classification happens at the end of a successful scrape, after the D1 insert, so the cover is kept whether or not the model has an opinion about it. `classifyAndStore` swallows its own errors: a model hiccup must never take down the daily scrape. An unclassified cover (the model didn't answer) is simply absent from the AI section — nothing retries it automatically.
+Not in the scrape. `scrapeNewspaper` stores the cover and stops; `ai_club` stays `NULL` until `.github/workflows/rag-classify.yml` runs, which the Worker fires itself right after the day's scrape finishes (see [AI Detector](#ai-detector)). `classifyAndStore` swallows its own errors either way: a model hiccup must never take down that workflow run. An unclassified cover (the model didn't answer, or the workflow hasn't run yet) is simply absent from the AI section until the next run retries it.
 
-`/api/stats` returns a second `latestAi` block alongside `latest`. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latestAi` is `null` and the section stays hidden. Expect this for the first hour or so after a fresh day's covers land.
+`/api/stats` returns a second `latestAi` block alongside `latest`. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latestAi` is `null` and the section stays hidden. Expect this for a while after a fresh day's covers land, until the automatic reclassify run catches up.
 
 ## Where they disagree
 

@@ -1,5 +1,3 @@
-import { classifyAndStore } from "./ai.js";
-
 export const NEWSPAPERS = [
   { slug: "record", capasjornais: "jornal_record",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
   { slug: "abola",  capasjornais: "jornal_a_bola",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
@@ -109,16 +107,15 @@ export async function scrapeNewspaper(newspaper, date, env) {
     generateThumbnail(env, thumbSource, thumbKey),
   ]);
 
-  const { meta } = await env.DB
+  await env.DB
     .prepare("INSERT INTO covers (newspaper, date, r2_key, url, thumb_url) VALUES (?, ?, ?, ?, ?)")
     .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl)
     .run();
 
   console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);
 
-  // After the insert, not before: the cover is worth keeping whether or not
-  // the model has an opinion about it. classifyAndStore swallows its own
-  // errors for the same reason.
-  const aiClub = await classifyAndStore(env, meta.last_row_id, r2Key);
-  console.log(`AI says ${newspaper.slug} ${dateLabel} is ${aiClub ?? "unclassified"}`);
+  // No classification here: ai_club stays NULL until rag-classify.yml picks
+  // this cover up (fired by scrape-completed right after this scrape settles
+  // — see api/lib/github.js and dashboard/documentation/ai-detector.md).
+  // Classification always runs with RAG context now, never bare zero-shot.
 }

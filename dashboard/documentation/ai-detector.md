@@ -1,44 +1,40 @@
 # AI Detector
 
-The "E a máquina, que diz?" card runs two classifiers, not one, and they
-don't run at the same time. `ai_club`, `ai_headline` and `ai_why` on the
-`covers` row hold whichever one answered. [Multimodal](#multimodal),
-[RAG](#rag) and [Image Embeddings](#image-embeddings) cover the mechanics;
-this page covers how they connect.
+The "E a máquina, que diz?" card runs one classifier, and it always runs
+with the same context pipeline behind it, never bare. `ai_club`,
+`ai_headline` and `ai_why` on the `covers` row hold the result.
+[Multimodal](#multimodal), [RAG](#rag) and
+[Image Embeddings](#image-embeddings) cover the mechanics; this page
+covers how they connect.
 
-## Two passes, not two opinions
+## One pass, run after the scrape
 
-Every cover gets a zero-shot read from
-`@cf/meta/llama-4-scout-17b-16e-instruct` the moment it's scraped (see
-[Multimodal](#multimodal)). No history, no retrieval, just the image and
-the prompt. That's what's on the card within minutes of a fresh cover
-landing.
+A cover gets no opinion at scrape time. `scrapeNewspaper` stores it in D1
+and stops. `ai_club` stays `NULL` until `scripts/rag_classify.py` picks it
+up: embeds it, pulls the nearest labelled covers from Vectorize, and calls
+Llama4 with that context folded into the prompt (see [RAG](#rag)).
 
-RAG doesn't grade that answer again. `classifyAndStore` writes `ai_club`,
-`ai_headline` and `ai_why` together or not at all, so `ai_club IS NULL`
-means one specific thing: the model didn't produce a parseable `ANSWER:`
-line. `/rag-candidates` selects on that column alone. A cover that already
-has a zero-shot label never becomes a RAG candidate, because RAG's job is
-picking up what the first pass dropped (with few-shot context from
-visually similar, already-labelled covers, see [RAG](#rag)), not
-double-checking what it kept.
+There used to be a separate zero-shot call at scrape time, with RAG only
+touching what that call missed. That call is gone. Every cover goes
+through the RAG pass now. If the archive has nothing visually similar
+yet, the few-shot block comes back empty and the model answers without a
+reference, but the call still happens, on the same schedule as everything
+else.
 
 ## What triggers what
 
-Scraping and classifying happen inline, in the Worker's daily
-`scheduled()` cron: `scrapeNewspaper` calls `classifyAndStore`
-(`api/lib/scraper.js`, `api/lib/ai.js`) right after each cover lands in
-D1. Once every newspaper's scrape for the day settles, that same
-`scheduled()` handler calls `dispatchGithubEvent` (`api/lib/github.js`)
-with a `scrape-completed` event. GitHub Actions picks it up and runs
+Scraping happens in the Worker's daily `scheduled()` cron. Once every
+newspaper's scrape for the day settles, that same handler calls
+`dispatchGithubEvent` (`api/lib/github.js`) with a `scrape-completed`
+event. GitHub Actions picks it up and runs
 `.github/workflows/rag-classify.yml`, which calls
 `scripts/rag_classify.py` against `/reclassify-rag` for whatever's still
 missing a label.
 
-The dispatch exists because the Worker can't build RAG context itself; it
+The dispatch exists because the Worker can't build RAG context itself. It
 has no CLIP model (see [RAG](#rag)'s "Why outside the Worker" section), so
-the retry has to run elsewhere, and `repository_dispatch` is what tells
-GitHub Actions to run now instead of on the next cron tick.
+classification has to run elsewhere, and `repository_dispatch` is what
+tells GitHub Actions to run now instead of on the next cron tick.
 `/rag-candidates` capping each call and staying self-converging (each
 successful `/reclassify-rag` call removes that cover from the next call's
 set) is what keeps a daily automatic trigger from repeating the quota
@@ -48,9 +44,9 @@ Both dispatches are best-effort. `dispatchGithubEvent` swallows its own
 errors and logs them instead of throwing, so a GitHub API hiccup can't
 fail the cron or the request that triggered it. Without `GH_DISPATCH_TOKEN`
 set (`wrangler secret put GH_DISPATCH_TOKEN`, a classic PAT with `repo`
-scope), both dispatches get skipped silently. The workflows still run fine
-by hand through their own `workflow_dispatch`; they just stop firing
-themselves.
+scope), both dispatches get skipped silently, and nothing gets classified
+until someone runs `rag-classify.yml` by hand. That token carries more
+weight than it used to: there's no fallback path behind it anymore.
 
 ## Getting into the embeddings index
 
@@ -81,8 +77,8 @@ known cost, not a bug waiting to be found.
 
 `/api/stats` returns a `latestAi` block next to the crowd's own `latest`,
 same verdict math, over `ai_club` instead of `club`. A paper the model
-hasn't classified yet, by either pass, is left out of that day's verdict
-rather than counted as a miss. `latestAi` can come back `null` or thin for
-the first hour after a fresh day's covers land, before either pass has
-run. [Multimodal](#multimodal) has the card layout and the "where they
-disagree" browser underneath it.
+hasn't classified yet is left out of that day's verdict rather than
+counted as a miss. `latestAi` can come back `null` or thin for a while
+after a fresh day's covers land, until the automatic reclassify run
+catches up. [Multimodal](#multimodal) has the card layout and the "where
+they disagree" browser underneath it.
