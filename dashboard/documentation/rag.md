@@ -1,46 +1,87 @@
 # RAG
 
 K-nearest-neighbor retrieval from [Image Embeddings](#image-embeddings),
-folded into the zero-shot classifier's prompt as few-shot context.
+folded into the zero-shot classifier's prompt as few-shot context. Runs
+outside the Worker, in `scripts/rag_classify.py`, on a schedule via
+`.github/workflows/rag-classify.yml` — not live at scrape time.
 
 ## What it does
 
-At classification time, `classifyCover` (`api/lib/ai.js`) embeds the cover
-with the same CLIP model `build_vectorize_index.py` used to build the index,
-queries `capas-cover-embeddings` for the `RAG_TOP_K` (5) nearest labelled
-covers, and prepends their crowd-labelled clubs to the prompt as a short
-reference block — before the model reads the actual image. The block
-explicitly names the caveat from [Image Embeddings](#image-embeddings):
-raw CLIP similarity tracks newspaper layout as much as subject, so it reads
-as a weak prior, not a verdict.
+`scripts/rag_classify.py` embeds a cover with the same CLIP model
+`build_vectorize_index.py` used to build the index, queries
+`capas-cover-embeddings` for the `RAG_TOP_K` (5) nearest labelled covers,
+and prepends their crowd-labelled clubs to the prompt as a short reference
+block — before the model reads the actual image. The block explicitly
+names the caveat from [Image Embeddings](#image-embeddings): raw CLIP
+similarity tracks newspaper layout as much as subject, so it reads as a
+weak prior, not a verdict. The self-vote-leakage guard (dropping a match
+with score ≥ 0.999 — a cover matching itself) lives in this function too,
+so a cover already in the index never gets handed its own crowd vote when
+reclassified.
+
+It then calls Llama4 directly via the Workers AI REST API with that
+augmented prompt, and — in live mode — POSTs the parsed result to the
+Worker's `/reclassify-rag` admin endpoint, which writes it to D1 through
+the same `classifyAndStore`/`classifyCover` the routine scrape-time call
+uses, just handed a pre-built `fewShot` string instead of the `""` default.
+`api/lib/ai.js` itself never touches Vectorize or does any embedding — that
+whole step happens in Python, outside the Worker.
 
 The new cover's own embedding is never written back to the index at this
 point — it has no crowd vote yet, same rule `build_vectorize_index.py`
 already applies. The index keeps growing only through that script, on its
 own schedule.
 
-## Why a Space, not Workers AI
+## Why outside the Worker, and why not a Space
 
-Workers AI has no CLIP-compatible image-embedding model, and an in-Worker
-ONNX/WASM attempt (`@huggingface/transformers` inside `wrangler dev`) failed
-twice — one run errored after 7.5 minutes at 18% of the model download, a
-retry stalled at 83% for 15+ minutes and never finished. Hugging Face's own
-hosted inference was checked live against a real token and serves no
-CLIP-family model on any route. A small self-hosted HF Space
-(`clip-space/`, Docker + FastAPI, free CPU tier) turned out to be the only
-path to a live per-cover embedding.
+Workers AI has no CLIP-compatible image-embedding model. Three live
+embedding paths were tried and ruled out, in order:
+
+1. **In-Worker ONNX/WASM** (`@huggingface/transformers` inside
+   `wrangler dev`) — spiked directly, failed twice: one run errored after
+   7.5 minutes at 18% of the model download, a retry stalled at 83% for
+   15+ minutes and never finished. Even a successful run would mean a
+   multi-minute cold start per isolate.
+2. **Hugging Face hosted inference** — tested live against a real account
+   token. No provider serves any CLIP-family model on any route
+   (`inferenceProviderMapping: {}` on the Hub for every model tried).
+3. **A self-hosted HF Space** (Docker + FastAPI) — the original plan here.
+   Blocked at creation time: as of 2026, Hugging Face requires a paid Pro
+   subscription just to *create* a Docker or Gradio Space, even on the free
+   CPU-basic tier (confirmed live: `402 Payment Required` on this account,
+   which has no payment method on file). Not a code problem — nothing to
+   build around.
+
+`scripts/rag_classify.py` running on a schedule via GitHub Actions is what
+was left: no live per-request embedding call, no external paid service, no
+cold-start problem, matches this repo's existing automation shape
+(`scrape.yml`, `backfill-ai-daily.yml` already do the same thing for their
+own jobs).
 
 ## Failure handling
 
-Every new step is optional. If the Space is cold, down, or misconfigured,
-or the Vectorize query fails, `classifyCover` falls back to exactly today's
-plain zero-shot prompt — `classifyAndStore`'s "never block the scrape"
-contract is unchanged.
+The live scrape-time classification (`classifyAndStore`, called from
+`scraper.js`) is completely unaffected by any of this — it always runs with
+`fewShot = ""`, exactly today's plain zero-shot behavior. RAG only ever
+touches a cover *after* it already has a baseline label, via the separate
+scheduled reclassification pass. If that pass or the Space idea it replaced
+ever breaks, the AI Detector section still gets same-day zero-shot labels
+from the routine scrape — RAG is strictly additive, never load-bearing for
+freshness.
+
+## Quota
+
+Reclassification calls Llama4 through the same Workers AI free allowance
+(10,000 neurons/day) the routine scrape-time classification and
+`backfill-ai-daily.yml` already share — see that workflow's own comments
+for the incident that made this fragile. `rag-classify.yml` is
+`workflow_dispatch`-only for now, not scheduled, until there's confidence
+it can run daily without repeating that.
 
 ## Status
 
-Built, not yet measured. `scripts/eval-ai.mjs --rag` is what answers the
-real question — does the few-shot context move agreement% at all, given the
-layout-not-subject bias already observed. Run it against the deployed Space
-once it exists, compare against a plain `scripts/eval-ai.mjs` run on the
-same sample, and update this section with the result.
+Built, not yet measured. `scripts/rag_classify.py --eval` is what answers
+the real question — does the few-shot context move agreement% at all,
+given the layout-not-subject bias already observed. Run it and compare
+against a plain `scripts/eval-ai.mjs` run on the same sample, then update
+this section with the result.

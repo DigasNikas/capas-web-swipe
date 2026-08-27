@@ -1,5 +1,21 @@
 # CLIP-RAG Cover Classification — Design
 
+> **Revision (2026-08-27, same day):** The chosen path below — a
+> self-hosted HF Space — turned out not to be buildable: creating a new
+> Docker/Gradio Space on Hugging Face now requires a paid Pro subscription,
+> confirmed live (`402 Payment Required`) against an account with no
+> payment method on file. The investigation into Workers AI, in-Worker
+> ONNX/WASM, and HF's hosted inference below is unchanged and still the
+> reason those three are ruled out. What replaced the Space: no live
+> per-request embedding at all. `scripts/rag_classify.py`, run on a
+> schedule via GitHub Actions (`.github/workflows/rag-classify.yml`), does
+> the embedding + Vectorize retrieval + Llama4 call entirely outside the
+> Worker, and writes results back through a new admin endpoint
+> (`/reclassify-rag`) instead of the Worker embedding covers itself. See
+> `dashboard/documentation/rag.md` for the as-built version of this
+> chapter — treat this file as a historical record of what was tried, not
+> the current architecture.
+
 ## Goal
 
 Improve the zero-shot Llama4 club classifier (`api/lib/ai.js`) by grounding

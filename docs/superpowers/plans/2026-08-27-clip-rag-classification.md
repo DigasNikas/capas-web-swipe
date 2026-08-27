@@ -1,5 +1,16 @@
 # CLIP-RAG Cover Classification Implementation Plan
 
+> **Superseded (2026-08-27, same day):** Task 1's HF Space turned out not
+> to be buildable — creating a Docker/Gradio Space now requires paid HF
+> Pro, confirmed live against an account with no payment method on file.
+> Tasks 1-5 below (and their execution log) are historical record only.
+> What actually shipped: `scripts/rag_classify.py` + `.github/workflows/rag-classify.yml`
+> + two new admin endpoints (`/rag-candidates`, `/reclassify-rag`) —
+> embedding and retrieval happen entirely outside the Worker now. See
+> `docs/superpowers/specs/2026-08-27-clip-rag-classification-design.md`'s
+> revision note and `dashboard/documentation/rag.md` for the as-built
+> version.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **Task 5 is manual/human-only — do not execute it autonomously.**
 
 **Goal:** Ground the zero-shot Llama4 cover classifier in visually similar past covers, retrieved live from the existing `capas-cover-embeddings` Vectorize index, via a self-hosted CLIP-embedding HF Space.

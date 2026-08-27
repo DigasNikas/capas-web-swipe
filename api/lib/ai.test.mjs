@@ -71,8 +71,8 @@ assert.equal(buildFewShotBlock([{ metadata: {} }, { metadata: { club: null } }])
 
 // Self-vote leakage: a cover already in the index matches itself at
 // ~0.99999. That near-identical hit must never leak its own crowd vote back
-// into its own few-shot context (backfill-ai and eval-ai.mjs --rag both
-// re-classify covers already in the index).
+// into its own few-shot context (scripts/rag_classify.py re-embeds and
+// reclassifies covers that are already indexed, both in live and --eval mode).
 assert.equal(
   buildFewShotBlock([{ metadata: { club: "benfica" }, score: 0.99999 }]),
   "",

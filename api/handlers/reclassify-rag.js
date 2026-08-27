@@ -1,0 +1,29 @@
+import { json } from "../lib/http.js";
+import { classifyAndStore } from "../lib/ai.js";
+
+// POST /reclassify-rag (admin, bearer-protected). Body: {coverId, r2Key,
+// fewShot}. Re-classifies one cover with an externally-computed RAG
+// few-shot block — the embedding and Vectorize retrieval that produced
+// fewShot already happened in scripts/rag_classify.py, outside the Worker,
+// because Workers AI has no CLIP model and no live embedding service is
+// available (see rag.md for why). This endpoint only does what the Worker
+// actually can: call Llama4 and write the result to D1, via the exact same
+// classifyAndStore used by the routine scrape-time call, just handed a
+// fewShot string instead of the "" default.
+export async function handleReclassifyRag(request, env) {
+  const auth = request.headers.get("Authorization") ?? "";
+  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+
+  const { coverId, r2Key, fewShot } = body;
+  if (!coverId || !r2Key) {
+    return json({ error: "coverId and r2Key required" }, 400);
+  }
+
+  const club = await classifyAndStore(env, coverId, r2Key, fewShot ?? "");
+  return json({ coverId, club });
+}

@@ -94,53 +94,30 @@ export function parseAnswer(text) {
   };
 }
 
-// How many similar past covers to pull as few-shot context. Small on
-// purpose: enough to show a majority signal, small enough not to crowd out
-// the actual instructions.
+// How many similar past covers scripts/rag_classify.py pulls as few-shot
+// context. Small on purpose: enough to show a majority signal, small enough
+// not to crowd out the actual instructions.
 export const RAG_TOP_K = 5;
-
-// A cold Space can take a while to answer; this must never stall the scrape
-// past reason, so an unresponsive Space just means no few-shot context this
-// round, not a blocked classification.
-const EMBED_TIMEOUT_MS = 8000;
-
-// Embeds a cover the same way scripts/build_vectorize_index.py and
-// clip-space/app.py do — same model, same preprocessing — so the vector
-// this returns lands in the same space as capas-cover-embeddings. Never
-// throws: a cold/down/unauthorized Space just means no RAG context this
-// round, same "never block the scrape" contract as classifyAndStore below.
-export async function embedCover(env, buffer) {
-  if (!env.CLIP_SPACE_URL || !env.CLIP_SPACE_KEY) return null;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
-  try {
-    const res = await fetch(env.CLIP_SPACE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/octet-stream", "X-Api-Key": env.CLIP_SPACE_KEY },
-      body: buffer,
-      signal: controller.signal,
-    });
-    if (!res.ok) return null;
-    const { embedding } = await res.json();
-    return Array.isArray(embedding) ? embedding : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 // Turns Vectorize matches into a short few-shot block, or "" if there's
 // nothing usable. The caveat line matters: image-embeddings.md's own
 // findings show raw CLIP similarity tracks newspaper layout as much as
 // subject, so this must read as a weak prior, not a verdict, or the model
 // will over-trust it.
+//
+// The Worker has no way to embed an image itself (no CLIP model in Workers
+// AI, and no live embedding service — see rag.md for why), so this runs
+// outside the Worker entirely: scripts/rag_classify.py computes the
+// embedding and the Vectorize query in Python, builds the identical block
+// (its own copy of this exact wording — keep both in sync by hand), and
+// POSTs the finished text to /reclassify-rag, which threads it into
+// classifyCover below as the fewShot parameter. This JS copy stays mainly
+// as the source-of-truth wording and for its test coverage.
 export function buildFewShotBlock(matches) {
   // A cover already in the index matches itself at ~0.99999 — dropping the
   // near-identical hit is what keeps a re-classified cover from being handed
-  // its own crowd vote (backfill-ai and eval-ai.mjs --rag both re-label
-  // covers that are already indexed).
+  // its own crowd vote (both rag_classify.py's live and --eval modes
+  // re-embed covers that are already indexed).
   const clubs = (matches ?? []).filter(m => (m.score ?? 0) < 0.999).map(m => m.metadata?.club).filter(Boolean);
   if (!clubs.length) return "";
 
@@ -151,18 +128,11 @@ export function buildFewShotBlock(matches) {
   );
 }
 
-export async function classifyCover(env, buffer, contentType = "image/jpeg") {
-  let fewShot = "";
-  const vector = await embedCover(env, buffer);
-  if (vector && env.VECTORIZE) {
-    try {
-      const { matches } = await env.VECTORIZE.query(vector, { topK: RAG_TOP_K, returnMetadata: "all" });
-      fewShot = buildFewShotBlock(matches);
-    } catch {
-      fewShot = "";
-    }
-  }
-
+// fewShot is "" for the routine scrape-time call (see scraper.js) and a
+// pre-built block (see buildFewShotBlock above) for the /reclassify-rag
+// admin path — either way this function itself never touches Vectorize or
+// does any embedding; that happens upstream, in Python.
+export async function classifyCover(env, buffer, contentType = "image/jpeg", fewShot = "") {
   const res = await env.AI.run(MODEL, {
     messages: [{
       role: "user",
@@ -183,12 +153,13 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg") {
 
 // Never throws: a model hiccup must not take down the daily scrape, and an
 // unlabelled cover is simply absent from the AI section until backfilled.
-export async function classifyAndStore(env, coverId, r2Key) {
+// fewShot: see classifyCover above — "" for the routine scrape-time call.
+export async function classifyAndStore(env, coverId, r2Key, fewShot = "") {
   try {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
 
-    const { club, headline, why } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType);
+    const { club, headline, why } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType, fewShot);
     if (!club) return null;
 
     await env.DB
