@@ -20,13 +20,17 @@ Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deli
 
 ## Running it
 
-Weekly, via `.github/workflows/build-vectorize.yml` (Sunday 10:00 UTC, `workflow_dispatch` too for a manual run). A full re-embed each time — Vectorize's upsert overwrites by id, so re-running is idempotent, just CPU time. Newly-voted covers stay out of similarity search until the next run; that lag is accepted, not a bug.
+Two paths write to the index now — see [AI Detector](#ai-detector) for the trigger side of both:
 
-To run by hand instead:
+- **One cover, on its first vote.** `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote (not on later votes), and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>` — embeds and upserts just that one vector.
+- **Everything, weekly.** `.github/workflows/build-vectorize.yml` (Sunday 10:00 UTC, `workflow_dispatch` too) re-embeds every crowd-labelled cover regardless. This is the safety net: it catches a dispatch that never arrived, and a cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in. A full re-embed is idempotent either way — Vectorize's upsert overwrites by id, so re-running just costs CPU time.
+
+To run either by hand:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
 CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py
+... scripts/build_vectorize_index.py --cover-id 1234   # one cover only
 ```
 
 Needs a Cloudflare API token with **Vectorize · Write**, a separate permission from the **Workers AI · Read** scope `eval-ai.mjs` needs. First run downloads CLIP's weights; after that it's CPU-bound and makes no external calls beyond fetching each cover from R2.

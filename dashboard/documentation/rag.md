@@ -2,8 +2,10 @@
 
 K-nearest-neighbor retrieval from [Image Embeddings](#image-embeddings),
 folded into the zero-shot classifier's prompt as few-shot context. Runs
-outside the Worker, in `scripts/rag_classify.py`, on a schedule via
-`.github/workflows/rag-classify.yml` — not live at scrape time.
+outside the Worker, in `scripts/rag_classify.py`, via
+`.github/workflows/rag-classify.yml` — not live at scrape time. See
+[AI Detector](#ai-detector) for how this fits together with the routine
+zero-shot pass and what actually triggers this workflow now.
 
 ## What it does
 
@@ -75,12 +77,18 @@ freshness.
 
 Reclassification calls Llama4 through the same Workers AI free allowance
 (10,000 neurons/day) the routine scrape-time classification shares. An
-earlier unbounded backfill run once starved that quota for a week — the
-reason `rag-classify.yml` is `workflow_dispatch`-only for now, not
-scheduled, until there's confidence it can run daily without repeating
-that. (The zero-shot-only `backfill-ai` endpoint and its daily workflow
-that hit that incident have since been removed — `rag_classify.py` is the
-one classification-backfill mechanism now.)
+earlier unbounded backfill run once starved that quota for a week (the
+zero-shot-only `backfill-ai` endpoint and its daily workflow that caused
+that have since been removed — `rag_classify.py` is the one
+classification-backfill mechanism now).
+
+That history is why `rag-classify.yml` stayed `workflow_dispatch`-only for
+a while rather than scheduled. It's no longer manual-only: the Worker fires
+a `scrape-completed` `repository_dispatch` event once each day's scrape
+finishes (see [AI Detector](#ai-detector)), which runs this workflow with
+its default `--limit 10` — small and bounded on purpose, not the unbounded
+shape that caused the earlier incident. `workflow_dispatch` with a custom
+`limit` still works for a manual backlog run.
 
 `/rag-candidates` selects covers still missing `ai_club`, newest first, up
 to `limit` (capped at 50 server-side) — self-converging: each successful
