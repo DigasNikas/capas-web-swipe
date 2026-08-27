@@ -4,9 +4,11 @@ name: Vectorize One Cover
 # vote (repository_dispatch event type cover-first-vote, client_payload
 # cover_id) — see api/lib/github.js and api/handlers/swipes.js. A cover has
 # no crowd label before that, so this is the earliest point it can be
-# embedded at all. build-vectorize.yml's weekly full re-embed stays as the
-# safety net for a missed dispatch or a later vote flip that changes a
-# cover's label after its first upsert.
+# embedded at all, and — now that the old weekly full-rebuild workflow is
+# gone — the only automatic path into the index. A missed dispatch or a
+# later vote flip that changes a cover's label after its first upsert
+# needs a manual `workflow_dispatch` (this one, --cover-id) or a local
+# `build_vectorize_index.py` run to catch up; nothing else does.
 
 on:
   repository_dispatch:

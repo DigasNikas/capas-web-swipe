@@ -26,14 +26,14 @@ once the backfill has actually caught the archive up.
     ... scripts/build_vectorize_index.py --limit 50   # quick run
     ... scripts/build_vectorize_index.py --cover-id 1234   # one cover only
 
-Runs weekly via .github/workflows/build-vectorize.yml (full re-embed each
-time — Vectorize upsert overwrites by id, so this stays idempotent). Also
-runs on-demand, one cover at a time, via .github/workflows/vectorize-one-cover.yml
+Runs on-demand, one cover at a time, via .github/workflows/vectorize-one-cover.yml
 (--cover-id), fired by the Worker's handleSwipe the moment a cover gets its
-first crowd vote — see api/lib/github.js and api/handlers/swipes.js. The
-weekly full run stays as the safety net for anything a missed dispatch
-leaves behind, or a vote flip that changes a cover's label after its first
-upsert.
+first crowd vote — see api/lib/github.js and api/handlers/swipes.js. That's
+the only automatic path into the index now (the old weekly full-rebuild
+workflow is gone); a missed dispatch or a vote flip that changes a cover's
+label after its first upsert needs a manual re-run — this script, by hand
+or via that workflow's workflow_dispatch, with or without --limit/--cover-id
+(Vectorize upsert overwrites by id, so re-running is always idempotent).
 HF_TOKEN is optional: unset, the weight download is anonymous (works fine,
 just the lower unauthenticated rate limit).
 """
