@@ -220,13 +220,23 @@ def load_clip():
     return model, processor
 
 
-def rag_classify_one(model, processor, image_bytes):
-    """Full pipeline for one cover: embed, retrieve, build few-shot text,
-    classify. Returns (result_dict, few_shot_text)."""
+def embed_and_retrieve(model, processor, image_bytes):
+    """Embed and retrieve only, no Llama4 call — what live mode needs.
+    /reclassify-rag is the one place that actually calls Llama4 for a live
+    cover; calling classify_via_llama here too would mean paying for the
+    same classification twice per cover. Returns few_shot_text."""
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     vector = embed(model, processor, image)
     matches = query_vectorize(vector)
-    few_shot = build_few_shot_block(matches)
+    return build_few_shot_block(matches)
+
+
+def rag_classify_one(model, processor, image_bytes):
+    """Full pipeline for one cover: embed, retrieve, build few-shot text,
+    classify. Used by --eval mode only, which needs the result locally to
+    score against the crowd label and never touches the Worker at all.
+    Returns (result_dict, few_shot_text)."""
+    few_shot = embed_and_retrieve(model, processor, image_bytes)
     result = classify_via_llama(image_bytes, few_shot)
     return result, few_shot
 
@@ -245,23 +255,27 @@ def run_live(model, processor, limit):
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
-            result, few_shot = rag_classify_one(model, processor, image_bytes)
+            few_shot = embed_and_retrieve(model, processor, image_bytes)
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
             continue
 
-        if not result["club"]:
-            print(f"  {c['newspaper']} {c['date']}: no answer, skipped")
-            continue
-
-        fetch(
+        # The Worker's env.AI.run call is the one and only Llama4 call for
+        # this cover — classifyAndStore does the classification and the D1
+        # write together, and hands the club back so this loop can report it.
+        resp = json.loads(fetch(
             f"{API_BASE}/reclassify-rag",
             headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
             data=json.dumps({"coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot}).encode("utf-8"),
             method="POST",
-        )
+        ))
+
+        if not resp.get("club"):
+            print(f"  {c['newspaper']} {c['date']}: no answer, skipped")
+            continue
+
         tag = " (RAG)" if few_shot else " (no similar covers found)"
-        print(f"  {c['newspaper']} {c['date']}: {result['club']}{tag}")
+        print(f"  {c['newspaper']} {c['date']}: {resp['club']}{tag}")
 
 
 def run_eval(model, processor, n, all_):
