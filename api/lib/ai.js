@@ -137,7 +137,11 @@ export async function embedCover(env, buffer) {
 // subject, so this must read as a weak prior, not a verdict, or the model
 // will over-trust it.
 export function buildFewShotBlock(matches) {
-  const clubs = (matches ?? []).map(m => m.metadata?.club).filter(Boolean);
+  // A cover already in the index matches itself at ~0.99999 — dropping the
+  // near-identical hit is what keeps a re-classified cover from being handed
+  // its own crowd vote (backfill-ai and eval-ai.mjs --rag both re-label
+  // covers that are already indexed).
+  const clubs = (matches ?? []).filter(m => (m.score ?? 0) < 0.999).map(m => m.metadata?.club).filter(Boolean);
   if (!clubs.length) return "";
 
   return (
@@ -152,7 +156,7 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg") {
   const vector = await embedCover(env, buffer);
   if (vector && env.VECTORIZE) {
     try {
-      const { matches } = await env.VECTORIZE.query(vector, { topK: RAG_TOP_K, returnMetadata: true });
+      const { matches } = await env.VECTORIZE.query(vector, { topK: RAG_TOP_K, returnMetadata: "all" });
       fewShot = buildFewShotBlock(matches);
     } catch {
       fewShot = "";

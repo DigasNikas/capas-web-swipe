@@ -72,7 +72,7 @@ async function queryVectorize(vector) {
     {
       method: "POST",
       headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ vector, topK: RAG_TOP_K, returnMetadata: true }),
+      body: JSON.stringify({ vector, topK: RAG_TOP_K, returnMetadata: "all" }),
     },
   ).then(r => r.json());
   if (!res.success) throw new Error(`Vectorize query failed: ${JSON.stringify(res.errors)}`);
