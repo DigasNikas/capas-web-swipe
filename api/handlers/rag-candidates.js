@@ -7,10 +7,10 @@ import { json } from "../lib/http.js";
 // public /covers route: that one requires a Cf-Access user session and
 // doesn't return r2_key, neither of which a GitHub Actions runner has.
 //
-// Deliberately "most recent N", not "everything missing a RAG pass": the
+// Deliberately "most recent N", not "everything missing a RAG pass" — the
 // goal is keeping the AI Detector section fresh day to day, not clearing a
-// backlog — see backfill-ai.js and its daily workflow for that job, which
-// this one shares a Workers AI neuron budget with.
+// historical backlog (there's no backfill mechanism for old covers anymore;
+// removed for simplicity — see rag.md).
 export async function handleRagCandidates(request, env) {
   const auth = request.headers.get("Authorization") ?? "";
   if (auth !== `Bearer ${env.ADMIN_SECRET}`) {

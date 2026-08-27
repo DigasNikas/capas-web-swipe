@@ -8,7 +8,7 @@
  *   AI             — Workers AI (zero-shot cover classification)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
- *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-*, /reclassify-rag* and /notify endpoints
+ *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
  */
@@ -24,7 +24,6 @@ import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
-import { handleBackfillAi } from "./handlers/backfill-ai.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
@@ -58,7 +57,6 @@ export default {
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
-    if (method === "POST" && pathname === "/backfill-ai")     return handleBackfillAi(request, env);
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);

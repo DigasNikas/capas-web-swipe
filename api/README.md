@@ -34,7 +34,6 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `scrape.js` | `GET /scrape` (admin, bearer-protected) |
 | `notify.js` | `POST /notify` (admin, bearer-protected) |
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
-| `backfill-ai.js` | `POST /backfill-ai` (admin) |
 | `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — recent covers for `scripts/rag_classify.py` to embed |
 | `reclassify-rag.js` | `POST /reclassify-rag` (admin) — classify one cover with an externally-computed few-shot block |
 | `*.test.mjs` | Self-checks: plain `node api/handlers/<name>.test.mjs`, no framework |

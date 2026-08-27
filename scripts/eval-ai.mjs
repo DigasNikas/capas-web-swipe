@@ -52,8 +52,8 @@ const flag = (name, fallback) => {
 };
 
 // Cloudflare Bot Fight Mode challenges GitHub's runners on both endpoints — a
-// per-request coin flip (same one documented in scrape.yml /
-// backfill-ai-daily.yml), not something a UA header alone reliably beats.
+// per-request coin flip (same one documented in scrape.yml), not something
+// a UA header alone reliably beats.
 // A retry is the actual fix for a coin flip: without one, one flaky image
 // among 80 kills the whole run (classify() below throws on a bad fetch, and
 // the caller stops the loop on the first error).

@@ -58,8 +58,7 @@ embedding paths were tried and ruled out, in order:
 `scripts/rag_classify.py` running on a schedule via GitHub Actions is what
 was left: no live per-request embedding call, no external paid service, no
 cold-start problem, matches this repo's existing automation shape
-(`scrape.yml`, `backfill-ai-daily.yml` already do the same thing for their
-own jobs).
+(`scrape.yml` already does the same thing for its own job).
 
 ## Failure handling
 
@@ -75,11 +74,14 @@ freshness.
 ## Quota
 
 Reclassification calls Llama4 through the same Workers AI free allowance
-(10,000 neurons/day) the routine scrape-time classification and
-`backfill-ai-daily.yml` already share — see that workflow's own comments
-for the incident that made this fragile. `rag-classify.yml` is
-`workflow_dispatch`-only for now, not scheduled, until there's confidence
-it can run daily without repeating that.
+(10,000 neurons/day) the routine scrape-time classification shares. An
+earlier unbounded backfill run once starved that quota for a week — the
+reason `rag-classify.yml` is `workflow_dispatch`-only for now, not
+scheduled, until there's confidence it can run daily without repeating
+that. (The zero-shot-only `backfill-ai` endpoint and its daily workflow
+that hit that incident have since been removed — `rag_classify.py` is the
+one classification-backfill mechanism now, and it only touches the most
+recent N covers by date, not a historical backlog.)
 
 ## Status
 
