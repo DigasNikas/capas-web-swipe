@@ -1,4 +1,4 @@
-name: RAG Reclassify
+name: Classify Covers
 
 # Triggered automatically by repository_dispatch (event type
 # scrape-completed), fired from the Worker's scheduled() handler right
