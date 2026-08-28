@@ -19,5 +19,7 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `GET` | `/api/rag-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `ai_club` (id, r2_key, url), newest first, for `scripts/rag_classify.py` to embed. Self-converging: repeated calls work through the backlog rather than reprocessing the same covers. See [RAG](#rag) |
 | `POST` | `/api/reclassify-rag` | `capas.` | Bearer | Classify one cover `{coverId, r2Key, fewShot, ragCoverIds}` with an externally-computed RAG few-shot block; the one Llama4 call for that cover. Stores `ragCoverIds` as `ai_rag_covers`, for provenance. See [RAG](#rag) |
 | `GET` | `/api/similarities` | `capas.` | - | Every cover with `ai_rag_covers` recorded, plus the covers those ids resolve to. Powers `/similarities`, not restricted to voted covers like `/api/stats` |
+| `GET` | `/api/vectorize-candidates?limit=` | `capas.` | Bearer | Up to N voted covers still missing `vectorized_at` (id, newspaper, date, url, club), newest first, for `scripts/build_vectorize_index.py --candidates` to embed. Self-converging like `/rag-candidates`. See [Image Embeddings](#image-embeddings) |
+| `POST` | `/api/vectorize-mark` | `capas.` | Bearer | Set `vectorized_at = now` for `{coverIds: [...]}`, after those ids upsert successfully into Vectorize. Never called before the upsert succeeds. See [Image Embeddings](#image-embeddings) |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.

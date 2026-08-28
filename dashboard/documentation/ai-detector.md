@@ -59,19 +59,24 @@ A cover gets in on its first vote, and only its first vote. `handleSwipe`
 (`api/handlers/swipes.js`) writes the swipe, refreshes `analytics_covers`,
 and checks whether that was the cover's first row there. If it was, it
 fires a `cover-first-vote` dispatch carrying the `cover_id`.
-`.github/workflows/vectorize-one-cover.yml` picks that up and runs
-`scripts/build_vectorize_index.py --cover-id <id>`: embed that one cover
-with CLIP, upsert that one vector, touch nothing else in the index.
+`.github/workflows/vectorize-covers.yml` picks that up, but it doesn't
+just embed the one cover named in the dispatch: it runs
+`scripts/build_vectorize_index.py --candidates`, which pulls the whole
+backlog of voted-but-unembedded covers from `/vectorize-candidates` (see
+[Image Embeddings](#image-embeddings)) and embeds it in one CLIP model
+load. A burst of votes still fires a burst of dispatches, but only the
+first run to actually start finds work; the rest see an empty backlog and
+exit before paying for a CLIP download at all.
 
 That's the only automatic path in. There's no scheduled rebuild behind it
 anymore. A dispatch that never lands, or a cover whose label changes
-because a later vote flips the winning decision after its first embedding
-already went in, stays stale until someone re-runs
-`build_vectorize_index.py` by hand, either through
-`vectorize-one-cover.yml`'s own `workflow_dispatch` for one cover or the
-script directly for a batch. Vectorize's upsert overwrites by id, so any
-re-run is safe to repeat. The lag until someone actually runs it is a
-known cost, not a bug waiting to be found.
+because a later vote flips the winning decision after its embedding
+already went in, stays stale until something re-triggers the workflow or
+someone reruns `build_vectorize_index.py` by hand, either through
+`vectorize-covers.yml`'s own `workflow_dispatch` or the script directly.
+Vectorize's upsert overwrites by id, so any rerun is safe to repeat. The
+lag until someone actually runs it is a known cost, not a bug waiting to
+be found.
 
 ## Reading the card
 

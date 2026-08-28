@@ -20,7 +20,9 @@ wrangler secret put R2_PUBLIC_URL
 
 `deploy-worker.yml` runs `wrangler d1 migrations apply capas-db --remote` before every `wrangler deploy`, not after: new code can start writing to a new column the moment it's live, so the column has to exist first. Wrangler tracks which migrations already ran in a `d1_migrations` table it manages on the database itself, so a deploy with nothing new under `migrations/` just applies zero migrations and moves on.
 
-To add a column or table, drop a new numbered file in `migrations/` (`0002_whatever.sql`, following on from `0001_add_ai_rag_covers.sql`) and push it alongside the code that uses it. `schema.sql` stays the reference for what a brand new database should look like. Keep it in sync by hand when a migration changes the shape it describes: `wrangler d1 migrations` only applies migration files, it doesn't read or write `schema.sql`.
+To add a column or table, drop a new numbered file in `migrations/` (`0003_whatever.sql`, following on from `0001_add_ai_rag_covers.sql` and `0002_add_vectorized_at.sql`) and push it alongside the code that uses it. `schema.sql` stays the reference for what a brand new database should look like. Keep it in sync by hand when a migration changes the shape it describes: `wrangler d1 migrations` only applies migration files, it doesn't read or write `schema.sql`.
+
+A migration can carry a data backfill too, not just a schema change: `0002_add_vectorized_at.sql` adds the column and, in the same file, marks every already-voted cover as already vectorized (an assumption, not a guarantee; see that file's own comment for the gap it accepts). Wrangler just runs the file's SQL as written, in order, so this is nothing special, just more than one statement in the file.
 
 `ai_club`, `ai_headline` and `ai_why` predate this: they were applied to the production database by hand, before `migrations/` existed. Don't write migrations for them. `wrangler d1 migrations apply` would try to add columns the database already has, and fail.
 
