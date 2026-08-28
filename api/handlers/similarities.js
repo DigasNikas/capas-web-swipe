@@ -39,8 +39,16 @@ export async function handleSimilarities(env) {
 
     const allIds = [...new Set(parsed.flatMap(r => r.ragIds))];
     const refById = new Map();
-    if (allIds.length > 0) {
-      const placeholders = allIds.map(() => "?").join(",");
+    // D1 rejects a query with too many bound parameters ("too many SQL
+    // variables") well before SQLite's own 999 default, so a single IN (...)
+    // over every referenced id breaks once the backlog grows past a
+    // couple dozen rows (RAG_TOP_K is 5, so it doesn't take many rows to
+    // get there). Batching keeps this working regardless of how large
+    // ai_rag_covers's backlog gets.
+    const BATCH = 100;
+    for (let i = 0; i < allIds.length; i += BATCH) {
+      const batch = allIds.slice(i, i + BATCH);
+      const placeholders = batch.map(() => "?").join(",");
       const { results: refs } = await env.DB
         .prepare(`
           SELECT c.id, c.newspaper, c.date, c.url, c.thumb_url, c.ai_club, ac.club
@@ -48,7 +56,7 @@ export async function handleSimilarities(env) {
           LEFT JOIN analytics_covers ac ON ac.cover_id = c.id
           WHERE c.id IN (${placeholders})
         `)
-        .bind(...allIds)
+        .bind(...batch)
         .all();
       refs.forEach(r => refById.set(r.id, r));
     }
