@@ -8,14 +8,15 @@
  *   AI             — Workers AI (RAG-augmented cover classification, called from /reclassify-rag only — see lib/ai.js)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
- *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag and /notify endpoints
+ *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates,
+ *                     /reclassify-rag, /vectorize-candidates, /vectorize-mark and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
  *
  * Optional env vars:
  *   GH_DISPATCH_TOKEN — GitHub PAT (repo scope) used to fire repository_dispatch
  *                        events (scrape-completed, cover-first-vote) that trigger
- *                        rag-classify.yml / vectorize-one-cover.yml. Unset, those
+ *                        rag-classify.yml / vectorize-covers.yml. Unset, those
  *                        dispatches are silently skipped — see lib/github.js.
  */
 
@@ -34,6 +35,8 @@ import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
 import { handleSimilarities } from "./handlers/similarities.js";
+import { handleVectorizeCandidates } from "./handlers/vectorize-candidates.js";
+import { handleVectorizeMark } from "./handlers/vectorize-mark.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
 export default {
@@ -72,6 +75,8 @@ export default {
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
     if (method === "GET"  && pathname === "/similarities")    return handleSimilarities(env);
+    if (method === "GET"  && pathname === "/vectorize-candidates") return handleVectorizeCandidates(request, env);
+    if (method === "POST" && pathname === "/vectorize-mark")       return handleVectorizeMark(request, env);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
     if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);

@@ -20,19 +20,20 @@ Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deli
 
 ## Running it
 
-A cover writes to the index automatically on its first vote, and that's the only automatic path in. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote, not on later votes, and `.github/workflows/vectorize-one-cover.yml` runs `build_vectorize_index.py --cover-id <id>`: embeds and upserts just that one vector. See [AI Detector](#ai-detector) for the trigger side.
+A cover's first vote is what makes it eligible, but the actual embedding run is batched rather than one-per-vote. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote, not on later votes, and `.github/workflows/vectorize-covers.yml` runs `build_vectorize_index.py --candidates`, which pulls the *whole* backlog from `/vectorize-candidates` (every voted cover with `vectorized_at IS NULL`, self-converging the same way `/rag-candidates` is) and embeds it in one CLIP model load. A burst of votes still fires a burst of dispatches, but only the first run to actually start finds candidates; the rest see an empty backlog and exit before even loading CLIP. See [AI Detector](#ai-detector) for the trigger side.
 
-There's no scheduled full rebuild anymore. A cover whose label changed because a later vote flipped the winning decision after its first-vote embedding already went in, or a cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), stays stale in the index until someone re-runs this by hand: `vectorize-one-cover.yml`'s own `workflow_dispatch` for one cover, or the script directly for a batch. Vectorize's upsert overwrites by id, so any re-run is idempotent, an accepted lag rather than silent data loss.
+`vectorized_at` is a real column now, not inferred from whether `analytics_covers` has a row (that only tells you a cover has a vote, not that it's actually in Vectorize; those two used to be conflated, which is exactly what let a burst of first-vote dispatches redundantly re-embed covers before this). It gets set once a batch upserts successfully, via `/vectorize-mark`, called from the script right after `upsert_batch` returns. A cover whose label changed because a later vote flipped the winning decision after its embedding already went in, or a cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup), stays stale until something re-triggers the workflow or someone reruns the script by hand. Vectorize's upsert overwrites by id, so any rerun is idempotent, an accepted lag rather than silent data loss.
 
-To run either by hand:
+To run by hand:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
 CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py
-... scripts/build_vectorize_index.py --cover-id 1234   # one cover only
+... scripts/build_vectorize_index.py --cover-id 1234                    # one cover only
+... ADMIN_SECRET=… scripts/build_vectorize_index.py --candidates 500    # the whole backlog
 ```
 
-Needs a Cloudflare API token with **Vectorize · Write**, a separate permission from the **Workers AI · Read** scope `eval-ai.mjs` needs. First run downloads CLIP's weights; after that it's CPU-bound and makes no external calls beyond fetching each cover from R2.
+Needs a Cloudflare API token with **Vectorize · Write**, a separate permission from the **Workers AI · Read** scope `eval-ai.mjs` needs. `--candidates` additionally needs `ADMIN_SECRET` (the Worker's own bearer token, not a Cloudflare token), for `/vectorize-candidates` and `/vectorize-mark`. First run downloads CLIP's weights; after that it's CPU-bound and makes no external calls beyond fetching each cover from R2.
 
 ## Status
 

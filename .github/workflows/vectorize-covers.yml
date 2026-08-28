@@ -1,0 +1,45 @@
+name: Vectorize Covers
+
+# Fired by the Worker's handleSwipe the moment a cover gets its first crowd
+# vote (repository_dispatch event type cover-first-vote) — see
+# api/lib/github.js and api/handlers/swipes.js. Doesn't process just the one
+# cover_id in the dispatch payload: it runs build_vectorize_index.py
+# --candidates, which pulls the *whole* /vectorize-candidates backlog
+# (every voted cover not yet embedded, self-converging like /rag-candidates)
+# and embeds it in one CLIP model load. A burst of votes fires a burst of
+# these dispatches, but only the first run to actually start finds work;
+# the rest find an empty backlog and exit before even loading CLIP, instead
+# of each paying the full pip-install-and-download cost to embed one
+# vector. A missed dispatch still self-heals the next time anything
+# triggers this workflow — nothing depends on the specific cover_id that
+# was actually in the payload. See dashboard/documentation/image-embeddings.md.
+
+on:
+  repository_dispatch:
+    types: [cover-first-vote]
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max covers to embed this run"
+        required: false
+        default: "500"
+
+jobs:
+  vectorize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pillow torch transformers
+      - name: Embed the vectorize backlog
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # inputs.limit is only set on workflow_dispatch — repository_dispatch
+        # (the cover-first-vote trigger) has no `inputs` context, so this
+        # falls back to the same default: 500.
+        run: python3 scripts/build_vectorize_index.py --candidates "${{ inputs.limit || '500' }}"
