@@ -8,7 +8,7 @@
  *   AI             — Workers AI (RAG-augmented cover classification, called from /reclassify-rag only — see lib/ai.js)
  *
  * Env vars required (set via: wrangler secret put <NAME>):
- *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag, /similarities and /notify endpoints
+ *   ADMIN_SECRET   — bearer token for the /scrape, /backfill-thumbs, /rag-candidates, /reclassify-rag and /notify endpoints
  *   R2_PUBLIC_URL  — public base URL for the R2 bucket (no trailing slash)
  *   RESEND_API_KEY — Resend API key for sending notification emails
  *
@@ -71,7 +71,7 @@ export default {
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
-    if (method === "GET"  && pathname === "/similarities")    return handleSimilarities(request, env);
+    if (method === "GET"  && pathname === "/similarities")    return handleSimilarities(env);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
     if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);

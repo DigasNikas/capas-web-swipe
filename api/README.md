@@ -37,5 +37,5 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
 | `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — recent covers for `scripts/rag_classify.py` to embed |
 | `reclassify-rag.js` | `POST /reclassify-rag` (admin) — classify one cover with an externally-computed few-shot block |
-| `similarities.js` | `GET /similarities` (admin) — every cover with `ai_rag_covers`, plus what those ids resolve to; powers `dashboard/similarities.html` |
+| `similarities.js` | `GET /similarities` (public) — every cover with `ai_rag_covers`, plus what those ids resolve to; powers `dashboard/similarities.html` |
 | `*.test.mjs` | Self-checks: plain `node api/handlers/<name>.test.mjs`, no framework |
