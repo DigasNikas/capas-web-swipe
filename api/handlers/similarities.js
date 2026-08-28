@@ -1,24 +1,22 @@
 import { json } from "../lib/http.js";
 
-// GET /similarities (admin, bearer-protected). Every cover that has
-// ai_rag_covers recorded, plus the covers those ids actually resolve to, so
-// the RAG few-shot matches can be eyeballed against the cover they were
-// used on: is the retrieval finding genuinely similar covers, or just
-// same-newspaper layout matches (the exact weak-prior worry documented in
+// GET /similarities (public). Every cover that has ai_rag_covers recorded,
+// plus the covers those ids actually resolve to, so the RAG few-shot
+// matches can be eyeballed against the cover they were used on: is the
+// retrieval finding genuinely similar covers, or just same-newspaper
+// layout matches (the exact weak-prior worry documented in
 // image-embeddings.md and rag.md)? Not restricted to voted covers like
 // /api/stats, an unclassified cover's RAG matches are exactly what's most
 // useful to check right after rag-classify.yml runs, before anyone's voted.
-export async function handleSimilarities(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-
+// No auth: same reasoning as /documentation, this is internal-interest
+// data (AI guesses, retrieval matches) with no user attached to it, not a
+// secret.
+export async function handleSimilarities(env) {
   // Diagnostic-only try/catch: this endpoint exists purely for debugging
   // RAG retrieval quality, so a plain D1 error message back to the caller
-  // (bearer-gated, admin only) is more useful here than the bare 500 a
-  // thrown error would otherwise produce. console.error also puts it in
-  // the Worker's real-time logs (observability.logs is on, see wrangler.toml).
+  // is more useful here than the bare 500 a thrown error would otherwise
+  // produce. console.error also puts it in the Worker's real-time logs
+  // (observability.logs is on, see wrangler.toml).
   try {
     const { results: rows } = await env.DB
       .prepare(`

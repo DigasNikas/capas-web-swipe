@@ -10,9 +10,9 @@
      same-newspaper layout (see dashboard/documentation/rag.md and
      image-embeddings.md for the background). Not linked from anywhere in
      the public UI; reachable only if you know the URL, same as
-     /documentation. Gated behind ADMIN_SECRET, unlike /documentation,
-     because it shows ai_club/ai_headline for covers nobody has voted on
-     yet, exactly the pre-verdict state /api/stats deliberately excludes. -->
+     /documentation. Public, no auth, same reasoning as /documentation:
+     nothing here is a secret, just AI guesses and retrieval matches with
+     no user attached to them. -->
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,25 +63,6 @@
 
   main { max-width: 1100px; margin: 0 auto; padding: 28px 22px 80px; }
 
-  #gate { display: flex; gap: 8px; align-items: center; max-width: 420px; }
-  #gate input {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--panel2);
-    color: var(--text);
-    padding: 8px 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-  }
-  #gate button, .reload {
-    background: var(--yellow);
-    color: var(--bg);
-    border: none;
-    font-weight: 800;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 0.8rem;
-  }
   #status { color: var(--muted); font-size: 0.8rem; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
   #status.error { color: #f87171; }
 
@@ -144,10 +125,6 @@
     Every cover with RAG matches recorded, next to the covers retrieval actually pulled for it.
     For assessing whether the image embeddings find real similarity or just same-newspaper layout.
   </p>
-  <form id="gate">
-    <input id="token" type="password" placeholder="ADMIN_SECRET" autocomplete="off" />
-    <button type="submit">Ver</button>
-  </form>
   <div id="status"></div>
   <div id="groups"></div>
 </main>
@@ -157,42 +134,25 @@ const PAPER_NAMES = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
 const CLUB_COLOR = { sporting: 'var(--sporting)', porto: 'var(--porto)', benfica: 'var(--benfica)', others: 'var(--others)' };
 const CLUB_SHORT = { sporting: 'SCP', porto: 'FCP', benfica: 'SLB', others: 'RES' };
 
-const tokenInput = document.getElementById('token');
 const status = document.getElementById('status');
 const groupsEl = document.getElementById('groups');
 
-// sessionStorage only, not localStorage: this is an admin secret, it
-// shouldn't survive past the browser tab closing.
-const STORAGE_KEY = 'similarities-admin-token';
-const savedToken = sessionStorage.getItem(STORAGE_KEY);
-if (savedToken) { tokenInput.value = savedToken; load(savedToken); }
+load();
 
-document.getElementById('gate').addEventListener('submit', e => {
-  e.preventDefault();
-  const token = tokenInput.value.trim();
-  if (token) load(token);
-});
-
-async function load(token) {
+async function load() {
   status.textContent = 'A carregar…';
   status.classList.remove('error');
   groupsEl.innerHTML = '';
 
   let res;
   try {
-    res = await fetch('/api/similarities', { headers: { Authorization: `Bearer ${token}` } });
+    res = await fetch('/api/similarities');
   } catch (err) {
     status.textContent = `Erro de rede: ${err}`;
     status.classList.add('error');
     return;
   }
 
-  if (res.status === 401) {
-    sessionStorage.removeItem(STORAGE_KEY);
-    status.textContent = 'Token inválido.';
-    status.classList.add('error');
-    return;
-  }
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).error ?? ''; } catch { /* not JSON, no extra detail */ }
@@ -201,7 +161,6 @@ async function load(token) {
     return;
   }
 
-  sessionStorage.setItem(STORAGE_KEY, token);
   const groups = await res.json();
   status.textContent = `${groups.length} capas com correspondências RAG.`;
   render(groups);
