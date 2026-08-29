@@ -104,7 +104,11 @@ def mark_vectorized(cover_ids):
     req = urllib.request.Request(
         f"{API_BASE}/vectorize-mark",
         data=json.dumps({"coverIds": cover_ids}).encode("utf-8"),
-        headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
+        headers={
+            "User-Agent": UA,  # Cloudflare 403s the default urllib UA — see fetch() above.
+            "Authorization": f"Bearer {ADMIN_SECRET}",
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=30) as r:
