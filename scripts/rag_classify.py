@@ -69,20 +69,13 @@ HF_TOKEN = os.environ.get("HF_TOKEN")  # optional: higher HF Hub rate limits, fa
 # Copied verbatim from api/lib/ai.js's PROMPT — keep in sync by hand.
 PROMPT = (
     "You are looking at the front page of a Portuguese sports daily (Record, A Bola or O Jogo).\n"
-    "Find the largest photo on the page — the one that takes up most of the visible space. "
-    "Name the football club that photo is about, then read ONLY that photo's own headline, "
-    "the text printed next to or under it.\n"
-    "\n"
-    "A page is dominated by whichever club's photo and headline together occupy the most space, "
-    "pushing everything else into smaller boxes, strips and corners. A headline can read as dramatic "
-    "or sit near the top of the page and still not be the dominant story — if it sits over a small "
-    "photo or no photo at all, the large photo elsewhere on the page is what the cover is about.\n"
+    "Name the football club the page is MOSTLY about — the dominant headline and the main photo, "
+    "the story that fills the page.\n"
     "\n"
     "Ignore these. They are on every edition and say nothing about the day:\n"
     "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n"
     "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA\n"
     "- teasers, adverts, cartoons and results bars along the edges\n"
-    "- small headline strips over a small photo or no photo, even near the top of the page\n"
     "\n"
     "How the clubs are named on these pages:\n"
     "- benfica: Benfica, SLB, Aguias, Encarnados, da Luz\n"
@@ -93,8 +86,8 @@ PROMPT = (
     "or a transfer round-up with no single club on top\n"
     "\n"
     "Reply in exactly three lines:\n"
-    "HEADLINE: <the headline belonging to the largest photo, copied>\n"
-    "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo or its headline>\n"
+    "HEADLINE: <the biggest headline, copied>\n"
+    "WHY: <the one detail that decided it — a name, nickname or kit colour word from the headline or photo>\n"
     "ANSWER: <benfica|sporting|porto|others>"
 )
 
