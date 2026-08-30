@@ -1,7 +1,7 @@
 export const NEWSPAPERS = [
-  { slug: "record", capasjornais: "jornal_record",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
-  { slug: "abola",  capasjornais: "jornal_a_bola",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
-  { slug: "ojogo",  capasjornais: "jornal_o_jogo",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}" },
+  { slug: "record", capasjornais: "jornal_record",  capasjornaisPage: "Capa-Jornal-Record",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/record-4139/{date}" },
+  { slug: "abola",  capasjornais: "jornal_a_bola",  capasjornaisPage: "Capa-Jornal-A-Bola",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/a-bola-4137/{date}" },
+  { slug: "ojogo",  capasjornais: "jornal_o_jogo",  capasjornaisPage: "Capa-Jornal-O-Jogo",  sapoUrl: "https://sapo.pt/noticias/jornais/desporto/o-jogo-4138/{date}" },
 ];
 
 const FETCH_HEADERS = {
@@ -48,6 +48,22 @@ export function capasjornaisUrl(newspaper, dateStr) {
   return `https://capasjornais.pt/img/FrontPages/${y}${m}/${newspaper.capasjornais}_${d}${m}${y}.jpg`;
 }
 
+// Pulls the "Títulos da Capa" block out of a capasjornais.pt page: one
+// <li><span> under <h2 class="BottomNews">, already "•"-joined into a
+// single string. Plain string parsing rather than HTMLRewriter (used for
+// the cover image above) so this stays testable with plain node, no
+// Workers runtime needed — see scraper.test.mjs.
+export function extractHeadlinesFromHtml(html) {
+  const marker = html.indexOf("BottomNews");
+  if (marker === -1) return null;
+
+  const match = html.slice(marker).match(/<li[^>]*>\s*<span[^>]*>([\s\S]*?)<\/span>\s*<\/li>/);
+  if (!match) return null;
+
+  const text = match[1].replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
 // null rather than a throw: a dead source is the normal case here, not an error.
 async function tryFetch(url) {
   try {
@@ -57,6 +73,18 @@ async function tryFetch(url) {
     console.error(`Fetch failed for ${url}: ${err}`);
     return null;
   }
+}
+
+// capasjornais.pt's per-newspaper page always shows *today's* edition, no
+// date parameter. Fetching it for anything but today's scrape would
+// mislabel today's headlines onto a past cover, so this is only ever
+// called when dateLabel is actually today. Same non-fatal spirit as
+// fetchCover: any failure (403, timeout, markup drift) returns null and
+// never blocks the cover image save.
+async function fetchHeadlines(newspaper) {
+  const res = await tryFetch(`https://capasjornais.pt/${newspaper.capasjornaisPage}.html`);
+  if (!res) return null;
+  return extractHeadlinesFromHtml(await res.text());
 }
 
 // The cover image itself, from whichever source still has it.
@@ -102,14 +130,16 @@ export async function scrapeNewspaper(newspaper, date, env) {
   const thumbKey = `thumb/${r2Key}`;
   const thumbUrl = `${env.R2_PUBLIC_URL}/${thumbKey}`;
 
-  await Promise.all([
+  const isToday = dateLabel === new Date().toISOString().slice(0, 10);
+  const [, , headlines] = await Promise.all([
     env.COVERS_BUCKET.put(r2Key, fullBody, { httpMetadata: { contentType } }),
     generateThumbnail(env, thumbSource, thumbKey),
+    isToday ? fetchHeadlines(newspaper) : Promise.resolve(null),
   ]);
 
   await env.DB
-    .prepare("INSERT INTO covers (newspaper, date, r2_key, url, thumb_url) VALUES (?, ?, ?, ?, ?)")
-    .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl)
+    .prepare("INSERT INTO covers (newspaper, date, r2_key, url, thumb_url, headlines) VALUES (?, ?, ?, ?, ?, ?)")
+    .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl, headlines)
     .run();
 
   console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);
