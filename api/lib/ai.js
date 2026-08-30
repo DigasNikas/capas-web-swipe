@@ -29,21 +29,18 @@ export const CLUBS = ["benfica", "sporting", "porto", "others"];
 // names and nicknames are unambiguous where the palette is not.
 export const PROMPT =
   "You are looking at the front page of a Portuguese sports daily (Record, A Bola or O Jogo).\n" +
-  "Find the largest photo on the page — the one that takes up most of the visible space. To work " +
-  "out which club it shows, use everything printed with that photo: the shirt colours and faces in " +
-  "it, plus any score line, caption or headline printed right next to or under it — all of that " +
-  "belongs to the photo. Then read that photo's own headline, the text printed next to or under it, " +
-  "for your HEADLINE line.\n" +
+  "Find the largest photo on the page — the one that takes up most of the visible space. " +
+  "Name the football club that photo is about, then read ONLY that photo's own headline, " +
+  "the text printed next to or under it.\n" +
   "\n" +
-  "A page is dominated by whichever club's photo and its surrounding text together occupy the most " +
-  "space, pushing everything else into smaller boxes, strips and corners. A headline can read as " +
-  "dramatic or sit near the top of the page and still not be the dominant story — if it sits over a " +
-  "small photo or no photo at all, the large photo elsewhere on the page is what the cover is about.\n" +
+  "A page is dominated by whichever club's photo and headline together occupy the most space, " +
+  "pushing everything else into smaller boxes, strips and corners. A headline can read as dramatic " +
+  "or sit near the top of the page and still not be the dominant story — if it sits over a small " +
+  "photo or no photo at all, the large photo elsewhere on the page is what the cover is about.\n" +
   "\n" +
   "Ignore these. They are on every edition and say nothing about the day:\n" +
   "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n" +
-  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA — these are separate " +
-  "from the largest photo, not printed with it\n" +
+  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA\n" +
   "- teasers, adverts, cartoons and results bars along the edges\n" +
   "- small headline strips over a small photo or no photo, even near the top of the page\n" +
   "\n" +
@@ -57,8 +54,7 @@ export const PROMPT =
   "\n" +
   "Reply in exactly three lines:\n" +
   "HEADLINE: <the headline belonging to the largest photo, copied>\n" +
-  "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo, its " +
-  "score line or caption, or its headline>\n" +
+  "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo or its headline>\n" +
   "ANSWER: <benfica|sporting|porto|others>";
 
 // btoa needs a binary string; spreading a 300 KB Uint8Array into
