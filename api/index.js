@@ -32,6 +32,7 @@ import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
+import { handleBackfillHeadlines } from "./handlers/backfill-headlines.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
 import { handleSimilarities } from "./handlers/similarities.js";
@@ -72,6 +73,7 @@ export default {
     if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
+    if (method === "POST" && pathname === "/backfill-headlines") return handleBackfillHeadlines(request, env);
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
     if (method === "GET"  && pathname === "/similarities")    return handleSimilarities(env);
