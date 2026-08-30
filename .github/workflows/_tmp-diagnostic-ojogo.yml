@@ -1,0 +1,28 @@
+name: _tmp diagnostic ojogo classification
+
+# Temporary, one-off: what ai_headline/ai_why the model actually returned
+# for the 2026-08-30 O Jogo cover, misclassified as benfica. Deleted right
+# after use, not meant to stick around.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g wrangler
+      - name: Inspect the O Jogo 2026-08-30 cover row
+        run: |
+          wrangler d1 execute capas-db --remote --command "
+            SELECT id, newspaper, date, ai_club, ai_headline, ai_why, ai_rag_covers
+            FROM covers
+            WHERE newspaper = 'ojogo' AND date = '2026-08-30'
+          "
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
