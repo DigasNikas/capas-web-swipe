@@ -30,9 +30,8 @@ export const CLUBS = ["benfica", "sporting", "porto", "others"];
 export const PROMPT =
   "You are looking at the front page of a Portuguese sports daily (Record, A Bola or O Jogo).\n" +
   "Find the largest photo on the page — the one that takes up most of the visible space. " +
-  "Name the football club that photo is about: a club crest printed on or right beside its own " +
-  "headline is the clearest signal, otherwise use the shirt colours and faces in the photo. Then " +
-  "read ONLY that photo's own headline, the text printed next to or under it.\n" +
+  "Name the football club that photo is about, then read ONLY that photo's own headline, " +
+  "the text printed next to or under it.\n" +
   "\n" +
   "A page is dominated by whichever club's photo and headline together occupy the most space, " +
   "pushing everything else into smaller boxes, strips and corners. A headline can read as dramatic " +
@@ -41,9 +40,7 @@ export const PROMPT =
   "\n" +
   "Ignore these. They are on every edition and say nothing about the day:\n" +
   "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n" +
-  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA — each carries its " +
-  "own club crest as part of the box, which is what marks it as a separate story from the main photo, " +
-  "not a reason to fold it into the main photo's club\n" +
+  "- the small section boxes and side rails headed SPORTING, FC PORTO or BENFICA\n" +
   "- teasers, adverts, cartoons and results bars along the edges\n" +
   "- small headline strips over a small photo or no photo, even near the top of the page\n" +
   "\n" +
@@ -57,8 +54,7 @@ export const PROMPT =
   "\n" +
   "Reply in exactly three lines:\n" +
   "HEADLINE: <the headline belonging to the largest photo, copied>\n" +
-  "WHY: <the one detail that decided it — a crest, name, nickname or kit colour word from that photo " +
-  "or its headline>\n" +
+  "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo or its headline>\n" +
   "ANSWER: <benfica|sporting|porto|others>";
 
 // btoa needs a binary string; spreading a 300 KB Uint8Array into
