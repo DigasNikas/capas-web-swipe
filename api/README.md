@@ -41,4 +41,6 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `similarities.js` | `GET /similarities` (public) — every cover with `ai_rag_covers`, plus what those ids resolve to; powers `dashboard/similarities.html` |
 | `vectorize-candidates.js` | `GET /vectorize-candidates?limit=` (admin) — voted covers still missing `vectorized_at`, for `scripts/build_vectorize_index.py --candidates` to embed |
 | `vectorize-mark.js` | `POST /vectorize-mark` (admin) — sets `vectorized_at` for a batch of cover ids that just upserted into Vectorize |
+| `headline-candidates.js` | `GET /headline-candidates?limit=` (admin) — covers still missing `headlines`, oldest first, for `scripts/backfill_headlines_archive.mjs` |
+| `update-headline.js` | `POST /update-headline` (admin) — sets `headlines` for one cover id |
 | `*.test.mjs` | Self-checks: plain `node api/handlers/<name>.test.mjs`, no framework |
