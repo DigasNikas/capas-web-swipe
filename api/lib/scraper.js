@@ -78,10 +78,12 @@ async function tryFetch(url) {
 // capasjornais.pt's per-newspaper page always shows *today's* edition, no
 // date parameter. Fetching it for anything but today's scrape would
 // mislabel today's headlines onto a past cover, so this is only ever
-// called when dateLabel is actually today. Same non-fatal spirit as
-// fetchCover: any failure (403, timeout, markup drift) returns null and
+// called when the target date is actually today — scrapeNewspaper checks
+// that below, handlers/backfill-headlines.js checks it before calling this
+// directly for covers scraped earlier the same day. Same non-fatal spirit
+// as fetchCover: any failure (403, timeout, markup drift) returns null and
 // never blocks the cover image save.
-async function fetchHeadlines(newspaper) {
+export async function fetchHeadlines(newspaper) {
   const res = await tryFetch(`https://capasjornais.pt/${newspaper.capasjornaisPage}.html`);
   if (!res) return null;
   return extractHeadlinesFromHtml(await res.text());
