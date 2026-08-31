@@ -21,5 +21,8 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `GET` | `/api/similarities` | `capas.` | - | Every cover with `ai_rag_covers` recorded, plus the covers those ids resolve to. Powers `/similarities`, not restricted to voted covers like `/api/stats` |
 | `GET` | `/api/vectorize-candidates?limit=` | `capas.` | Bearer | Up to N voted covers still missing `vectorized_at` (id, newspaper, date, url, club), newest first, for `scripts/build_vectorize_index.py --candidates` to embed. Self-converging like `/rag-candidates`. See [Image Embeddings](#image-embeddings) |
 | `POST` | `/api/vectorize-mark` | `capas.` | Bearer | Set `vectorized_at = now` for `{coverIds: [...]}`, after those ids upsert successfully into Vectorize. Never called before the upsert succeeds. See [Image Embeddings](#image-embeddings) |
+| `POST` | `/api/backfill-headlines` | `capas.` | Bearer | One-off: fills `headlines` for covers scraped earlier the same day, before that column existed. Today-only. Returns `{done, checked}`. See [Headlines](#headlines) |
+| `GET` | `/api/headline-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `headlines` (id, newspaper, date), oldest first, for `scripts/backfill_headlines_archive.mjs`. Self-converging like `/rag-candidates`. See [Headlines](#headlines) |
+| `POST` | `/api/update-headline` | `capas.` | Bearer | Set `headlines` for one cover `{id, headlines}`. See [Headlines](#headlines) |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.
