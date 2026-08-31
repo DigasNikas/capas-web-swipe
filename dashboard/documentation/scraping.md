@@ -48,6 +48,8 @@ until curl -s -X POST -H "Authorization: Bearer <secret>" \
 
 Scraping doesn't classify anything by itself. A cover scraped by any of these routes still needs `rag-classify.yml` to run before it gets an `ai_club`: automatic after the daily cron scrape, manual (`workflow_dispatch`, or `python3 scripts/rag_classify.py` directly) after a backfill like this one. See [AI Detector](#ai-detector).
 
+The daily cron scrape also fetches real headline text alongside the cover image, but only for the day it runs on — a backfill through any of the routes above leaves `headlines` `NULL`. See [Headlines](#headlines) for why, and for the separate historical-backfill path.
+
 ## Bulk backfill (full month)
 
 For scraping large amounts of covers at once, use `scrape_month.sh`. It calls the `/scrape` API for every day in a given month:
