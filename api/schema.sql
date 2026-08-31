@@ -15,6 +15,24 @@ CREATE TABLE IF NOT EXISTS covers (
   UNIQUE (newspaper, date)
 );
 
+-- Full-text search over covers.headlines. External-content FTS5: the text
+-- lives once, on covers itself; these triggers are what keep this table's
+-- index in sync with it. See migrations/0004_add_headlines_fts.sql.
+CREATE VIRTUAL TABLE IF NOT EXISTS covers_fts USING fts5(headlines, content='covers', content_rowid='id');
+
+CREATE TRIGGER IF NOT EXISTS covers_fts_ai AFTER INSERT ON covers BEGIN
+  INSERT INTO covers_fts(rowid, headlines) VALUES (new.id, new.headlines);
+END;
+
+CREATE TRIGGER IF NOT EXISTS covers_fts_ad AFTER DELETE ON covers BEGIN
+  INSERT INTO covers_fts(covers_fts, rowid, headlines) VALUES ('delete', old.id, old.headlines);
+END;
+
+CREATE TRIGGER IF NOT EXISTS covers_fts_au AFTER UPDATE ON covers BEGIN
+  INSERT INTO covers_fts(covers_fts, rowid, headlines) VALUES ('delete', old.id, old.headlines);
+  INSERT INTO covers_fts(rowid, headlines) VALUES (new.id, new.headlines);
+END;
+
 CREATE TABLE IF NOT EXISTS swipes (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_email  TEXT NOT NULL,

@@ -24,5 +24,6 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `POST` | `/api/backfill-headlines` | `capas.` | Bearer | One-off: fills `headlines` for covers scraped earlier the same day, before that column existed. Today-only. Returns `{done, checked}`. See [Headlines](#headlines) |
 | `GET` | `/api/headline-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `headlines` (id, newspaper, date), oldest first, for `scripts/backfill_headlines_archive.mjs`. Self-converging like `/rag-candidates`. See [Headlines](#headlines) |
 | `POST` | `/api/update-headline` | `capas.` | Bearer | Set `headlines` for one cover `{id, headlines}`. See [Headlines](#headlines) |
+| `GET` | `/api/search?q=` | `capas.` | - | Full-text search over `headlines` (D1 FTS5), up to 30 results ranked by `bm25()`. Always returns `{results, total, searchable}`; an empty/missing `q` skips the search and just reports coverage. See [Search](#search) |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.

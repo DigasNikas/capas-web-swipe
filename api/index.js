@@ -40,6 +40,7 @@ import { handleVectorizeCandidates } from "./handlers/vectorize-candidates.js";
 import { handleVectorizeMark } from "./handlers/vectorize-mark.js";
 import { handleHeadlineCandidates } from "./handlers/headline-candidates.js";
 import { handleUpdateHeadline } from "./handlers/update-headline.js";
+import { handleSearch } from "./handlers/search.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
 export default {
@@ -83,6 +84,7 @@ export default {
     if (method === "POST" && pathname === "/vectorize-mark")       return handleVectorizeMark(request, env);
     if (method === "GET"  && pathname === "/headline-candidates")  return handleHeadlineCandidates(request, env);
     if (method === "POST" && pathname === "/update-headline")      return handleUpdateHeadline(request, env);
+    if (method === "GET"  && pathname === "/search")               return handleSearch(request, env, url);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
     if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);

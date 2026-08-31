@@ -14,3 +14,4 @@ Cloudflare Pages project `capas-dashboard` (`destination_dir: dashboard`), deplo
 | `documentation.html` | This documentation site's renderer: hand-written markdown, no library |
 | `documentation/*.md` | The chapters it renders, one per topic |
 | `similarities.html` | RAG match viewer: every cover with `ai_rag_covers`, next to the covers retrieval matched it to. Public, no login, like the rest of this project. Not linked from anywhere in the UI |
+| `search.html` | Full-text search over `headlines` (D1 FTS5, `/api/search`). Public, no login. Not linked from anywhere in the UI |

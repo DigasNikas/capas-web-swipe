@@ -43,4 +43,5 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `vectorize-mark.js` | `POST /vectorize-mark` (admin) — sets `vectorized_at` for a batch of cover ids that just upserted into Vectorize |
 | `headline-candidates.js` | `GET /headline-candidates?limit=` (admin) — covers still missing `headlines`, oldest first, for `scripts/backfill_headlines_archive.mjs` |
 | `update-headline.js` | `POST /update-headline` (admin) — sets `headlines` for one cover id |
+| `search.js` | `GET /search?q=` (public) — D1 FTS5 search over `headlines`, powers `dashboard/search.html` |
 | `*.test.mjs` | Self-checks: plain `node api/handlers/<name>.test.mjs`, no framework |
