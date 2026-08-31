@@ -81,6 +81,8 @@
     display: block;
     background: var(--panel2);
     border: 1px solid var(--panel2);
+    cursor: pointer;
+    padding: 0;
   }
   .result:hover, .result:focus-visible { outline: 1px solid var(--yellow); }
   .result img {
@@ -91,6 +93,85 @@
     display: block;
   }
   .empty { color: var(--muted); margin-top: 20px; }
+
+  /* Cover modal, same visual language as the main dashboard's
+     d-cover-modal — this page has no shared stylesheet, so it's
+     reimplemented here rather than imported. #modal2 stacks visually on
+     top of #modal1 (higher z-index) rather than replacing it, since
+     opening a similar cover should feel like drilling in, not navigating
+     away. */
+  .cmodal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    cursor: zoom-out;
+  }
+  #modal2 { z-index: 210; background: rgba(0, 0, 0, 0.96); }
+  .cmodal img {
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    cursor: default;
+  }
+  #modal1 img { max-height: 60vh; }
+  .cmodal-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cmodal-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cmodal-nav:hover { background: rgba(255, 255, 255, 0.18); }
+  .cmodal-nav:disabled { opacity: 0.25; cursor: default; }
+  .cmodal-prev { left: 16px; }
+  .cmodal-next { right: 16px; }
+
+  #similar-strip {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    cursor: default;
+  }
+  #similar-strip .sim-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    align-self: center;
+    margin-right: 4px;
+  }
+  #similar-strip img {
+    width: 56px;
+    aspect-ratio: 0.78;
+    object-fit: cover;
+    box-shadow: none;
+    cursor: pointer;
+  }
+  #similar-strip img:hover { outline: 2px solid var(--yellow); }
 </style>
 </head>
 <body>
@@ -104,6 +185,19 @@
   <div id="status"></div>
   <div id="results"></div>
 </main>
+
+<div id="modal1" class="cmodal hidden">
+  <button class="cmodal-close" id="modal1-close" aria-label="Fechar">&times;</button>
+  <img id="modal1-img" src="" alt="" />
+  <div id="similar-strip" class="hidden"></div>
+</div>
+
+<div id="modal2" class="cmodal hidden">
+  <button class="cmodal-close" id="modal2-close" aria-label="Fechar">&times;</button>
+  <button class="cmodal-nav cmodal-prev" id="modal2-prev" type="button" aria-label="Capa anterior">‹</button>
+  <img id="modal2-img" src="" alt="" />
+  <button class="cmodal-nav cmodal-next" id="modal2-next" type="button" aria-label="Capa seguinte">›</button>
+</div>
 
 <script>
 const PAPER_NAMES = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
@@ -120,6 +214,16 @@ qEl.addEventListener('input', () => {
 });
 
 search('');
+
+// The 5 RAG few-shot matches per cover, resolved by /api/similarities —
+// only covers the AI Detector has actually classified with RAG context
+// have any, everything else's modal just skips the strip. Fetched once,
+// not re-fetched per modal open.
+let similaritiesById = new Map();
+fetch('/api/similarities')
+  .then(res => (res.ok ? res.json() : []))
+  .then(list => list.forEach(entry => similaritiesById.set(entry.id, entry)))
+  .catch(() => { /* similar-covers strip just stays empty */ });
 
 async function search(q) {
   statusEl.textContent = 'A procurar…';
@@ -156,25 +260,116 @@ function render(results) {
   }
 
   results.forEach(r => {
-    const a = document.createElement('a');
-    a.className = 'result';
-    a.href = r.url;
-    a.target = '_blank';
-    a.rel = 'noopener';
+    const div = document.createElement('div');
+    div.className = 'result';
+    div.tabIndex = 0;
+    div.setAttribute('role', 'button');
 
     const d = new Date(r.date + 'T00:00:00');
     const label = `${PAPER_NAMES[r.newspaper] || r.newspaper} · ${d.toLocaleDateString('pt-PT')}`;
-    a.title = `${label}\n${r.headlines}`;
+    div.title = `${label}\n${r.headlines}`;
 
     const img = document.createElement('img');
     img.src = r.thumb_url || r.url;
     img.alt = label;
     img.loading = 'lazy';
-    a.appendChild(img);
+    div.appendChild(img);
 
-    resultsEl.appendChild(a);
+    const open = () => openModal1(r);
+    div.addEventListener('click', open);
+    div.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+
+    resultsEl.appendChild(div);
   });
 }
+
+const modal1 = document.getElementById('modal1');
+const modal1Img = document.getElementById('modal1-img');
+const similarStrip = document.getElementById('similar-strip');
+
+function openModal1(r) {
+  modal1Img.src = r.url;
+  modal1Img.alt = PAPER_NAMES[r.newspaper] || r.newspaper;
+
+  const ragCovers = similaritiesById.get(r.id)?.ragCovers ?? [];
+  similarStrip.innerHTML = '';
+  similarStrip.classList.toggle('hidden', ragCovers.length === 0);
+  if (ragCovers.length) {
+    const label = document.createElement('span');
+    label.className = 'sim-label';
+    label.textContent = 'Parecidas:';
+    similarStrip.appendChild(label);
+
+    ragCovers.forEach((rc, i) => {
+      const img = document.createElement('img');
+      img.src = rc.thumb_url || rc.url;
+      img.alt = PAPER_NAMES[rc.newspaper] || rc.newspaper;
+      img.loading = 'lazy';
+      img.addEventListener('click', () => openModal2(ragCovers, i));
+      similarStrip.appendChild(img);
+    });
+  }
+
+  modal1.classList.remove('hidden');
+}
+
+function closeModal1() {
+  closeModal2();
+  modal1.classList.add('hidden');
+  modal1Img.src = '';
+  similarStrip.innerHTML = '';
+  similarStrip.classList.add('hidden');
+}
+
+document.getElementById('modal1-close').addEventListener('click', closeModal1);
+modal1.addEventListener('click', closeModal1);
+modal1Img.addEventListener('click', e => e.stopPropagation());
+similarStrip.addEventListener('click', e => e.stopPropagation());
+
+// The carousel over one cover's RAG matches — opened from similar-strip,
+// stacked visually above modal1 rather than replacing it. Same
+// prev/next-paging shape as the main dashboard's "onde discordam"
+// lightbox (dashboard.js's stepDiffModal).
+const modal2 = document.getElementById('modal2');
+const modal2Img = document.getElementById('modal2-img');
+const modal2Prev = document.getElementById('modal2-prev');
+const modal2Next = document.getElementById('modal2-next');
+let carouselItems = null;
+let carouselIndex = 0;
+
+function openModal2(items, index) {
+  carouselItems = items;
+  carouselIndex = index;
+  renderModal2();
+  modal2.classList.remove('hidden');
+}
+
+function stepModal2(delta) {
+  const next = carouselIndex + delta;
+  if (!carouselItems || next < 0 || next >= carouselItems.length) return;
+  carouselIndex = next;
+  renderModal2();
+}
+
+function renderModal2() {
+  const c = carouselItems[carouselIndex];
+  modal2Img.src = c.url;
+  modal2Img.alt = PAPER_NAMES[c.newspaper] || c.newspaper;
+  modal2Prev.disabled = carouselIndex === 0;
+  modal2Next.disabled = carouselIndex === carouselItems.length - 1;
+}
+
+function closeModal2() {
+  modal2.classList.add('hidden');
+  modal2Img.src = '';
+  carouselItems = null;
+}
+
+document.getElementById('modal2-close').addEventListener('click', closeModal2);
+modal2.addEventListener('click', closeModal2);
+modal2Img.addEventListener('click', e => e.stopPropagation());
+modal2Prev.addEventListener('click', e => { e.stopPropagation(); stepModal2(-1); });
+modal2Next.addEventListener('click', e => { e.stopPropagation(); stepModal2(1); });
 </script>
 </body>
 </html>
