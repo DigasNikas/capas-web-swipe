@@ -71,30 +71,25 @@
   #status { color: var(--muted); font-size: 0.8rem; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
   #status.error { color: #f87171; }
 
-  #results { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
-  .result {
-    display: flex;
-    gap: 14px;
-    background: var(--panel);
-    border: 1px solid var(--panel2);
-    padding: 12px;
+  #results {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
   }
+  .result {
+    display: block;
+    background: var(--panel2);
+    border: 1px solid var(--panel2);
+  }
+  .result:hover, .result:focus-visible { outline: 1px solid var(--yellow); }
   .result img {
-    flex: 0 0 70px;
-    width: 70px;
+    width: 100%;
     aspect-ratio: 0.78;
     object-fit: cover;
     background: var(--panel2);
     display: block;
   }
-  .result-body { min-width: 0; }
-  .result-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  .result-headline { font-size: 0.85rem; margin-top: 4px; }
   .empty { color: var(--muted); margin-top: 20px; }
 </style>
 </head>
@@ -161,31 +156,23 @@ function render(results) {
   }
 
   results.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'result';
+    const a = document.createElement('a');
+    a.className = 'result';
+    a.href = r.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+
+    const d = new Date(r.date + 'T00:00:00');
+    const label = `${PAPER_NAMES[r.newspaper] || r.newspaper} · ${d.toLocaleDateString('pt-PT')}`;
+    a.title = `${label}\n${r.headlines}`;
 
     const img = document.createElement('img');
     img.src = r.thumb_url || r.url;
-    img.alt = PAPER_NAMES[r.newspaper] || r.newspaper;
+    img.alt = label;
     img.loading = 'lazy';
-    div.appendChild(img);
+    a.appendChild(img);
 
-    const body = document.createElement('div');
-    body.className = 'result-body';
-
-    const meta = document.createElement('div');
-    meta.className = 'result-meta';
-    const d = new Date(r.date + 'T00:00:00');
-    meta.textContent = `${PAPER_NAMES[r.newspaper] || r.newspaper} · ${d.toLocaleDateString('pt-PT')}`;
-    body.appendChild(meta);
-
-    const headline = document.createElement('div');
-    headline.className = 'result-headline';
-    headline.textContent = r.headlines;
-    body.appendChild(headline);
-
-    div.appendChild(body);
-    resultsEl.appendChild(div);
+    resultsEl.appendChild(a);
   });
 }
 </script>
