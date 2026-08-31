@@ -98,25 +98,10 @@ runner IPs at this volume (~1800 requests for the initial run) is
 untested, and a historical backfill only needs to run once per gap, not
 on a schedule.
 
-### Result of the first run (2026-08-30)
-
-1433 of 1816 candidate covers got real headline text. The other 383
-split into two genuine site-side gaps, not script errors:
-
-- **198** — the date isn't in capasjornais.pt's archive index at all
-  (e.g. 2025-01-01, missing for every paper).
-- **185** — the dated permalink exists but that edition's "Títulos da
-  Capa" block is empty on the page itself (a reduced holiday edition, or
-  similar).
-
-Neither is recoverable from this site. A cover in either state stays
-`headlines IS NULL` permanently unless another source turns up.
-
 ## Status
 
 `headlines` sits on `covers` next to the other nullable, added-after-the-fact
 columns (`ai_club`, `vectorized_at`, etc. — see [Overview](#overview)'s D1
 schema). As of the first historical backfill run: 1438 of 1821 covers have
 it (1433 from the archive backfill, the rest from the live scrape and the
-same-day backfill); the remaining 383 are the permanent gap described
-above.
+same-day backfill).
