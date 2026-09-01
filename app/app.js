@@ -197,13 +197,24 @@ async function init() {
   state.groupIndex = 0;
   advanceToNextPendingGroup();
 
-  const savedDate = localStorage.getItem(ACTIVE_DATE_KEY);
-  if (savedDate) {
-    const idx = state.dateGroups.findIndex(g => g.date === savedDate);
-    if (idx !== -1) {
-      const sIds    = new Set(state.catalogue.map(e => e.id));
-      const pending = state.dateGroups[idx].ids.filter(id => !sIds.has(id));
-      if (pending.length > 0) { state.groupIndex = idx; state.queue = pending; }
+  // advanceToNextPendingGroup already lands on the newest pending day —
+  // today's, the moment a fresh cover shows up unswiped, since dateGroups
+  // sorts newest-first. Only fall back to resuming wherever localStorage
+  // last left off when that's *not* the case: today already fully
+  // swiped, or not scraped yet. Otherwise a stale saved date from an
+  // unfinished older day would win here and bury today's fresh cover.
+  const todayStr     = new Date().toISOString().slice(0, 10);
+  const landedOnToday = state.dateGroups[state.groupIndex]?.date === todayStr;
+
+  if (!landedOnToday) {
+    const savedDate = localStorage.getItem(ACTIVE_DATE_KEY);
+    if (savedDate) {
+      const idx = state.dateGroups.findIndex(g => g.date === savedDate);
+      if (idx !== -1) {
+        const sIds    = new Set(state.catalogue.map(e => e.id));
+        const pending = state.dateGroups[idx].ids.filter(id => !sIds.has(id));
+        if (pending.length > 0) { state.groupIndex = idx; state.queue = pending; }
+      }
     }
   }
 
