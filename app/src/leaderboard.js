@@ -120,7 +120,7 @@ async function openUserDetail(email) {
 export function closeUserDetail() {
   if (userDetailPanel.classList.contains('hidden')) return;
   const content = userDetailPanel.querySelector('.udp-content');
-  content.style.animation = 'drawer-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  content.style.animation = 'drawer-out-left 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
   setTimeout(() => {
     content.style.animation = '';
     userDetailPanel.classList.add('hidden');

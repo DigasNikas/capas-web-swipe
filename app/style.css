@@ -948,6 +948,27 @@ header h1 {
   color: var(--bg);
 }
 
+/* Histórico's own drawer-styled panel inside the Conta bottom sheet —
+   narrower than the modal, anchored left, rounded/shadowed on its right
+   edge like a real drawer. flex/min-height mirror .modal-content's own
+   rules so #catalogue-grid's flex:1 + overflow-y:auto still sizes
+   correctly one level deeper. */
+.historico-drawer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(340px, 86vw);
+  align-self: flex-start;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  border-radius: 0 16px 16px 0;
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
+  padding: 14px;
+  overflow: hidden;
+}
+
 #catalogue-grid {
   display: block;
   flex: 1;
@@ -1276,34 +1297,49 @@ header h1 {
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
-/* User detail panel (leaderboard row drill-down) and cover detail panel
-   (Histórico cover drill-down) — a standalone overlay above .modal
-   (z-index 70 vs .modal's 60), a left-edge drawer rather than a centered
-   fullscreen view: Classificação/Histórico stays visible and open behind
-   it rather than being replaced. Own full-viewport click target closes
-   it, guarded to the panel itself so clicks inside .udp-content (the
-   back button, breakdown rows) don't. */
+/* User detail panel (leaderboard row drill-down) — standalone overlay
+   above .modal (z-index 70 vs .modal's 60), a left-edge drawer rather
+   than a centered fullscreen view: Classificação stays visible and open
+   behind it rather than being replaced. Own full-viewport click target
+   closes it, guarded to the panel itself so clicks inside .udp-content
+   (the back button, breakdown rows) don't. Cover detail panel below
+   shares this shell but anchors to the right instead — it opens from a
+   cover already sitting inside a left-anchored Histórico drawer
+   (.historico-drawer), so mirroring the side keeps the two from
+   visually colliding into the same edge. */
 #user-detail-panel, #cover-detail-panel {
   position: fixed;
   inset: 0;
   z-index: 70;
   display: flex;
   align-items: stretch;
-  justify-content: flex-start;
   background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
+#user-detail-panel { justify-content: flex-start; }
+#cover-detail-panel { justify-content: flex-end; }
 #user-detail-panel:not(.hidden), #cover-detail-panel:not(.hidden) { pointer-events: all; }
-#user-detail-panel:not(.hidden) .udp-content, #cover-detail-panel:not(.hidden) .udp-content {
-  animation: drawer-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+#user-detail-panel:not(.hidden) .udp-content {
+  animation: drawer-in-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
-@keyframes drawer-in {
+#cover-detail-panel:not(.hidden) .udp-content {
+  animation: drawer-in-right 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes drawer-in-left {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
 }
-@keyframes drawer-out {
+@keyframes drawer-out-left {
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
+}
+@keyframes drawer-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes drawer-out-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
 }
 .udp-content {
   background: var(--surface);
@@ -1314,9 +1350,16 @@ header h1 {
   padding: 26px 20px 20px;
   gap: 14px;
   overflow-y: auto;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+#user-detail-panel .udp-content {
   border-right: 1px solid var(--border);
   border-radius: 0 16px 16px 0;
-  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+#cover-detail-panel .udp-content {
+  border-left: 1px solid var(--border);
+  border-radius: 16px 0 0 16px;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
 }
 
 #cdp-nav { display: flex; align-items: center; gap: 8px; }

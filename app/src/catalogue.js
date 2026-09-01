@@ -219,11 +219,15 @@ function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
 
-// Same left-side drawer as the leaderboard's user-detail-panel
+// Same drawer mechanics as the leaderboard's user-detail-panel
 // (leaderboard.js openUserDetail/closeUserDetail) — opened over Histórico
-// instead of Classificação, but the same "drill into one item without
-// leaving the list behind it" shape. No fetch needed here: everything
-// shown already lives on entry, unlike the leaderboard drawer's user stats.
+// instead of Classificação, same "drill into one item without leaving
+// the list behind it" shape, but anchored to the right instead of the
+// left: Histórico's own grid now sits in a left-anchored drawer
+// (.historico-drawer) inside Conta, so the cover it opens comes in from
+// the opposite edge rather than covering the same one. No fetch needed
+// here: everything shown already lives on entry, unlike the leaderboard
+// drawer's user stats.
 function openCoverDetail(entry) {
   coverDetailPanel.classList.remove('hidden');
   cdpImg.src = entry.full;
@@ -235,11 +239,12 @@ function openCoverDetail(entry) {
   cdpDecision.style.background = `var(--${entry.action})`;
 }
 
-// Mirrors leaderboard.js's closeUserDetail: same drawer-out animation/timing.
+// Mirrors leaderboard.js's closeUserDetail: same timing/easing, mirrored
+// (drawer-out-right) since this panel slides in from the right.
 function closeCoverDetail() {
   if (coverDetailPanel.classList.contains('hidden')) return;
   const content = coverDetailPanel.querySelector('.udp-content');
-  content.style.animation = 'drawer-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  content.style.animation = 'drawer-out-right 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
   setTimeout(() => {
     content.style.animation = '';
     coverDetailPanel.classList.add('hidden');
