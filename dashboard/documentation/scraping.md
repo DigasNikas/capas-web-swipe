@@ -6,7 +6,7 @@ The Worker runs hourly from **05:00–08:00 UTC** (06:00–09:00/07:00–10:00 L
 
 ## Sources, primary and fallback
 
-The scraper looks at **capasjornais.pt** first: its images carry no watermark (sapo.pt's do), and the URL is computable from the date alone, so there is no page to fetch and no HTMLRewriter:
+The scraper looks at **capasjornais.pt** first: its images carry no watermark (sapo.pt's do), and the URL is computable from the date alone, so there's no page to fetch and no HTMLRewriter:
 
 ```
 https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg

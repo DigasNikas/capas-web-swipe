@@ -38,4 +38,4 @@ wrangler r2 bucket cors put capas-storage --file cors.json
 
 Deployed automatically by the two git-connected Cloudflare Pages projects (`capas-dashboard` → `dashboard/`, `capas-app` → `app/`) on every push to this branch. No build step, no GitHub Actions workflow involved. See [Frontend](#frontend) for what each project serves.
 
-> The frontend used to be served by GitHub Pages. DNS has moved off it, but the repo's Pages source setting (Settings → Pages) has not been switched to "None" yet. Cosmetic cleanup, low priority.
+> The frontend used to be served by GitHub Pages. DNS has moved off it, but the repo's Pages source setting (Settings → Pages) hasn't been switched to "None" yet. Cosmetic cleanup, low priority.
