@@ -948,6 +948,16 @@ header h1 {
   color: var(--bg);
 }
 
+/* Icon+label pair per filter (except "All", which has no voting icon and
+   is short enough as text either way) — desktop shows the label, mobile
+   swaps to the icon alone so six buttons fit without wrapping. */
+.filter-icon { display: none; }
+@media (max-width: 480px) {
+  .filter-btn { padding: 7px 10px; }
+  .filter-icon { display: inline; font-size: 0.9rem; }
+  .filter-label { display: none; }
+}
+
 #catalogue-grid {
   display: block;
   flex: 1;
@@ -1149,42 +1159,6 @@ header h1 {
   filter: grayscale(1);
 }
 
-.catalogue-item-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.catalogue-item-badge.keep     { background: var(--keep);     color: #fff; }
-.catalogue-item-badge.reject   { background: var(--reject);   color: #fff; }
-.catalogue-item-badge.favorite { background: var(--favorite); color: #fff; }
-.catalogue-item-badge.skip     { background: var(--skip);     color: #fff; }
-
-.catalogue-item-star {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  background: rgba(0,0,0,.5);
-  color: rgba(255,255,255,.7);
-  font-size: 1.1rem;
-  line-height: 26px;
-  text-align: center;
-  cursor: pointer;
-}
-.catalogue-item-star.active { color: var(--accent); }
 
 .catalogue-item-footer {
   position: absolute;
@@ -1192,7 +1166,9 @@ header h1 {
   left: 0;
   right: 0;
   padding: 16px 3px 4px;
-  background: linear-gradient(transparent, rgba(0,0,0,.85));
+  /* background: linear-gradient(transparent, var(--<action>)) — set
+     per-item in catalogue.js's expandGrid, the voted club's color
+     standing in for the badge that used to sit in its own corner. */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1276,64 +1252,49 @@ header h1 {
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
-/* Fullscreen cover viewer — matches dashboard/dashboard.css's .d-cover-modal
-   exactly (same rules, app's own tokens). Sits above the bottom-sheet
-   modals (z-index 200 vs .modal's 60) since it can open from within one. */
-.cover-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  cursor: zoom-out;
-}
-.cover-modal img {
-  max-width: 100%;
-  max-height: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-}
-.cover-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-/* User detail panel (leaderboard row drill-down) — same "standalone overlay
-   above .modal" shape as .cover-modal (z-index 70 vs .modal's 60), but a
-   left-edge drawer instead of a centered fullscreen view: Classificação
-   stays visible and open behind it rather than being replaced. Own
+/* User detail panel (leaderboard row drill-down) and Histórico panel —
+   standalone overlays above .modal (z-index 70 vs .modal's 60), a
+   left-edge drawer rather than a centered fullscreen view: Classificação/
+   Conta stays visible and open behind it rather than being replaced. Own
    full-viewport click target closes it, guarded to the panel itself so
-   clicks inside .udp-content (the back button, breakdown rows) don't. */
-#user-detail-panel {
+   clicks inside .udp-content (the back button, grid) don't. Cover detail
+   panel below shares this shell but anchors to the right instead — it
+   opens from a cover already sitting inside historico-panel, so
+   mirroring the side keeps the two from visually colliding into the
+   same edge. */
+#user-detail-panel, #historico-panel, #cover-detail-panel {
   position: fixed;
   inset: 0;
   z-index: 70;
   display: flex;
   align-items: stretch;
-  justify-content: flex-start;
   background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
-#user-detail-panel:not(.hidden) { pointer-events: all; }
-#user-detail-panel:not(.hidden) .udp-content {
-  animation: drawer-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+#user-detail-panel, #historico-panel { justify-content: flex-start; }
+#cover-detail-panel { justify-content: flex-end; }
+#user-detail-panel:not(.hidden), #historico-panel:not(.hidden), #cover-detail-panel:not(.hidden) { pointer-events: all; }
+#user-detail-panel:not(.hidden) .udp-content, #historico-panel:not(.hidden) .udp-content {
+  animation: drawer-in-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
-@keyframes drawer-in {
+#cover-detail-panel:not(.hidden) .udp-content {
+  animation: drawer-in-right 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes drawer-in-left {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
 }
-@keyframes drawer-out {
+@keyframes drawer-out-left {
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
+}
+@keyframes drawer-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes drawer-out-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
 }
 .udp-content {
   background: var(--surface);
@@ -1344,9 +1305,71 @@ header h1 {
   padding: 26px 20px 20px;
   gap: 14px;
   overflow-y: auto;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+#user-detail-panel .udp-content, #historico-panel .udp-content {
   border-right: 1px solid var(--border);
   border-radius: 0 16px 16px 0;
-  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+#cover-detail-panel .udp-content {
+  border-left: 1px solid var(--border);
+  border-radius: 16px 0 0 16px;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+}
+
+#historico-nav { display: flex; align-items: center; gap: 8px; }
+#historico-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+#cdp-nav { display: flex; align-items: center; gap: 8px; }
+#cdp-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+#cdp-img {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+#cdp-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#cdp-decision-group { display: flex; align-items: center; gap: 8px; }
+/* Own small circular button, not .catalogue-item-star's absolute
+   positioning (that one overlays an image; this one sits inline next
+   to the club label). */
+#cdp-star {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+#cdp-star.active { color: var(--accent); }
+#cdp-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+#cdp-decision {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #fff;
 }
 
 /* ─── Instruções modal ───────────────────────────────────────────────────── */

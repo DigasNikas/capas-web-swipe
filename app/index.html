@@ -130,9 +130,8 @@
     </div>
 
     <!-- User Detail Panel — leaderboard row drill-down. Its own standalone
-         overlay layered above Classificação (like #cover-modal is above
-         everything), not nested inside it — Classificação stays open
-         underneath rather than being replaced. -->
+         overlay layered above Classificação, not nested inside it —
+         Classificação stays open underneath rather than being replaced. -->
     <div id="user-detail-panel" class="hidden">
       <div class="udp-content">
         <div id="lb-detail-nav">
@@ -145,6 +144,60 @@
         </div>
         <div class="acc-section-title">Votos por clube</div>
         <div id="lb-detail-breakdown" class="acc-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- Histórico panel: same full-height overlay shell as user-detail-panel
+         above, opened by the "Ver" button inside Conta (account-modal
+         below) instead of always sitting inline in it. Own full-viewport
+         target so Conta stays open underneath rather than being replaced. -->
+    <div id="historico-panel" class="hidden">
+      <div class="udp-content">
+        <div id="historico-nav">
+          <button id="btn-historico-back" class="btn-back">‹ Voltar</button>
+          <span id="historico-title">Histórico</span>
+        </div>
+        <!-- Each non-"All" filter carries both an icon and a label — the
+             icon is the same one ACTIONS (state.js) uses for that same
+             decision when voting. Desktop shows the label, mobile hides
+             it and shows the icon instead (style.css), to fit six
+             buttons without wrapping. -->
+        <div class="modal-filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="keep"><span class="filter-icon">🦁</span><span class="filter-label">Sporting</span></button>
+          <button class="filter-btn" data-filter="favorite"><span class="filter-icon">?</span><span class="filter-label">Restantes</span></button>
+          <button class="filter-btn" data-filter="reject"><span class="filter-icon">🦅</span><span class="filter-label">Benfica</span></button>
+          <button class="filter-btn" data-filter="skip"><span class="filter-icon">🐉</span><span class="filter-label">Porto</span></button>
+          <button class="filter-btn" data-filter="starred"><span class="filter-icon">★</span><span class="filter-label">Favoritos</span></button>
+        </div>
+        <div id="catalogue-nav" class="hidden">
+          <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
+          <span id="catalogue-nav-label"></span>
+        </div>
+        <div id="catalogue-grid"></div>
+        <p id="catalogue-empty" class="catalogue-empty hidden">Ainda não há votos aqui.</p>
+      </div>
+    </div>
+
+    <!-- Cover detail drawer: opened from a cover inside historico-panel
+         above — slides in from the right instead, so the two don't cover
+         the same edge. Own full-viewport target (stacks over everything,
+         including historico-panel and account-modal) so both stay open
+         underneath rather than being replaced. -->
+    <div id="cover-detail-panel" class="hidden">
+      <div class="udp-content cdp-content">
+        <div id="cdp-nav">
+          <button id="btn-cdp-back" class="btn-back">‹ Voltar</button>
+          <span id="cdp-name"></span>
+        </div>
+        <img id="cdp-img" src="" alt="" />
+        <div id="cdp-meta">
+          <span id="cdp-date"></span>
+          <div id="cdp-decision-group">
+            <span id="cdp-decision"></span>
+            <button id="cdp-star" aria-label="Favorito">☆</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -163,20 +216,7 @@
         <div class="acc-section-title">Os teus votos</div>
         <div id="acc-breakdown" class="acc-breakdown"></div>
         <div class="acc-section-title">Histórico</div>
-        <div class="modal-filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="keep">Sporting</button>
-          <button class="filter-btn" data-filter="favorite">Restantes</button>
-          <button class="filter-btn" data-filter="reject">Benfica</button>
-          <button class="filter-btn" data-filter="skip">Porto</button>
-          <button class="filter-btn" data-filter="starred">Favoritos</button>
-        </div>
-        <div id="catalogue-nav" class="hidden">
-          <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
-          <span id="catalogue-nav-label"></span>
-        </div>
-        <div id="catalogue-grid"></div>
-        <p id="catalogue-empty" class="catalogue-empty hidden">Ainda não há votos aqui.</p>
+        <button id="btn-historico-open" class="btn-secondary">Ver →</button>
       </div>
     </div>
 
@@ -307,11 +347,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div id="cover-modal" class="cover-modal hidden">
-    <button id="cover-modal-close" class="cover-modal-close" aria-label="Fechar">&times;</button>
-    <img id="cover-modal-img" src="" alt="" />
   </div>
 
   <script type="module" src="/app.js?v=13"></script>

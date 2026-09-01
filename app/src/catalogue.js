@@ -1,6 +1,9 @@
 import { ACTIONS, API_URL } from './state.js';
-import { formatMonth, formatShortDate, groupByMonth } from './dates.js';
-import { openCoverModal } from './modals.js';
+import { formatDate, formatMonth, formatShortDate, groupByMonth } from './dates.js';
+import {
+  historicoPanel, btnHistoricoOpen, btnHistoricoBack,
+  coverDetailPanel, btnCdpBack, cdpImg, cdpStar, cdpName, cdpDate, cdpDecision,
+} from './dom.js';
 
 const catalogueGrid  = document.getElementById('catalogue-grid');
 const catalogueEmpty = document.getElementById('catalogue-empty');
@@ -160,25 +163,15 @@ function expandGrid(items) {
 
     const img = document.createElement('img');
     img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
-    makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverModal(entry.full, entry.name));
+    makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverDetail(entry));
 
-    const badge = document.createElement('div');
-    badge.className = `catalogue-item-badge ${entry.action}`;
-    badge.textContent = ACTIONS[actionToDir(entry.action)]?.icon ?? '?';
-    badge.setAttribute('role', 'img');
-    badge.setAttribute('aria-label', ACTIONS[actionToDir(entry.action)]?.label ?? entry.action);
-
-    const star = document.createElement('button');
-    star.className = `catalogue-item-star${entry.starred ? ' active' : ''}`;
-    star.textContent = entry.starred ? '★' : '☆';
-    star.setAttribute('aria-label', 'Favorito');
-    star.addEventListener('click', e => {
-      e.stopPropagation();
-      toggleFavorite(entry, star);
-    });
-
+    // Was a colored circle badge in its own corner — now a color overlay
+    // on the footer bar itself instead, so the voted club still reads at
+    // a glance without a second element competing with the favorite star
+    // (moved to the cover-detail drawer, see openCoverDetail below).
     const footer = document.createElement('div');
     footer.className = 'catalogue-item-footer';
+    footer.style.background = `linear-gradient(transparent, var(--${entry.action}))`;
 
     const date = document.createElement('div');
     date.className = 'catalogue-item-date';
@@ -189,7 +182,7 @@ function expandGrid(items) {
     name.textContent = entry.name;
 
     footer.append(date, name);
-    div.append(img, badge, star, footer);
+    div.append(img, footer);
     catalogueGrid.appendChild(div);
   });
 }
@@ -218,3 +211,77 @@ async function toggleFavorite(entry, star) {
 function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
+
+// Histórico's own full-height drawer, opened by Conta's "Ver" button
+// instead of sitting inline in it — same shell as user-detail-panel,
+// left-anchored. Doesn't need to touch catalogue/filter state: whatever
+// renderCatalogueView last drew is still there, this just reveals it.
+export function openHistoricoPanel() {
+  historicoPanel.classList.remove('hidden');
+}
+
+// Mirrors leaderboard.js's closeUserDetail: same drawer-out-left
+// animation/timing, since this panel also anchors left.
+export function closeHistoricoPanel() {
+  if (historicoPanel.classList.contains('hidden')) return;
+  const content = historicoPanel.querySelector('.udp-content');
+  content.style.animation = 'drawer-out-left 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
+    historicoPanel.classList.add('hidden');
+  }, 280);
+}
+
+btnHistoricoOpen.addEventListener('click', openHistoricoPanel);
+btnHistoricoBack.addEventListener('click', closeHistoricoPanel);
+
+// Own backdrop click-to-close, same pattern as cover-detail-panel below.
+historicoPanel.addEventListener('click', e => {
+  if (e.target === historicoPanel) closeHistoricoPanel();
+});
+
+// Cover detail drawer: opened from within historico-panel above — same
+// shell as user-detail-panel/historico-panel, but anchored to the right
+// instead of the left, so the two don't cover the same edge. No fetch
+// needed here: everything shown already lives on entry, unlike the
+// leaderboard drawer's user stats.
+function openCoverDetail(entry) {
+  coverDetailPanel.classList.remove('hidden');
+  cdpImg.src = entry.full;
+  cdpImg.alt = entry.name;
+  cdpName.textContent = entry.name;
+  cdpDate.textContent = formatDate(entry.date);
+  const dir = actionToDir(entry.action);
+  cdpDecision.textContent = ACTIONS[dir]?.label ?? entry.action;
+  cdpDecision.style.background = `var(--${entry.action})`;
+
+  // The favorite toggle lives here now, not on the grid tile — one
+  // static button, re-bound to whichever entry is currently open rather
+  // than recreated per tile.
+  cdpStar.classList.toggle('active', entry.starred);
+  cdpStar.textContent = entry.starred ? '★' : '☆';
+  cdpStar.onclick = () => toggleFavorite(entry, cdpStar);
+}
+
+// Mirrors leaderboard.js's closeUserDetail: same timing/easing, mirrored
+// (drawer-out-right) since this panel slides in from the right.
+function closeCoverDetail() {
+  if (coverDetailPanel.classList.contains('hidden')) return;
+  const content = coverDetailPanel.querySelector('.udp-content');
+  content.style.animation = 'drawer-out-right 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
+    coverDetailPanel.classList.add('hidden');
+  }, 280);
+}
+
+btnCdpBack.addEventListener('click', closeCoverDetail);
+
+// Own backdrop click-to-close, guarded to the panel itself so a click on
+// the back button doesn't also close it (it's a descendant, so it'd
+// otherwise bubble up here too).
+coverDetailPanel.addEventListener('click', e => {
+  if (e.target === coverDetailPanel) closeCoverDetail();
+});
+
+export { closeCoverDetail };
