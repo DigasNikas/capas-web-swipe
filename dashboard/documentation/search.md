@@ -2,8 +2,33 @@
 
 `search.html` (`capas.digasnikas.com/search.html`) is a text box over
 `covers.headlines` — type a word or two, get back the covers whose real
-scraped headline text matches. Public, no login, same audience as
-[Similarities](#rag).
+scraped headline text matches, shown as a grid of clickable cover
+thumbnails. Public, no login, same audience as [Similarities](#rag).
+
+## Viewing a result: the cover modal
+
+Clicking a result thumbnail opens it enlarged in a modal — no new tab,
+no page navigation. If that cover has RAG few-shot matches recorded
+(`ai_rag_covers`, up to `RAG_TOP_K` = 5), the modal also shows a
+"Parecidas" strip of their thumbnails underneath, resolved from
+`/api/similarities`. Fetched once on page load and cached client-side,
+not re-fetched per modal open, since it's the same public dataset
+[Similarities](#rag) already exposes. A cover with no RAG matches — not
+yet classified, or classified with no similar covers found — just shows
+no strip; nothing in the modal implies a failure.
+
+## Drilling into a "parecida"
+
+Clicking one of the strip's thumbnails opens a second modal, a
+carousel over that cover's up-to-5 RAG matches, positioned as a smaller
+panel floating on top of the first — not a replacement for it. The
+original cover stays exactly where it was, dimmed behind a light
+scrim, so drilling into a similar cover reads as looking closer, not as
+navigating away. `‹`/`›` (mouse) and the Left/Right arrow keys (only
+while this second modal is open) page through the same 5 covers;
+`Escape` closes whichever modal is currently on top, so backing out of
+the carousel takes two presses — one back to the original cover, one
+back to the results grid — rather than jumping straight past it.
 
 ## Why D1 FTS5, not Vectorize
 
@@ -67,5 +92,6 @@ empty FTS5 `MATCH ''` is invalid syntax, not just zero results).
 `searchable` is `covers` where `headlines IS NOT NULL` — see
 [Headlines](#headlines) for why that's short of `total`: the live scrape
 only ever sets it going forward, and the historical archive backfill
-didn't reach every past cover. `search.html` states this coverage
-directly rather than let a missing cover look like a failed search.
+didn't reach every past cover. `search.html` shows this as "Procura em
+mais de X capas," X rounded down to the nearest hundred — a plain
+statement of scale, not a breakdown of what's missing or why.
