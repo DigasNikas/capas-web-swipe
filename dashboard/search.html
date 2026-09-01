@@ -262,7 +262,8 @@ async function search(q) {
   }
 
   const { results, total, searchable } = await res.json();
-  coverageEl.textContent = `A procura cobre ${searchable} de ${total} capas — só as que já têm texto real da capa (ver Headlines na documentação).`;
+  const roundedSearchable = Math.floor(searchable / 100) * 100;
+  coverageEl.textContent = `Procura em mais de ${roundedSearchable} capas.`;
   statusEl.textContent = q.trim() ? `${results.length} resultado${results.length === 1 ? '' : 's'}.` : '';
   render(results);
 }
