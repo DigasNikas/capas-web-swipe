@@ -108,10 +108,11 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
   }
-  .site-footer-nav { display: flex; gap: 18px; }
+  .site-footer-nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
   .site-footer-nav a { color: var(--text); text-decoration: none; letter-spacing: 0.04em; }
   .site-footer-nav a:hover { color: var(--yellow); }
-  .site-footer-copy { font-size: 0.68rem; opacity: 0.7; margin: 0; }
+  .footer-dot { color: var(--muted); }
+  .site-footer-copy { font-size: 0.68rem; opacity: 0.7; }
 
   .hidden { display: none !important; }
 
@@ -221,9 +222,13 @@
 <footer class="site-footer">
   <nav class="site-footer-nav">
     <a href="/">Dashboard</a>
+    <span class="footer-dot">·</span>
     <a href="/documentation">Documentação</a>
+    <span class="footer-dot">·</span>
+    <a href="https://github.com/DigasNikas" target="_blank" rel="noopener">GitHub</a>
+    <span class="footer-dot">·</span>
+    <span class="site-footer-copy">© 2026 Diogo Nicolau</span>
   </nav>
-  <p class="site-footer-copy">© 2026 Diogo Nicolau</p>
 </footer>
 
 <div id="modal1" class="cmodal hidden">
