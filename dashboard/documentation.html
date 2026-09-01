@@ -56,7 +56,7 @@
 
   .layout { display: flex; min-height: calc(100vh - 49px); }
 
-  nav {
+  #nav {
     width: 260px;
     flex-shrink: 0;
     border-right: 1px solid var(--panel2);
@@ -67,7 +67,7 @@
     height: calc(100vh - 49px);
     overflow-y: auto;
   }
-  nav a {
+  #nav a {
     display: block;
     padding: 6px 22px;
     color: var(--text);
@@ -75,11 +75,11 @@
     font-size: 0.85rem;
     font-family: 'JetBrains Mono', monospace;
   }
-  nav a:hover { background: var(--panel2); }
-  nav a.active { color: var(--yellow); font-weight: 700; background: var(--panel2); }
-  nav a.section { padding-left: 38px; font-size: 0.75rem; color: var(--muted); }
-  nav a.section:hover { color: var(--text); }
-  nav .nav-group {
+  #nav a:hover { background: var(--panel2); }
+  #nav a.active { color: var(--yellow); font-weight: 700; background: var(--panel2); }
+  #nav a.section { padding-left: 38px; font-size: 0.75rem; color: var(--muted); }
+  #nav a.section:hover { color: var(--text); }
+  #nav .nav-group {
     margin-top: 10px;
     padding: 8px 22px 2px;
     font-size: 0.68rem;
@@ -145,18 +145,18 @@
   main .error { color: var(--muted); }
 
   .site-footer {
-    text-align: center;
-    padding: 24px 0 40px;
+    text-align: right;
+    padding: 24px 40px 40px;
     border-top: 1px solid var(--panel2);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 10px;
     color: var(--muted);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
   }
-  .site-footer-nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+  .site-footer-nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
   .site-footer-nav a { color: var(--text); text-decoration: none; letter-spacing: 0.04em; }
   .site-footer-nav a:hover { color: var(--yellow); }
   .footer-dot { color: var(--muted); }
@@ -164,8 +164,8 @@
 
   @media (max-width: 760px) {
     .layout { display: block; }
-    nav { width: auto; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--panel2); }
-    nav a.section { display: none; }
+    #nav { width: auto; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--panel2); }
+    #nav a.section { display: none; }
     main { padding: 20px 16px 60px; }
   }
 </style>
