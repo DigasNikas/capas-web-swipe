@@ -144,6 +144,23 @@
   main a { color: var(--yellow); }
   main .error { color: var(--muted); }
 
+  .site-footer {
+    text-align: center;
+    padding: 24px 0 40px;
+    border-top: 1px solid var(--panel2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .site-footer-nav { display: flex; gap: 18px; }
+  .site-footer-nav a { color: var(--text); text-decoration: none; letter-spacing: 0.04em; }
+  .site-footer-nav a:hover { color: var(--yellow); }
+  .site-footer-copy { font-size: 0.68rem; opacity: 0.7; margin: 0; }
+
   @media (max-width: 760px) {
     .layout { display: block; }
     nav { width: auto; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--panel2); }
@@ -161,6 +178,14 @@
   <nav id="nav"></nav>
   <main id="content"><p class="error">A carregar…</p></main>
 </div>
+
+<footer class="site-footer">
+  <nav class="site-footer-nav">
+    <a href="/">Dashboard</a>
+    <a href="/search.html">Pesquisa</a>
+  </nav>
+  <p class="site-footer-copy">© 2026 Diogo Nicolau</p>
+</footer>
 
 <script>
 // The chapters, in reading order. Each is a markdown file in documentation/ —
