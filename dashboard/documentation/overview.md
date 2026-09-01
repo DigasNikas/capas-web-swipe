@@ -111,7 +111,7 @@ Ephemeral, scoped to a single cover day.
 |---|---|---|
 | `id` | INTEGER, PK | |
 | `date` | TEXT | the cover day, `YYYY-MM-DD` |
-| `author` | TEXT | `"Given - localpart"`, e.g. `Diogo - dlimanic`: first name plus the commenter's email local-part, the same identifier the app's leaderboard shows |
+| `author` | TEXT | `"Given - localpart"`, e.g. `Ana - ana92`: first name plus the commenter's email local-part, the same identifier the app's leaderboard shows |
 | `author_sub` | TEXT | opaque Google subject id, used only for the daily rate limit (`MAX_PER_DAY`, `COOLDOWN_S` in `comments.js`) and never shown |
 | `body` | TEXT | ≤ 240 chars, plain text |
 | `created_at` | TEXT | defaults to now |
