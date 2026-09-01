@@ -2,7 +2,7 @@ import { state, API_URL, ACTIVE_DATE_KEY, DECISION_TO_ACTION } from '/src/state.
 import {
   loadingState, comecarPill, activeCardArea, swipeHints,
   leaderboardModal, instrucoesModal, accountModal, modalOverlay,
-  definicoesModal, userDetailPanel, coverDetailPanel,
+  definicoesModal, userDetailPanel, historicoPanel, coverDetailPanel,
 } from '/src/dom.js';
 import { groupByDate } from '/src/dates.js';
 import { syncCalToActiveDate, setDateClickHandler, prevMonth, nextMonth } from '/src/calendar.js';
@@ -15,7 +15,7 @@ import { updateProgress } from '/src/ui.js';
 import { openInstrucoes, closeInstrucoes, addSwipeDownToClose } from '/src/modals.js';
 import { openLeaderboard, closeLeaderboard, closeUserDetail } from '/src/leaderboard.js';
 import { openAccount, closeAccount } from '/src/account.js';
-import { closeCoverDetail } from '/src/catalogue.js';
+import { closeCoverDetail, closeHistoricoPanel } from '/src/catalogue.js';
 import { openDefinicoes, closeDefinicoes, handleSettingChange, applyTheme } from '/src/settings.js';
 
 applyTheme();
@@ -83,12 +83,15 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   updateProgress();
 });
 
-// Whichever modal is on top, if any — coverDetailPanel and userDetailPanel
-// (70) are checked before the bottom sheets they each open on top of
-// (accountModal, leaderboardModal), so Histórico/Classificação stay open
-// underneath instead of closing along with the drawer above them.
+// Whichever modal is on top, if any — coverDetailPanel, historicoPanel and
+// userDetailPanel (70) are checked before whatever each one opens on top
+// of (historicoPanel, accountModal, leaderboardModal respectively), so
+// the layer underneath stays open instead of closing along with the
+// drawer above it. coverDetailPanel opens from within historicoPanel, so
+// it has to be checked first of the three.
 function openModal() {
   if (!coverDetailPanel.classList.contains('hidden')) return { close: closeCoverDetail };
+  if (!historicoPanel.classList.contains('hidden'))   return { close: closeHistoricoPanel };
   if (!userDetailPanel.classList.contains('hidden'))  return { close: closeUserDetail };
   if (!accountModal.classList.contains('hidden'))     return { close: closeAccount };
   if (!definicoesModal.classList.contains('hidden'))  return { close: closeDefinicoes };

@@ -1,6 +1,9 @@
 import { ACTIONS, API_URL } from './state.js';
 import { formatDate, formatMonth, formatShortDate, groupByMonth } from './dates.js';
-import { coverDetailPanel, btnCdpBack, cdpImg, cdpName, cdpDate, cdpDecision } from './dom.js';
+import {
+  historicoPanel, btnHistoricoOpen, btnHistoricoBack,
+  coverDetailPanel, btnCdpBack, cdpImg, cdpName, cdpDate, cdpDecision,
+} from './dom.js';
 
 const catalogueGrid  = document.getElementById('catalogue-grid');
 const catalogueEmpty = document.getElementById('catalogue-empty');
@@ -219,15 +222,39 @@ function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
 
-// Same drawer mechanics as the leaderboard's user-detail-panel
-// (leaderboard.js openUserDetail/closeUserDetail) — opened over Histórico
-// instead of Classificação, same "drill into one item without leaving
-// the list behind it" shape, but anchored to the right instead of the
-// left: Histórico's own grid now sits in a left-anchored drawer
-// (.historico-drawer) inside Conta, so the cover it opens comes in from
-// the opposite edge rather than covering the same one. No fetch needed
-// here: everything shown already lives on entry, unlike the leaderboard
-// drawer's user stats.
+// Histórico's own full-height drawer, opened by Conta's "Ver" button
+// instead of sitting inline in it — same shell as user-detail-panel,
+// left-anchored. Doesn't need to touch catalogue/filter state: whatever
+// renderCatalogueView last drew is still there, this just reveals it.
+export function openHistoricoPanel() {
+  historicoPanel.classList.remove('hidden');
+}
+
+// Mirrors leaderboard.js's closeUserDetail: same drawer-out-left
+// animation/timing, since this panel also anchors left.
+export function closeHistoricoPanel() {
+  if (historicoPanel.classList.contains('hidden')) return;
+  const content = historicoPanel.querySelector('.udp-content');
+  content.style.animation = 'drawer-out-left 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
+    historicoPanel.classList.add('hidden');
+  }, 280);
+}
+
+btnHistoricoOpen.addEventListener('click', openHistoricoPanel);
+btnHistoricoBack.addEventListener('click', closeHistoricoPanel);
+
+// Own backdrop click-to-close, same pattern as cover-detail-panel below.
+historicoPanel.addEventListener('click', e => {
+  if (e.target === historicoPanel) closeHistoricoPanel();
+});
+
+// Cover detail drawer: opened from within historico-panel above — same
+// shell as user-detail-panel/historico-panel, but anchored to the right
+// instead of the left, so the two don't cover the same edge. No fetch
+// needed here: everything shown already lives on entry, unlike the
+// leaderboard drawer's user stats.
 function openCoverDetail(entry) {
   coverDetailPanel.classList.remove('hidden');
   cdpImg.src = entry.full;

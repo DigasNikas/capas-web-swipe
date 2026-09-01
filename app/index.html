@@ -147,11 +147,37 @@
       </div>
     </div>
 
-    <!-- Cover detail drawer: opened from a cover in Histórico's own
-         left-anchored drawer (.historico-drawer, inside account-modal
-         below) — slides in from the right instead, so the two don't
-         cover the same edge. Own full-viewport target (stacks over
-         everything, including account-modal) so Histórico stays open
+    <!-- Histórico panel: same full-height overlay shell as user-detail-panel
+         above, opened by the "Ver" button inside Conta (account-modal
+         below) instead of always sitting inline in it. Own full-viewport
+         target so Conta stays open underneath rather than being replaced. -->
+    <div id="historico-panel" class="hidden">
+      <div class="udp-content">
+        <div id="historico-nav">
+          <button id="btn-historico-back" class="btn-back">‹ Voltar</button>
+          <span id="historico-title">Histórico</span>
+        </div>
+        <div class="modal-filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="keep">Sporting</button>
+          <button class="filter-btn" data-filter="favorite">Restantes</button>
+          <button class="filter-btn" data-filter="reject">Benfica</button>
+          <button class="filter-btn" data-filter="skip">Porto</button>
+          <button class="filter-btn" data-filter="starred">Favoritos</button>
+        </div>
+        <div id="catalogue-nav" class="hidden">
+          <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
+          <span id="catalogue-nav-label"></span>
+        </div>
+        <div id="catalogue-grid"></div>
+        <p id="catalogue-empty" class="catalogue-empty hidden">Ainda não há votos aqui.</p>
+      </div>
+    </div>
+
+    <!-- Cover detail drawer: opened from a cover inside historico-panel
+         above — slides in from the right instead, so the two don't cover
+         the same edge. Own full-viewport target (stacks over everything,
+         including historico-panel and account-modal) so both stay open
          underneath rather than being replaced. -->
     <div id="cover-detail-panel" class="hidden">
       <div class="udp-content cdp-content">
@@ -182,27 +208,7 @@
         <div class="acc-section-title">Os teus votos</div>
         <div id="acc-breakdown" class="acc-breakdown"></div>
         <div class="acc-section-title">Histórico</div>
-        <!-- Styled as its own left-anchored drawer panel within Conta
-             (narrower than the modal, rounded + shadowed on its right
-             edge) rather than flowing full-width like the sections
-             above — the cover-detail-panel it opens (index.html, near
-             the top) anchors right to match. -->
-        <div class="historico-drawer">
-          <div class="modal-filters">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="keep">Sporting</button>
-            <button class="filter-btn" data-filter="favorite">Restantes</button>
-            <button class="filter-btn" data-filter="reject">Benfica</button>
-            <button class="filter-btn" data-filter="skip">Porto</button>
-            <button class="filter-btn" data-filter="starred">Favoritos</button>
-          </div>
-          <div id="catalogue-nav" class="hidden">
-            <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
-            <span id="catalogue-nav-label"></span>
-          </div>
-          <div id="catalogue-grid"></div>
-          <p id="catalogue-empty" class="catalogue-empty hidden">Ainda não há votos aqui.</p>
-        </div>
+        <button id="btn-historico-open" class="btn-secondary">Ver →</button>
       </div>
     </div>
 
