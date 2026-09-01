@@ -157,13 +157,18 @@
           <button id="btn-historico-back" class="btn-back">‹ Voltar</button>
           <span id="historico-title">Histórico</span>
         </div>
+        <!-- Each non-"All" filter carries both an icon and a label — the
+             icon is the same one ACTIONS (state.js) uses for that same
+             decision when voting. Desktop shows the label, mobile hides
+             it and shows the icon instead (style.css), to fit six
+             buttons without wrapping. -->
         <div class="modal-filters">
           <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="keep">Sporting</button>
-          <button class="filter-btn" data-filter="favorite">Restantes</button>
-          <button class="filter-btn" data-filter="reject">Benfica</button>
-          <button class="filter-btn" data-filter="skip">Porto</button>
-          <button class="filter-btn" data-filter="starred">Favoritos</button>
+          <button class="filter-btn" data-filter="keep"><span class="filter-icon">🦁</span><span class="filter-label">Sporting</span></button>
+          <button class="filter-btn" data-filter="favorite"><span class="filter-icon">?</span><span class="filter-label">Restantes</span></button>
+          <button class="filter-btn" data-filter="reject"><span class="filter-icon">🦅</span><span class="filter-label">Benfica</span></button>
+          <button class="filter-btn" data-filter="skip"><span class="filter-icon">🐉</span><span class="filter-label">Porto</span></button>
+          <button class="filter-btn" data-filter="starred"><span class="filter-icon">★</span><span class="filter-label">Favoritos</span></button>
         </div>
         <div id="catalogue-nav" class="hidden">
           <button id="btn-catalogue-back" class="btn-back">‹ Voltar</button>
@@ -185,7 +190,10 @@
           <button id="btn-cdp-back" class="btn-back">‹ Voltar</button>
           <span id="cdp-name"></span>
         </div>
-        <img id="cdp-img" src="" alt="" />
+        <div id="cdp-img-wrap">
+          <img id="cdp-img" src="" alt="" />
+          <button id="cdp-star" class="catalogue-item-star" aria-label="Favorito">☆</button>
+        </div>
         <div id="cdp-meta">
           <span id="cdp-date"></span>
           <span id="cdp-decision"></span>

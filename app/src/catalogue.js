@@ -2,7 +2,7 @@ import { ACTIONS, API_URL } from './state.js';
 import { formatDate, formatMonth, formatShortDate, groupByMonth } from './dates.js';
 import {
   historicoPanel, btnHistoricoOpen, btnHistoricoBack,
-  coverDetailPanel, btnCdpBack, cdpImg, cdpName, cdpDate, cdpDecision,
+  coverDetailPanel, btnCdpBack, cdpImg, cdpStar, cdpName, cdpDate, cdpDecision,
 } from './dom.js';
 
 const catalogueGrid  = document.getElementById('catalogue-grid');
@@ -165,23 +165,13 @@ function expandGrid(items) {
     img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
     makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverDetail(entry));
 
-    const badge = document.createElement('div');
-    badge.className = `catalogue-item-badge ${entry.action}`;
-    badge.textContent = ACTIONS[actionToDir(entry.action)]?.icon ?? '?';
-    badge.setAttribute('role', 'img');
-    badge.setAttribute('aria-label', ACTIONS[actionToDir(entry.action)]?.label ?? entry.action);
-
-    const star = document.createElement('button');
-    star.className = `catalogue-item-star${entry.starred ? ' active' : ''}`;
-    star.textContent = entry.starred ? '★' : '☆';
-    star.setAttribute('aria-label', 'Favorito');
-    star.addEventListener('click', e => {
-      e.stopPropagation();
-      toggleFavorite(entry, star);
-    });
-
+    // Was a colored circle badge in its own corner — now a color overlay
+    // on the footer bar itself instead, so the voted club still reads at
+    // a glance without a second element competing with the favorite star
+    // (moved to the cover-detail drawer, see openCoverDetail below).
     const footer = document.createElement('div');
     footer.className = 'catalogue-item-footer';
+    footer.style.background = `linear-gradient(transparent, var(--${entry.action}))`;
 
     const date = document.createElement('div');
     date.className = 'catalogue-item-date';
@@ -192,7 +182,7 @@ function expandGrid(items) {
     name.textContent = entry.name;
 
     footer.append(date, name);
-    div.append(img, badge, star, footer);
+    div.append(img, footer);
     catalogueGrid.appendChild(div);
   });
 }
@@ -264,6 +254,13 @@ function openCoverDetail(entry) {
   const dir = actionToDir(entry.action);
   cdpDecision.textContent = ACTIONS[dir]?.label ?? entry.action;
   cdpDecision.style.background = `var(--${entry.action})`;
+
+  // The favorite toggle lives here now, not on the grid tile — one
+  // static button, re-bound to whichever entry is currently open rather
+  // than recreated per tile.
+  cdpStar.classList.toggle('active', entry.starred);
+  cdpStar.textContent = entry.starred ? '★' : '☆';
+  cdpStar.onclick = () => toggleFavorite(entry, cdpStar);
 }
 
 // Mirrors leaderboard.js's closeUserDetail: same timing/easing, mirrored

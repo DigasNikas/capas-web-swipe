@@ -26,6 +26,7 @@ export const btnHistoricoBack  = document.getElementById('btn-historico-back');
 export const coverDetailPanel  = document.getElementById('cover-detail-panel');
 export const btnCdpBack        = document.getElementById('btn-cdp-back');
 export const cdpImg            = document.getElementById('cdp-img');
+export const cdpStar           = document.getElementById('cdp-star');
 export const cdpName           = document.getElementById('cdp-name');
 export const cdpDate           = document.getElementById('cdp-date');
 export const cdpDecision       = document.getElementById('cdp-decision');
