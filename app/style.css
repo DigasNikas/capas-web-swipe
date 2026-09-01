@@ -1159,25 +1159,6 @@ header h1 {
   filter: grayscale(1);
 }
 
-/* Reused by #cdp-star (cover-detail drawer) for the same visual
-   treatment — a top-left circle over the image — now that the favorite
-   toggle lives there instead of on each grid tile. */
-.catalogue-item-star {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  background: rgba(0,0,0,.5);
-  color: rgba(255,255,255,.7);
-  font-size: 1.1rem;
-  line-height: 26px;
-  text-align: center;
-  cursor: pointer;
-}
-.catalogue-item-star.active { color: var(--accent); }
 
 .catalogue-item-footer {
   position: absolute;
@@ -1353,16 +1334,30 @@ header h1 {
   color: var(--text-muted);
   text-transform: uppercase;
 }
-#cdp-img-wrap { position: relative; }
 #cdp-img {
   width: 100%;
   border-radius: 10px;
   display: block;
 }
-/* #cdp-star reuses .catalogue-item-star's own top:4px/left:4px, which
-   positions relative to this wrapper the same way it used to position
-   relative to .catalogue-item. */
 #cdp-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#cdp-decision-group { display: flex; align-items: center; gap: 8px; }
+/* Own small circular button, not .catalogue-item-star's absolute
+   positioning (that one overlays an image; this one sits inline next
+   to the club label). */
+#cdp-star {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+#cdp-star.active { color: var(--accent); }
 #cdp-date {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
