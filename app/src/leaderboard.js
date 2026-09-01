@@ -129,9 +129,10 @@ export function closeUserDetail() {
 
 btnLbBack.addEventListener('click', closeUserDetail);
 
-// Own backdrop click-to-close, same as #cover-modal — guarded to the panel
-// itself so a click on the back button or a breakdown row doesn't also
-// close it (they're descendants, so they'd otherwise bubble up here too).
+// Own backdrop click-to-close, same as #cover-detail-panel — guarded to
+// the panel itself so a click on the back button or a breakdown row
+// doesn't also close it (they're descendants, so they'd otherwise bubble
+// up here too).
 userDetailPanel.addEventListener('click', e => {
   if (e.target === userDetailPanel) closeUserDetail();
 });

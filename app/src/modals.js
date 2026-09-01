@@ -1,4 +1,4 @@
-import { modalOverlay, instrucoesModal, coverModal, coverModalImg } from './dom.js';
+import { modalOverlay, instrucoesModal } from './dom.js';
 
 export function animateModalClose(modal, onDone) {
   const content = modal.querySelector('.modal-content');
@@ -46,18 +46,4 @@ export function closeInstrucoes() {
     instrucoesModal.classList.add('hidden');
     modalOverlay.classList.add('hidden');
   });
-}
-
-// Fullscreen cover viewer — same pattern as dashboard/dashboard.js's own
-// openCoverModal/closeCoverModal. Sits above the account modal (higher
-// z-index), so it's a standalone overlay, not tied to modalOverlay/.modal.
-export function openCoverModal(url, name) {
-  coverModalImg.src = url;
-  coverModalImg.alt = name;
-  coverModal.classList.remove('hidden');
-}
-
-export function closeCoverModal() {
-  coverModal.classList.add('hidden');
-  coverModalImg.src = '';
 }

@@ -1276,44 +1276,14 @@ header h1 {
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
-/* Fullscreen cover viewer — matches dashboard/dashboard.css's .d-cover-modal
-   exactly (same rules, app's own tokens). Sits above the bottom-sheet
-   modals (z-index 200 vs .modal's 60) since it can open from within one. */
-.cover-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  cursor: zoom-out;
-}
-.cover-modal img {
-  max-width: 100%;
-  max-height: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-}
-.cover-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-/* User detail panel (leaderboard row drill-down) — same "standalone overlay
-   above .modal" shape as .cover-modal (z-index 70 vs .modal's 60), but a
-   left-edge drawer instead of a centered fullscreen view: Classificação
-   stays visible and open behind it rather than being replaced. Own
-   full-viewport click target closes it, guarded to the panel itself so
-   clicks inside .udp-content (the back button, breakdown rows) don't. */
-#user-detail-panel {
+/* User detail panel (leaderboard row drill-down) and cover detail panel
+   (Histórico cover drill-down) — a standalone overlay above .modal
+   (z-index 70 vs .modal's 60), a left-edge drawer rather than a centered
+   fullscreen view: Classificação/Histórico stays visible and open behind
+   it rather than being replaced. Own full-viewport click target closes
+   it, guarded to the panel itself so clicks inside .udp-content (the
+   back button, breakdown rows) don't. */
+#user-detail-panel, #cover-detail-panel {
   position: fixed;
   inset: 0;
   z-index: 70;
@@ -1323,8 +1293,8 @@ header h1 {
   background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
-#user-detail-panel:not(.hidden) { pointer-events: all; }
-#user-detail-panel:not(.hidden) .udp-content {
+#user-detail-panel:not(.hidden), #cover-detail-panel:not(.hidden) { pointer-events: all; }
+#user-detail-panel:not(.hidden) .udp-content, #cover-detail-panel:not(.hidden) .udp-content {
   animation: drawer-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 @keyframes drawer-in {
@@ -1347,6 +1317,34 @@ header h1 {
   border-right: 1px solid var(--border);
   border-radius: 0 16px 16px 0;
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+}
+
+#cdp-nav { display: flex; align-items: center; gap: 8px; }
+#cdp-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+#cdp-img {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+#cdp-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#cdp-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+#cdp-decision {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #fff;
 }
 
 /* ─── Instruções modal ───────────────────────────────────────────────────── */

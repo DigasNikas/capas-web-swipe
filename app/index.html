@@ -130,9 +130,8 @@
     </div>
 
     <!-- User Detail Panel — leaderboard row drill-down. Its own standalone
-         overlay layered above Classificação (like #cover-modal is above
-         everything), not nested inside it — Classificação stays open
-         underneath rather than being replaced. -->
+         overlay layered above Classificação, not nested inside it —
+         Classificação stays open underneath rather than being replaced. -->
     <div id="user-detail-panel" class="hidden">
       <div class="udp-content">
         <div id="lb-detail-nav">
@@ -145,6 +144,24 @@
         </div>
         <div class="acc-section-title">Votos por clube</div>
         <div id="lb-detail-breakdown" class="acc-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- Cover detail drawer: same left-side slide-in as user-detail-panel
+         above, opened from a cover in Histórico. Own full-viewport target
+         (stacks over everything, including account-modal) so Histórico
+         stays open underneath rather than being replaced. -->
+    <div id="cover-detail-panel" class="hidden">
+      <div class="udp-content cdp-content">
+        <div id="cdp-nav">
+          <button id="btn-cdp-back" class="btn-back">‹ Voltar</button>
+          <span id="cdp-name"></span>
+        </div>
+        <img id="cdp-img" src="" alt="" />
+        <div id="cdp-meta">
+          <span id="cdp-date"></span>
+          <span id="cdp-decision"></span>
+        </div>
       </div>
     </div>
 
@@ -307,11 +324,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div id="cover-modal" class="cover-modal hidden">
-    <button id="cover-modal-close" class="cover-modal-close" aria-label="Fechar">&times;</button>
-    <img id="cover-modal-img" src="" alt="" />
   </div>
 
   <script type="module" src="/app.js?v=13"></script>

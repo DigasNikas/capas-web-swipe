@@ -1,6 +1,6 @@
 import { ACTIONS, API_URL } from './state.js';
-import { formatMonth, formatShortDate, groupByMonth } from './dates.js';
-import { openCoverModal } from './modals.js';
+import { formatDate, formatMonth, formatShortDate, groupByMonth } from './dates.js';
+import { coverDetailPanel, btnCdpBack, cdpImg, cdpName, cdpDate, cdpDecision } from './dom.js';
 
 const catalogueGrid  = document.getElementById('catalogue-grid');
 const catalogueEmpty = document.getElementById('catalogue-empty');
@@ -160,7 +160,7 @@ function expandGrid(items) {
 
     const img = document.createElement('img');
     img.src = entry.src; img.alt = entry.name; img.loading = 'lazy';
-    makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverModal(entry.full, entry.name));
+    makeClickable(img, `Ver capa: ${entry.name}`, () => openCoverDetail(entry));
 
     const badge = document.createElement('div');
     badge.className = `catalogue-item-badge ${entry.action}`;
@@ -218,3 +218,41 @@ async function toggleFavorite(entry, star) {
 function actionToDir(action) {
   return Object.keys(ACTIONS).find(d => ACTIONS[d].name === action);
 }
+
+// Same left-side drawer as the leaderboard's user-detail-panel
+// (leaderboard.js openUserDetail/closeUserDetail) — opened over Histórico
+// instead of Classificação, but the same "drill into one item without
+// leaving the list behind it" shape. No fetch needed here: everything
+// shown already lives on entry, unlike the leaderboard drawer's user stats.
+function openCoverDetail(entry) {
+  coverDetailPanel.classList.remove('hidden');
+  cdpImg.src = entry.full;
+  cdpImg.alt = entry.name;
+  cdpName.textContent = entry.name;
+  cdpDate.textContent = formatDate(entry.date);
+  const dir = actionToDir(entry.action);
+  cdpDecision.textContent = ACTIONS[dir]?.label ?? entry.action;
+  cdpDecision.style.background = `var(--${entry.action})`;
+}
+
+// Mirrors leaderboard.js's closeUserDetail: same drawer-out animation/timing.
+function closeCoverDetail() {
+  if (coverDetailPanel.classList.contains('hidden')) return;
+  const content = coverDetailPanel.querySelector('.udp-content');
+  content.style.animation = 'drawer-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards';
+  setTimeout(() => {
+    content.style.animation = '';
+    coverDetailPanel.classList.add('hidden');
+  }, 280);
+}
+
+btnCdpBack.addEventListener('click', closeCoverDetail);
+
+// Own backdrop click-to-close, guarded to the panel itself so a click on
+// the back button doesn't also close it (it's a descendant, so it'd
+// otherwise bubble up here too).
+coverDetailPanel.addEventListener('click', e => {
+  if (e.target === coverDetailPanel) closeCoverDetail();
+});
+
+export { closeCoverDetail };
