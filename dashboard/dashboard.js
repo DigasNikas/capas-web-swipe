@@ -162,8 +162,9 @@ function renderEpoca(rows, epoca, matchesByDate) {
   // day in both), so the barcode's onSelect closes over this binding rather
   // than the two functions taking each other as arguments directly.
   let selectCalendarDay;
-  const highlightBarcodeDay = renderBarcode(days, date => selectCalendarDay?.(date));
-  selectCalendarDay = renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay);
+  const { highlightDay: highlightBarcodeDay, filterPaper: filterBarcodeRows } =
+    renderBarcode(days, date => selectCalendarDay?.(date));
+  selectCalendarDay = renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterBarcodeRows);
 }
 
 function renderPapers(rows) {
@@ -327,7 +328,7 @@ function renderSuspeito(stats, epoca) {
   };
 }
 
-function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
+function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterBarcodeRows) {
   let paperFilter = null;
   let selectedCell = null;
   const calEl = document.getElementById('calendar');
@@ -409,6 +410,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay) {
     });
     legendEl.innerHTML = legendMarkup();
     panelEl.innerHTML = '<div class="d-day-hint">toca num dia →</div>';
+    filterBarcodeRows(paperFilter);
 
     const byMonth = new Map();
     days.forEach(d => {
@@ -517,6 +519,7 @@ function renderBarcode(days, onSelect) {
   Object.keys(PAPERS_BY_ID).forEach(paper => {
     const row = document.createElement('div');
     row.className = 'd-barcode-row';
+    row.dataset.paper = paper;
     row.innerHTML = `<span class="bc-label">${PAPERS_BY_ID[paper]}</span>`;
 
     const strip = document.createElement('div');
@@ -553,10 +556,21 @@ function renderBarcode(days, onSelect) {
     el.dataset.tooltipWired = '1';
   }
 
-  // Lets the calendar mirror its selected day here, across all three rows.
-  return function highlightBarcodeDay(date) {
-    el.querySelectorAll('.bc-day.selected').forEach(s => s.classList.remove('selected'));
-    el.querySelectorAll(`.bc-day[data-date="${date}"]`).forEach(s => s.classList.add('selected'));
+  return {
+    // Lets the calendar mirror its selected day here, across all three rows.
+    highlightDay(date) {
+      el.querySelectorAll('.bc-day.selected').forEach(s => s.classList.remove('selected'));
+      el.querySelectorAll(`.bc-day[data-date="${date}"]`).forEach(s => s.classList.add('selected'));
+    },
+    // Mirrors the calendar's own paper filter: null shows all three rows,
+    // a paper id hides the other two instead of just dimming them, so the
+    // barcode reads as "this paper's days" the same way the calendar's
+    // "LENTE: X" mode does.
+    filterPaper(paper) {
+      el.querySelectorAll('.d-barcode-row').forEach(row => {
+        row.classList.toggle('hidden', paper !== null && row.dataset.paper !== paper);
+      });
+    },
   };
 }
 
