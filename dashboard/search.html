@@ -114,7 +114,10 @@
     padding: 32px;
     cursor: zoom-out;
   }
-  #modal2 { z-index: 210; background: rgba(0, 0, 0, 0.96); }
+  /* modal2 doesn't cover the screen like modal1 does — the original cover
+     stays exactly where it is, dimmed but visible, and this floats a
+     smaller panel on top of it rather than replacing it. */
+  #modal2 { z-index: 210; background: rgba(0, 0, 0, 0.4); }
   .cmodal img {
     max-width: 100%;
     max-height: 100%;
@@ -122,6 +125,13 @@
     cursor: default;
   }
   #modal1 img { max-height: 60vh; }
+  .cmodal-panel {
+    position: relative;
+    max-width: 55vw;
+    max-height: 55vh;
+    cursor: default;
+  }
+  .cmodal-panel img { max-width: 100%; max-height: 100%; display: block; }
   .cmodal-close {
     position: absolute;
     top: 16px;
@@ -195,10 +205,12 @@
 </div>
 
 <div id="modal2" class="cmodal hidden">
-  <button class="cmodal-close" id="modal2-close" aria-label="Fechar">&times;</button>
-  <button class="cmodal-nav cmodal-prev" id="modal2-prev" type="button" aria-label="Capa anterior">‹</button>
-  <img id="modal2-img" src="" alt="" />
-  <button class="cmodal-nav cmodal-next" id="modal2-next" type="button" aria-label="Capa seguinte">›</button>
+  <div class="cmodal-panel">
+    <button class="cmodal-close" id="modal2-close" aria-label="Fechar">&times;</button>
+    <button class="cmodal-nav cmodal-prev" id="modal2-prev" type="button" aria-label="Capa anterior">‹</button>
+    <img id="modal2-img" src="" alt="" />
+    <button class="cmodal-nav cmodal-next" id="modal2-next" type="button" aria-label="Capa seguinte">›</button>
+  </div>
 </div>
 
 <script>
@@ -369,7 +381,7 @@ function closeModal2() {
 
 document.getElementById('modal2-close').addEventListener('click', closeModal2);
 modal2.addEventListener('click', closeModal2);
-modal2Img.addEventListener('click', e => e.stopPropagation());
+document.querySelector('#modal2 .cmodal-panel').addEventListener('click', e => e.stopPropagation());
 modal2Prev.addEventListener('click', e => { e.stopPropagation(); stepModal2(-1); });
 modal2Next.addEventListener('click', e => { e.stopPropagation(); stepModal2(1); });
 </script>
