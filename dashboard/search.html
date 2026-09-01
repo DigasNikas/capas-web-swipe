@@ -94,6 +94,26 @@
   }
   .empty { color: var(--muted); margin-top: 20px; }
 
+  .site-footer {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: right;
+    padding: 24px 22px 40px;
+    border-top: 1px solid var(--panel2);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .site-footer-nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+  .site-footer-nav a { color: var(--text); text-decoration: none; letter-spacing: 0.04em; }
+  .site-footer-nav a:hover { color: var(--yellow); }
+  .footer-dot { color: var(--muted); }
+  .site-footer-copy { font-size: 0.68rem; opacity: 0.7; }
+
   .hidden { display: none !important; }
 
   /* Cover modal, same visual language as the main dashboard's
@@ -198,6 +218,18 @@
   <div id="status"></div>
   <div id="results"></div>
 </main>
+
+<footer class="site-footer">
+  <nav class="site-footer-nav">
+    <a href="/">Dashboard</a>
+    <span class="footer-dot">·</span>
+    <a href="/documentation">Documentação</a>
+    <span class="footer-dot">·</span>
+    <a href="https://github.com/DigasNikas" target="_blank" rel="noopener">GitHub</a>
+    <span class="footer-dot">·</span>
+    <span class="site-footer-copy">© 2026 Diogo Nicolau</span>
+  </nav>
+</footer>
 
 <div id="modal1" class="cmodal hidden">
   <button class="cmodal-close" id="modal1-close" aria-label="Fechar">&times;</button>
