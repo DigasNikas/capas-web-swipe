@@ -384,6 +384,14 @@ modal2.addEventListener('click', closeModal2);
 document.querySelector('#modal2 .cmodal-panel').addEventListener('click', e => e.stopPropagation());
 modal2Prev.addEventListener('click', e => { e.stopPropagation(); stepModal2(-1); });
 modal2Next.addEventListener('click', e => { e.stopPropagation(); stepModal2(1); });
+
+// Left/right paging through the 5 "parecidas" from the keyboard, not just
+// the ‹ › buttons — only while the carousel is actually open.
+document.addEventListener('keydown', e => {
+  if (modal2.classList.contains('hidden')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); stepModal2(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); stepModal2(1); }
+});
 </script>
 </body>
 </html>
