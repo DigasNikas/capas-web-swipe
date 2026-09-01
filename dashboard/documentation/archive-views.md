@@ -14,7 +14,7 @@ Picking a day in either the calendar grid or the barcode selects it in both. The
 
 The archive holds two eras of scraping: older files keep an advertising strip above the masthead, newer ones crop it off. So the covers are aligned before averaging. Each page's per-row mean brightness is a 1D fingerprint of its horizontal bands, and a cross-correlation against the paper's newest cover gives the vertical offset. Without it every masthead prints twice. A third era, the sapo.pt-fallback covers (see [Scraping](#scraping)), has a slightly different crop and aligns the same way.
 
-Runs locally (it pulls ~1250 JPEGs, ~90s on 12 threads), never in the Worker. Output is committed to `dashboard/avg/`: 15 JPEGs plus `counts.json`. The page fetches those as static files, and the section stays hidden if they are absent.
+Runs locally (it pulls ~1250 JPEGs, ~90s on 12 threads), never in the Worker. Output is committed to `dashboard/avg/`: 15 JPEGs plus `counts.json`. The page fetches those as static files, and the section stays hidden if they're absent.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install numpy pillow

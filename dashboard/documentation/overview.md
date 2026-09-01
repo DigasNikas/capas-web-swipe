@@ -22,7 +22,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics, comments |
 | Image storage | Cloudflare R2 | Full-res covers + generated thumbnails |
 | Image processing | Cloudflare Images (Workers binding) | Generates a 220px WebP thumbnail per cover at scrape time (free tier: 5,000 transformations/month) |
-| Cover classification | Workers AI (`AI` binding) | Reads each cover and guesses the club it is about. Zero-shot, no training. ~$0.0006/cover |
+| Cover classification | Workers AI (`AI` binding) | Reads each cover and guesses the club it's about. Zero-shot, no training. ~$0.0006/cover |
 | Auth | Cloudflare Access | Gates the entire `app.capas.digasnikas.com`: pages plus `/api/covers`, `/api/swipes`, `/api/leaderboard`. `capas.digasnikas.com` (dashboard, `/api/stats`, `/api/matches`) is fully public. |
 
 Both Pages projects git-connect to this repo/branch and deploy on every push. One commit produces two independent deploys, one per project, each with its own `destination_dir` (`dashboard` vs `app`). See [Deployment](#deployment).
