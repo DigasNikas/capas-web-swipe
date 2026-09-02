@@ -1,0 +1,38 @@
+# Cloudflare Pages reads this file to set response headers — no build
+# step, no config file, just a plain text list next to the pages it
+# governs. See https://developers.cloudflare.com/pages/configuration/headers/
+#
+# No content-hash in any filename here (no build step means nothing to
+# hash it), so a long-lived Cache-Control on a stable URL like
+# /dashboard.js would be actively dangerous — a bug fix could sit
+# uncached-out of a visitor's browser for up to a year. Five minutes
+# bounds that window to roughly how long a Pages deploy takes to
+# propagate. This is not a hypothetical: mid-session, an edited
+# dashboard.css kept rendering old CSS in an already-open browser tab
+# purely because nothing here told it to revalidate — the fix landed,
+# the ?v= query string didn't change, and the browser had no reason to
+# ask again. `?v=NN` bumps still matter for *forcing* a specific new
+# fetch across a deploy; this file is what stops the *previous* fetch's
+# cache from being any longer-lived than it needs to be.
+/*.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*.css
+  Cache-Control: public, max-age=300, must-revalidate
+
+# scripts/avg_cover.py regenerates these in place — same stable-URL,
+# changing-bytes situation as the JS/CSS above.
+/avg/*.jpg
+  Cache-Control: public, max-age=300, must-revalidate
+
+/avg/counts.json
+  Cache-Control: public, max-age=300, must-revalidate
+
+# HTML, and the documentation source markdown documentation.html fetches
+# at runtime, must never be served stale — explicit here rather than left
+# to whatever Cloudflare Pages' unconfigured default is.
+/*.html
+  Cache-Control: no-cache
+
+/documentation/*.md
+  Cache-Control: no-cache
