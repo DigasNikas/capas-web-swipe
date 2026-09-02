@@ -40,6 +40,20 @@ Deployed automatically by the two git-connected Cloudflare Pages projects (`capa
 
 > The frontend used to be served by GitHub Pages. DNS has moved off it, but the repo's Pages source setting (Settings → Pages) hasn't been switched to "None" yet. Cosmetic cleanup, low priority.
 
+## End-to-end tests
+
+`e2e/*.e2e.cjs` drives a real Chromium browser against a locally running stack: `wrangler dev` on port 8787 for the worker, plus one `http-server` each for `dashboard/` (8788) and `app/` (8789), each started with `--proxy http://localhost:8787` so an unmatched request (any `/api/*` call) falls through to the worker — the same effective routing `capas.digasnikas.com` gets from the Cloudflare zone's route match, reproduced locally instead of invented as a second thing to maintain.
+
+```bash
+npm run test:e2e
+```
+
+Bootstraps the local D1 by executing `api/schema.sql` directly, not `wrangler d1 migrations apply`: schema.sql is the authoritative full-state schema (every migration's columns are already in it, see above), and a fresh local database has no migration for the base schema at all — production got it by hand before `migrations/` existed, so `migrations apply` against an empty local D1 fails trying to ALTER-add columns that were never there to begin with.
+
+Playwright isn't a `package.json` dependency — same reasoning as `_headers` below applies to keeping the deploy small: it's only needed to run this suite. `e2e/helpers.cjs` resolves it from `PLAYWRIGHT_PATH`, `node_modules`, or a couple of common local paths; install it once with `npm i --no-save playwright && npx playwright install chromium`.
+
+`app.capas.digasnikas.com` sits behind Cloudflare Access in production, which has no local equivalent under `wrangler dev` — every app-side handler just trusts `Cf-Access-Authenticated-User-Email` on the request (see `api/handlers/covers.js`, `swipes.js`). Locally, suites that need an app session set that header themselves via Playwright's `context.setExtraHTTPHeaders`, reproducing the same trust boundary Access provides in production without faking Access itself.
+
 ## Cache-Control (`_headers`)
 
 Both Pages projects carry a `dashboard/_headers` / `app/_headers` file — Cloudflare Pages reads it directly, no build step needed. Same policy in both: `.js`/`.css` get `public, max-age=300, must-revalidate` (5 minutes), `.html` gets `no-cache`.
