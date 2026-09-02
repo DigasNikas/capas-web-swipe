@@ -1,0 +1,13 @@
+# Cloudflare Pages reads this file to set response headers — see
+# https://developers.cloudflare.com/pages/configuration/headers/ and
+# dashboard/_headers for the full reasoning (same project shape, same
+# no-build-step/no-content-hash situation, so the same policy applies
+# here).
+/*.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*.css
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*.html
+  Cache-Control: no-cache

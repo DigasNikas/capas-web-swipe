@@ -39,3 +39,9 @@ wrangler r2 bucket cors put capas-storage --file cors.json
 Deployed automatically by the two git-connected Cloudflare Pages projects (`capas-dashboard` → `dashboard/`, `capas-app` → `app/`) on every push to this branch. No build step, no GitHub Actions workflow involved. See [Frontend](#frontend) for what each project serves.
 
 > The frontend used to be served by GitHub Pages. DNS has moved off it, but the repo's Pages source setting (Settings → Pages) hasn't been switched to "None" yet. Cosmetic cleanup, low priority.
+
+## Cache-Control (`_headers`)
+
+Both Pages projects carry a `dashboard/_headers` / `app/_headers` file — Cloudflare Pages reads it directly, no build step needed. Same policy in both: `.js`/`.css` get `public, max-age=300, must-revalidate` (5 minutes), `.html` gets `no-cache`.
+
+Five minutes rather than a long-lived cache because none of these filenames carry a content hash (no build step means nothing to hash them) — a stable URL like `/dashboard.js` with a year-long cache would mean a bug fix sitting invisible in an already-open tab for just as long. Five minutes bounds that to roughly a Pages deploy's own propagation time, still cheap enough to save a re-fetch across one visitor's session. `?v=NN` query-string bumps in the HTML (`dashboard.js?v=26`) still matter for forcing a *new* URL after a deploy; `_headers` is what stops the *previous* URL's cache from outliving its usefulness once nothing points at it anymore. Without this file the behavior falls back to whatever Cloudflare Pages' unconfigured default is — which is exactly what produced a real stale-cache confusion mid-session: an edited `dashboard.css` kept rendering in an already-open browser tab with no `_headers` rule telling it to revalidate.
