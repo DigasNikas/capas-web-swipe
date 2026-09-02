@@ -3,3 +3,5 @@
 !.github
 images/
 __pycache__/
+node_modules/
+e2e/.e2e-*.log

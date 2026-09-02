@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "scripts": {
+    "test:e2e": "node e2e/run.cjs"
+  },
   "devDependencies": {
     "wrangler": "^3"
   }
