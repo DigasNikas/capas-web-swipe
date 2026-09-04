@@ -14,6 +14,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | File | What |
 |---|---|
 | `http.js` | CORS headers, `json()`, and the shared `requireAdmin()` / `parseLimit()` used by every admin route |
+| `vectorize.js` | The two Vectorize indexes and the D1 column/fields each needs, behind the `index=` parameter both vectorize routes take |
 | `scraper.js` | Scraping logic (fetch → HTMLRewriter → R2 + D1). Doesn't classify — see `ai.js` and `handlers/reclassify-rag.js` |
 | `scraper.test.mjs` | Self-check: the capasjornais.pt cover-image URL and the `headlines` extraction both parse right. Run `node api/lib/scraper.test.mjs` |
 | `ai.js` | Cover classification: Llama4 zero-shot, optionally handed a RAG few-shot block computed elsewhere |

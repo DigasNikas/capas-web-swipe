@@ -61,34 +61,50 @@ assert.equal(buildFewShotBlock(undefined), "");
 // Matches with no usable label are dropped, not counted as signal.
 assert.equal(buildFewShotBlock([{ metadata: {} }, { metadata: { club: null } }]), "");
 
-// Real matches: every club listed, in order, and the layout-bias caveat present.
+// Real matches: a tally rather than a list, the channel breakdown, and the
+// caveat. A tally is what the model can actually act on — "3 benfica" reads
+// as a majority, "benfica, benfica, sporting, benfica" reads as noise.
 {
   const block = buildFewShotBlock([
-    { metadata: { club: "sporting" } },
-    { metadata: { club: "sporting" } },
-    { metadata: { club: "benfica" } },
+    { metadata: { club: "sporting" }, via: "layout" },
+    { metadata: { club: "sporting" }, via: "headline" },
+    { metadata: { club: "benfica" }, via: "layout" },
   ]);
-  assert.ok(block.includes("sporting, sporting, benfica"), "lists every club in order");
-  assert.ok(block.includes("weak prior"), "carries the layout-bias caveat");
+  assert.ok(block.includes("2 sporting, 1 benfica"), "tallied, most common first");
+  assert.ok(block.includes("1 matched by headline wording, 2 by page layout"));
+  assert.ok(block.includes("weak prior"), "carries the caveat");
 }
 
-// Self-vote leakage: a cover already in the index matches itself at
-// ~0.99999. That near-identical hit must never leak its own crowd vote back
-// into its own few-shot context (scripts/rag_classify.py re-embeds and
-// reclassifies covers that are already indexed, both in live and --eval mode).
-assert.equal(
-  buildFewShotBlock([{ metadata: { club: "benfica" }, score: 0.99999 }]),
-  "",
-  "a near-identical self-match alone produces no few-shot block",
-);
+// Ties are broken by CLUBS order, not by whichever the retrieval happened to
+// return first: the same neighbours must always produce the same prompt, or
+// two --eval runs over one sample stop being comparable.
+{
+  const a = buildFewShotBlock([{ metadata: { club: "porto" } }, { metadata: { club: "benfica" } }]);
+  const b = buildFewShotBlock([{ metadata: { club: "benfica" } }, { metadata: { club: "porto" } }]);
+  assert.equal(a, b);
+  assert.ok(a.includes("1 benfica, 1 porto"));
+}
+
+// One channel only — the archive's state until the headline index fills, and
+// the permanent state for a cover with no scraped headlines.
 {
   const block = buildFewShotBlock([
-    { metadata: { club: "benfica" }, score: 0.99999 },
-    { metadata: { club: "sporting" }, score: 0.87 },
-    { metadata: { club: "porto" }, score: 0.81 },
+    { metadata: { club: "porto" }, via: "layout" },
+    { metadata: { club: "porto" }, via: "layout" },
   ]);
-  assert.ok(!block.includes("benfica"), "self-match's club is excluded, not just deprioritized");
-  assert.ok(block.includes("sporting, porto"), "genuinely different matches still count");
+  assert.ok(block.includes("both matched by page layout"), "no empty 0-by-headline clause");
+  assert.ok(!block.includes("headline wording"));
+}
+{
+  const block = buildFewShotBlock([{ metadata: { club: "porto" }, via: "headline" }]);
+  assert.ok(block.includes("matched by headline wording"));
+}
+
+// An unlabelled via is treated as layout: that is what every vector in the
+// image index predates the second channel as.
+{
+  const block = buildFewShotBlock([{ metadata: { club: "benfica" } }]);
+  assert.ok(block.includes("page layout"));
 }
 
 // ragCoverIdsFromMatches mirrors buildFewShotBlock's filter exactly — same

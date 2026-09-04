@@ -1,0 +1,12 @@
+-- Progress marker for the second Vectorize index, capas-headline-embeddings
+-- (384 dims, cosine), which holds one text vector per crowd-labelled cover's
+-- lead headline. Separate from vectorized_at because the two indexes fill up
+-- independently: a cover can be embedded as an image the moment it gets its
+-- first vote while still having headlines IS NULL (every past-date scrape
+-- does, and the archive backfill hasn't reached every gap), and it becomes a
+-- headline candidate only once both the text and the vote exist.
+--
+-- No backfill clause here, unlike 0002. Nothing has ever written to the
+-- headline index, so every eligible cover is genuinely a fresh candidate and
+-- NULL is the honest starting state.
+ALTER TABLE covers ADD COLUMN headline_vectorized_at TEXT;

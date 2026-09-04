@@ -11,7 +11,9 @@ import { handleRagCandidates } from "./rag-candidates.js";
 function fakeEnv(rows) {
   const DB = {
     lastArgs: null,
+    sql: "",
     prepare(sql) {
+      DB.sql = sql;
       const stmt = {
         bind: (...args) => ((DB.lastArgs = args), stmt),
         async all() {
@@ -33,12 +35,21 @@ const req = (auth, qs = "") =>
 assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
 
 {
-  const rows = [{ id: 1, newspaper: "record", date: "2025-01-01", r2_key: "k", url: "u" }];
+  const rows = [{ id: 1, newspaper: "record", date: "2025-01-01", r2_key: "k", url: "u", headlines: "Águias voam" }];
   const env = fakeEnv(rows);
   const res = await handleRagCandidates(req("s3cret"), env);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), rows);
   assert.equal(env.DB.lastArgs[0], 10, "default batch stays small");
+}
+
+// The script embeds the lead headline against the text index and drops
+// same-day siblings from the result, so it needs both columns back.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret"), env);
+  assert.ok(env.DB.sql.includes("headlines"), "returns the text to embed");
+  assert.ok(env.DB.sql.includes("date"), "returns the date the query filters on");
 }
 
 {
