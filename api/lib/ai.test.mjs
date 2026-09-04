@@ -6,7 +6,10 @@
  * into a confident wrong label.
  */
 import assert from "node:assert";
-import { parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches } from "./ai.js";
+import {
+  parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches,
+  buildHeadlinesBlock, classifyCover, classifyAndStore, PROMPT,
+} from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
 assert.deepEqual(
@@ -107,5 +110,105 @@ assert.deepEqual(
   ["2", "3"],
   "ids line up with the same matches buildFewShotBlock's text is built from",
 );
+
+// --- buildHeadlinesBlock ---
+//
+// covers.headlines is the real scraped front-page text (see headlines.md), so
+// the model no longer has to OCR what we already know. Nothing to say when a
+// cover has none: 383 of 1821 covers were never reached by either backfill,
+// and every past-date scrape leaves the column NULL, so "" is the common case
+// for the archive, not an error.
+assert.equal(buildHeadlinesBlock(null), "");
+assert.equal(buildHeadlinesBlock(undefined), "");
+assert.equal(buildHeadlinesBlock(""), "");
+assert.equal(buildHeadlinesBlock("   \n  "), "");
+
+{
+  const block = buildHeadlinesBlock("Palhinha ja e da casa • Zaidu com suspeita de lesao");
+  assert.ok(block.includes("Palhinha ja e da casa • Zaidu com suspeita de lesao"));
+  // The guard is the whole reason this is safe to add. headlines is every
+  // title on the page, side rails included, and the documented failure mode
+  // of this classifier is exactly counting rail mentions (others recall 39%,
+  // see the header of ai.js). Deleting this sentence turns the block into a
+  // club-name tally.
+  assert.ok(/does not decide the answer/.test(block), "the do-not-count-mentions guard survives");
+  assert.ok(block.endsWith("\n\n"), "separated from the prompt that follows it");
+}
+
+// Scraped text arrives with the source page's own line breaks in it; collapse
+// them so one cover cannot reshape the prompt's layout.
+assert.ok(buildHeadlinesBlock("Dragoes\n\npasseiam   na Beira").includes("Dragoes passeiam na Beira"));
+
+{
+  // Bounded on purpose: a full "Titulos da Capa" block runs past 1000 chars on
+  // a busy page, all of it tail-end rail teasers by then. The dominant story
+  // is at the top of the list, so the tail is what gets dropped.
+  const long = `${"cabecalho ".repeat(200)}FIMDOTEXTO`;
+  const block = buildHeadlinesBlock(long);
+  assert.ok(!block.includes("FIMDOTEXTO"), "tail is dropped, not sent");
+  assert.ok(block.includes("…"), "truncation is visible to the model, not silent");
+  assert.ok(block.length < long.length, "block is shorter than the raw text");
+}
+
+// --- classifyCover threads the block into the prompt ---
+
+const fakeAi = (capture, response = "ANSWER: benfica") => ({
+  AI: { run: async (_model, body) => { capture.push(body); return { response }; } },
+});
+const buf = new Uint8Array([1, 2, 3]).buffer;
+
+{
+  // No headlines, no few-shot: the prompt is byte-identical to the zero-shot
+  // baseline every number in ai.js's header was measured against.
+  const sent = [];
+  await classifyCover(fakeAi(sent), buf);
+  assert.equal(sent[0].messages[0].content[0].text, PROMPT);
+}
+
+{
+  const sent = [];
+  await classifyCover(fakeAi(sent), buf, "image/jpeg", "REF. ", "Aguias voam alto");
+  const text = sent[0].messages[0].content[0].text;
+  assert.ok(text.startsWith("REF. "), "few-shot context still comes first");
+  assert.ok(text.includes("Aguias voam alto"));
+  assert.ok(text.endsWith(PROMPT), "the instructions stay last, next to the image");
+}
+
+// --- classifyAndStore reads headlines from D1 itself ---
+//
+// Not sent in by rag_classify.py the way fewShot is: fewShot has to be built
+// outside the Worker (no CLIP in Workers AI), headlines is a column already
+// sitting next to the row this function updates. One read, no round trip, and
+// no way for the script to send text that disagrees with what is stored.
+
+const fakeEnv = ({ headlines = null, capture = [] } = {}) => ({
+  ...fakeAi(capture),
+  COVERS_BUCKET: { get: async () => ({ arrayBuffer: async () => buf, httpMetadata: {} }) },
+  DB: {
+    prepare(sql) {
+      return {
+        bind: () => ({
+          first: async () => (sql.includes("SELECT headlines") ? { headlines } : null),
+          run: async () => ({ success: true }),
+        }),
+      };
+    },
+  },
+});
+
+{
+  const capture = [];
+  assert.equal(await classifyAndStore(fakeEnv({ headlines: "Leao ruge em Alvalade", capture }), 1, "k"), "benfica");
+  assert.ok(capture[0].messages[0].content[0].text.includes("Leao ruge em Alvalade"));
+}
+
+{
+  // The archive's common case. A cover with no scraped headlines still gets
+  // classified, on the image alone, exactly as before this existed.
+  const capture = [];
+  assert.equal(await classifyAndStore(fakeEnv({ capture }), 1, "k"), "benfica");
+  assert.equal(capture[0].messages[0].content[0].text, PROMPT);
+}
+
 
 console.log("ai.js self-check ok");

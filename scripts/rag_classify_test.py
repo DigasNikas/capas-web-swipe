@@ -8,7 +8,12 @@ behaviourally identical (see the "keep in sync by hand" notes in
 rag_classify.py). Not a coincidence these tests read almost line-for-line
 the same as the JS ones.
 """
-from rag_classify import build_few_shot_block, parse_answer, rag_cover_ids_from_matches
+from rag_classify import (
+    build_few_shot_block,
+    build_headlines_block,
+    parse_answer,
+    rag_cover_ids_from_matches,
+)
 
 # --- parse_answer ---
 
@@ -74,5 +79,28 @@ assert rag_cover_ids_from_matches([
     {"id": "2", "score": 0.87, "metadata": {"club": "sporting"}},
     {"id": "3", "score": 0.81, "metadata": {"club": "porto"}},
 ]) == ["2", "3"]
+
+# --- build_headlines_block ---
+#
+# Mirrors api/lib/ai.js's buildHeadlinesBlock. Live mode never calls this (the
+# Worker reads covers.headlines from D1 itself), --eval does, and --eval only
+# means anything if the prompt it scores is the prompt production sends.
+
+assert build_headlines_block(None) == ""
+assert build_headlines_block("") == ""
+assert build_headlines_block("   \n  ") == ""
+
+block = build_headlines_block("Palhinha ja e da casa • Zaidu com suspeita de lesao")
+assert "Palhinha ja e da casa • Zaidu com suspeita de lesao" in block
+assert "does not decide the answer" in block
+assert block.endswith("\n\n")
+
+assert "Dragoes passeiam na Beira" in build_headlines_block("Dragoes\n\npasseiam   na Beira")
+
+long_text = "cabecalho " * 200 + "FIMDOTEXTO"
+block = build_headlines_block(long_text)
+assert "FIMDOTEXTO" not in block
+assert "\u2026" in block
+assert len(block) < len(long_text)
 
 print("rag_classify.py self-check ok")

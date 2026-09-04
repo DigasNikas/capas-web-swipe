@@ -5,8 +5,9 @@ scraped straight off capasjornais.pt — not `ai_headline`, which is what
 the vision model quotes back while guessing a club (see
 [AI Detector](#ai-detector)). The two can disagree; `headlines` is ground
 truth from the source, `ai_headline` is the model's own reading of the
-image. This page covers how the column gets filled in; see
-[Search](#search) for what reads it.
+image. This page covers how the column gets filled in. Two things read it:
+[Search](#search) indexes it, and the classifier folds it into its
+prompt (see [AI Detector](#ai-detector)'s "What the prompt carries").
 
 ## Where the text comes from
 

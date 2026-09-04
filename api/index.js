@@ -67,7 +67,7 @@ export default {
 
     if (method === "GET"  && pathname === "/covers")      return handleCovers(request, env);
     if (method === "GET"  && pathname === "/matches")     return handleGetMatches(env);
-    if (method === "GET"  && pathname === "/stats")       return handleStats(env);
+    if (method === "GET"  && pathname === "/stats")       return handleStats(env, url);
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/user-stats")  return handleUserStats(request, env, url);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);

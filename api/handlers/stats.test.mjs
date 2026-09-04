@@ -57,4 +57,25 @@ assert.equal(latestAi.confidence, 1);
 assert.equal(latestAi, null);
 assert.equal(latest.winner, "porto");
 
+// --- ?headlines=1 ---
+//
+// Opt-in because the dashboard fetches every row on page load and the scraped
+// headline text is a few hundred characters each: unconditionally, that is
+// most of a megabyte added to a request nothing on the dashboard reads. The
+// one caller that needs it is scripts/rag_classify.py --eval, which has to
+// rebuild the exact prompt live mode sends, headlines block included, or it
+// silently measures a different classifier than the one in production.
+{
+  const seen = [];
+  const env = { DB: { prepare(sql) { seen.push(sql); return { all: async () => ({ results: [] }) }; } } };
+
+  await handleStats(env, new URL("https://capas.example/api/stats"));
+  assert.ok(!seen[0].includes("c.headlines"), "not selected by default");
+
+  seen.length = 0;
+  await handleStats(env, new URL("https://capas.example/api/stats?headlines=1"));
+  assert.ok(seen[0].includes("c.headlines"), "selected on request");
+}
+
+
 console.log("stats: ok");
