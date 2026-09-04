@@ -9,6 +9,7 @@ rag_classify.py). Not a coincidence these tests read almost line-for-line
 the same as the JS ones.
 """
 from rag_classify import (
+    RAG_TOP_K,
     build_few_shot_block,
     build_headlines_block,
     merge_channels,
@@ -111,7 +112,14 @@ assert usable_matches(None, "layout", None) == []
 
 h = [{"id": "h1"}, {"id": "h2"}, {"id": "h3"}]
 i = [{"id": "i1"}, {"id": "i2"}, {"id": "i3"}]
-assert [m["id"] for m in merge_channels(h, i)] == ["h1", "i1", "h2", "i2", "h3"], "alternates, headline first, caps at 5"
+assert [m["id"] for m in merge_channels(h, i)] == ["h1", "i1", "h2", "i2", "h3", "i3"], "alternates, headline first"
+
+# The cap is RAG_TOP_K, and it cuts mid-alternation rather than truncating
+# one channel: with top_k=3 that is two headline matches and one image.
+assert [m["id"] for m in merge_channels(h, i, top_k=3)] == ["h1", "i1", "h2"]
+many_h = [{"id": f"H{n}"} for n in range(10)]
+many_i = [{"id": f"I{n}"} for n in range(10)]
+assert len(merge_channels(many_h, many_i)) == RAG_TOP_K, "default cap is RAG_TOP_K, not a hardcoded number"
 
 # A cover both channels found appears once, credited to the channel that is
 # the better reason for it being there.

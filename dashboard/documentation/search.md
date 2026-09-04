@@ -9,7 +9,7 @@ thumbnails. Public, no login, same audience as [Similarities](#rag).
 
 Clicking a result thumbnail opens it enlarged in a modal — no new tab,
 no page navigation. If that cover has RAG few-shot matches recorded
-(`ai_rag_covers`, up to `RAG_TOP_K` = 5), the modal also shows a
+(`ai_rag_covers`, up to `RAG_TOP_K` = 7), the modal also shows a
 "Parecidas" strip of their thumbnails underneath, resolved from
 `/api/similarities`. Fetched once on page load and cached client-side,
 not re-fetched per modal open, since it's the same public dataset
