@@ -1,11 +1,11 @@
-import { json } from '../lib/http.js';
+import { json, requireAdmin } from '../lib/http.js';
 import { buildEmailHtml } from '../lib/email.js';
 
 const FROM = 'Capas Desportivas <capas@capas.digasnikas.com>';
 
 export async function handleNotify(request, env) {
-  const auth = request.headers.get('Authorization');
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) return json({ error: 'Unauthorized' }, 401);
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   // Latest covers (most recent date in DB)
   const { results: latestCovers } = await env.DB
@@ -23,7 +23,7 @@ export async function handleNotify(request, env) {
               FROM users u`)
     .all();
 
-  if (!users.length) return json({ sent: 0 });
+  if (!users.length) return json({ ok: true, sent: 0 });
 
   // Fetch up to 4 unswiped example covers per user (from older dates, random)
   const exampleStmt = env.DB.prepare(`
@@ -62,5 +62,5 @@ export async function handleNotify(request, env) {
     if (res.ok) sent += batch.length;
   }
 
-  return json({ sent });
+  return json({ ok: true, sent });
 }

@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, parseLimit, requireAdmin } from "../lib/http.js";
 
 // GET /vectorize-candidates?limit= (admin, bearer-protected). Every voted
 // cover not yet embedded into capas-cover-embeddings, newest first, for
@@ -16,13 +16,13 @@ import { json } from "../lib/http.js";
 // not be embedded yet, and that gap is exactly what this query exists to
 // find.
 export async function handleVectorizeCandidates(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
-  const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit")) || 500, 500);
+  // Default and cap are the same number on purpose: it matches
+  // build_vectorize_index.py's BATCH, one Vectorize upsert per run.
+  const limit = parseLimit(new URL(request.url), 500, 500);
+  if (limit === null) return json({ error: "limit must be a positive integer" }, 400);
 
   const { results } = await env.DB
     .prepare(`

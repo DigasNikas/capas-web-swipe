@@ -46,4 +46,13 @@ const req = (auth, qs = "") =>
   assert.equal(env.DB.lastArgs[0], 2000, "limit caps at 2000");
 }
 
+// A negative used to slip past both the fallback and the cap and reach SQLite
+// as LIMIT -1, which means no limit at all.
+{
+  const env = fakeEnv([]);
+  const res = await handleHeadlineCandidates(req("s3cret", "?limit=-1"), env);
+  assert.equal(res.status, 400);
+  assert.equal(env.DB.lastArgs, null, "rejected before the query runs");
+}
+
 console.log("ok");

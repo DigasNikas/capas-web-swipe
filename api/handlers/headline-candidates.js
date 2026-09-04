@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, parseLimit, requireAdmin } from "../lib/http.js";
 
 // GET /headline-candidates?limit= (admin, bearer-protected). Every cover
 // still missing `headlines`, oldest first — the order scripts/backfill_
@@ -9,13 +9,14 @@ import { json } from "../lib/http.js";
 // successful /update-headline call removes that cover from the next call's
 // set.
 export async function handleHeadlineCandidates(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
-  const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit")) || 500, 2000);
+  // Bigger than /rag-candidates because the work per row is one polite HTTP
+  // fetch on the caller's side, not a model call — the whole remaining gap is
+  // a few hundred covers, so one run should be able to ask for all of it.
+  const limit = parseLimit(new URL(request.url), 500, 2000);
+  if (limit === null) return json({ error: "limit must be a positive integer" }, 400);
 
   const { results } = await env.DB
     .prepare("SELECT id, newspaper, date FROM covers WHERE headlines IS NULL ORDER BY date ASC LIMIT ?")

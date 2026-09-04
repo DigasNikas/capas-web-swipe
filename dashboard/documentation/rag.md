@@ -21,11 +21,11 @@ function too (dropping a match with score ≥ 0.999, a cover matching
 itself), so a cover already in the index never gets handed its own crowd
 vote when reclassified.
 
-Live mode stops there and POSTs the finished `fewShot` block, plus
-`ragCoverIds`, to the Worker's `/reclassify-rag` admin endpoint, which does
-the one and only Llama4 call for that cover through
-`classifyAndStore`/`classifyCover`. `fewShot` is usually a populated block.
-It comes back `""` only when no similar covers were found yet (a thin
+Live mode stops there and POSTs the finished few-shot block, plus the ids
+it was built from, to the Worker's `/reclassify-rag` admin endpoint, which
+does the one and only Llama4 call for that cover through
+`classifyAndStore`/`classifyCover`. The block is usually populated; it comes
+back `""` only when no similar covers were found yet (a thin
 archive, or a genuinely novel front page), and the cover still gets
 classified, just without the reference context. This is deliberately not
 called twice: `--eval` mode is the one exception, calling Llama4 directly
@@ -34,7 +34,7 @@ locally and never touches the Worker at all. `api/lib/ai.js` itself never
 touches Vectorize or does any embedding; that whole step happens in
 Python, outside the Worker.
 
-`ragCoverIds` is the same set of covers `fewShot`'s text was built from,
+Those ids are the same set of covers the few-shot text was built from,
 their ids instead of their clubs (`ragCoverIdsFromMatches` in `ai.js`,
 `rag_cover_ids_from_matches` in `rag_classify.py`, same filter as the text
 so the two never drift apart). `classifyAndStore` writes it straight to

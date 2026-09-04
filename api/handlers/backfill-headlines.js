@@ -1,3 +1,4 @@
+import { json, requireAdmin } from "../lib/http.js";
 import { NEWSPAPERS, fetchHeadlines } from "../lib/scraper.js";
 
 // One-off: fills in `headlines` for covers scraped earlier today, before
@@ -10,10 +11,8 @@ import { NEWSPAPERS, fetchHeadlines } from "../lib/scraper.js";
 //   curl -X POST -H "Authorization: Bearer <ADMIN_SECRET>" \
 //     https://capas.digasnikas.com/api/backfill-headlines
 export async function handleBackfillHeadlines(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   const today = new Date().toISOString().slice(0, 10);
   const { results: rows } = await env.DB
@@ -34,7 +33,5 @@ export async function handleBackfillHeadlines(request, env) {
     done++;
   }
 
-  return new Response(JSON.stringify({ done, checked: rows.length }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return json({ ok: true, done, checked: rows.length });
 }

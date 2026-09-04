@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, requireAdmin } from "../lib/http.js";
 
 // POST /vectorize-mark (admin, bearer-protected). Body: {coverIds: [...]}.
 // Sets vectorized_at = now for each id, so /vectorize-candidates stops
@@ -7,17 +7,15 @@ import { json } from "../lib/http.js";
 // that fails to upsert should stay in the backlog for the next run, not
 // get marked done and silently dropped.
 export async function handleVectorizeMark(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  const { coverIds } = body;
-  if (!Array.isArray(coverIds) || coverIds.length === 0) {
-    return json({ error: "coverIds required" }, 400);
+  const { cover_ids } = body;
+  if (!Array.isArray(cover_ids) || cover_ids.length === 0) {
+    return json({ error: "cover_ids required" }, 400);
   }
 
   try {
@@ -26,15 +24,15 @@ export async function handleVectorizeMark(request, env) {
     // plausibly get that large, but there's no reason to trust that "it
     // won't happen here" a second time.
     const BATCH = 100;
-    for (let i = 0; i < coverIds.length; i += BATCH) {
-      const batch = coverIds.slice(i, i + BATCH);
+    for (let i = 0; i < cover_ids.length; i += BATCH) {
+      const batch = cover_ids.slice(i, i + BATCH);
       const placeholders = batch.map(() => "?").join(",");
       await env.DB
         .prepare(`UPDATE covers SET vectorized_at = datetime('now') WHERE id IN (${placeholders})`)
         .bind(...batch)
         .run();
     }
-    return json({ success: true, marked: coverIds.length });
+    return json({ ok: true, marked: cover_ids.length });
   } catch (err) {
     console.error(`POST /vectorize-mark failed: ${err}`);
     return json({ error: String(err?.message ?? err) }, 500);

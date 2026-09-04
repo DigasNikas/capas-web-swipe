@@ -1,3 +1,4 @@
+import { json, requireAdmin } from "../lib/http.js";
 import { generateThumbnail } from "../lib/scraper.js";
 
 // One-off: generates thumb_url for covers scraped before thumbnails existed.
@@ -10,10 +11,8 @@ import { generateThumbnail } from "../lib/scraper.js";
 //   until curl -s -X POST -H "Authorization: Bearer <ADMIN_SECRET>" \
 //     https://capas.digasnikas.com/api/backfill-thumbs | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
 export async function handleBackfillThumbs(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   const { results: rows } = await env.DB
     .prepare("SELECT id, r2_key FROM covers WHERE thumb_url IS NULL LIMIT 25")
@@ -36,7 +35,5 @@ export async function handleBackfillThumbs(request, env) {
     .prepare("SELECT COUNT(*) AS remaining FROM covers WHERE thumb_url IS NULL")
     .all();
 
-  return new Response(JSON.stringify({ done, remaining }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return json({ ok: true, done, remaining });
 }
