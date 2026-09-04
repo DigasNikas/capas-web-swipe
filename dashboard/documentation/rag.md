@@ -129,17 +129,3 @@ headlines, and is the fixed baseline. `rag_classify.py --eval` sends what
 production sends, both blocks included, reading the headline text from
 `/stats?headlines=1` (opt-in on that endpoint, since the dashboard pulls
 every row on load and reads none of it).
-
-## Status
-
-Over 80 covers evenly spaced through the archive: `PROMPT` alone agrees
-with the crowd 86.2% of the time, the few-shot block takes that to 90.0%,
-and both blocks together to 91.2%. `others` recall, the weakest class,
-runs 50% / 58% / 67% across the same three.
-
-The few-shot block is doing the visible work. The headlines block is
-within noise at this sample size, and only 63 of those 80 covers carry
-headlines at all; the other 17 get an empty block and are classified on
-the image alone, scoring exactly as they do without it. `--n 200` on
-`rag_classify.py --eval` is what would separate the two blocks' effects,
-at roughly 200 classification calls against the daily neuron allowance.
