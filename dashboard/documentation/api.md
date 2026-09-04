@@ -6,7 +6,7 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 |---|---|---|---|---|
 | `GET` | `/api/covers` | `app.` | Access | All covers, ordered by date desc |
 | `GET` | `/api/matches` | either | - | All match dates |
-| `GET` | `/api/stats` | `capas.` | - | Public aggregate results (per-paper breakdown, per-day winners, latest classified day). Reads only `analytics_covers`. `?headlines=1` adds `covers.headlines` to every row — opt-in because the dashboard reads none of it and pulls every row on load; `rag_classify.py --eval` is the caller that needs it |
+| `GET` | `/api/stats` | `capas.` | - | Public aggregate results (per-paper breakdown, per-day winners, latest classified day). Reads only `analytics_covers` |
 | `GET` | `/api/swipes` | `app.` | Access | Authenticated user's swipe history |
 | `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
 | `POST` | `/api/favorites` | `app.` | Access | Toggle a personal bookmark on an already-swiped cover `{ cover_id, favorite }`. Unrelated to `decision` |
@@ -24,6 +24,7 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 | `POST` | `/api/backfill-headlines` | `capas.` | Bearer | One-off: fills `headlines` for covers scraped earlier the same day, before that column existed. Today-only. Returns `{done, checked}`. See [Headlines](#headlines) |
 | `GET` | `/api/headline-candidates?limit=` | `capas.` | Bearer | Up to N covers still missing `headlines` (id, newspaper, date), oldest first, for `scripts/backfill_headlines_archive.mjs`. Self-converging like `/rag-candidates`. See [Headlines](#headlines) |
 | `POST` | `/api/update-headline` | `capas.` | Bearer | Set `headlines` for one cover `{id, headlines}`. See [Headlines](#headlines) |
+| `GET` | `/api/headlines` | `capas.` | - | Every cover's scraped front-page text as `{id, headlines}`, covers with none left out. For `scripts/rag_classify.py --eval`, which needs the same text `classifyAndStore` reads from D1 to score the prompt production sends. See [Headlines](#headlines) |
 | `GET` | `/api/search?q=` | `capas.` | - | Full-text search over `headlines` (D1 FTS5), up to 30 results ranked by `bm25()`. Always returns `{results, total, searchable}`; an empty/missing `q` skips the search and just reports coverage. See [Search](#search) |
 
 See [Overview](#overview) for the D1 schema these routes read and write, and `api/README.md` for how the Worker's own files are split.
