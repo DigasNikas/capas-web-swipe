@@ -13,7 +13,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 
 | File | What |
 |---|---|
-| `http.js` | CORS headers + `json()` helper |
+| `http.js` | CORS headers, `json()`, and the shared `requireAdmin()` / `parseLimit()` used by every admin route |
 | `scraper.js` | Scraping logic (fetch → HTMLRewriter → R2 + D1). Doesn't classify — see `ai.js` and `handlers/reclassify-rag.js` |
 | `scraper.test.mjs` | Self-check: the capasjornais.pt cover-image URL and the `headlines` extraction both parse right. Run `node api/lib/scraper.test.mjs` |
 | `ai.js` | Cover classification: Llama4 zero-shot, optionally handed a RAG few-shot block computed elsewhere |
@@ -29,10 +29,10 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `matches.js` | `GET /matches` |
 | `stats.js` | `GET /stats` (public; reads `analytics_covers` only, never swipes) |
 | `swipes.js` | `GET` + `POST /swipes` (`POST` also refreshes `analytics_covers`) |
-| `comments.js` | `GET` + `POST` + `DELETE /comments` (ephemeral, Google sign-in) |
+| `comments.js` | `GET` + `POST /comments`, `DELETE /comments/:id` (ephemeral, Google sign-in) |
 | `leaderboard.js` | `GET /leaderboard` |
 | `user-stats.js` | `GET /user-stats?email=`: per-club breakdown + current/best streak, for the leaderboard's row drill-down |
-| `scrape.js` | `GET /scrape` (admin, bearer-protected) |
+| `scrape.js` | `POST /scrape` (admin, bearer-protected) |
 | `notify.js` | `POST /notify` (admin, bearer-protected) |
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
 | `backfill-headlines.js` | `POST /backfill-headlines` (admin) — today-only: fills `headlines` for covers already scraped earlier today, before this column existed |
@@ -43,5 +43,6 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `vectorize-mark.js` | `POST /vectorize-mark` (admin) — sets `vectorized_at` for a batch of cover ids that just upserted into Vectorize |
 | `headline-candidates.js` | `GET /headline-candidates?limit=` (admin) — covers still missing `headlines`, oldest first, for `scripts/backfill_headlines_archive.mjs` |
 | `update-headline.js` | `POST /update-headline` (admin) — sets `headlines` for one cover id |
+| `headlines.js` | `GET /headlines` (public) — every cover's scraped front-page text, for `scripts/rag_classify.py --eval` |
 | `search.js` | `GET /search?q=` (public) — D1 FTS5 search over `headlines`, powers `dashboard/search.html` |
 | `*.test.mjs` | Self-checks: plain `node api/handlers/<name>.test.mjs`, no framework |

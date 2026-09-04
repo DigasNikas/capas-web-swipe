@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, requireAdmin } from "../lib/http.js";
 
 // POST /update-headline (admin, bearer-protected). Body: {id, headlines}.
 // Single-cover write, called once per cover by scripts/backfill_headlines_
@@ -8,10 +8,8 @@ import { json } from "../lib/http.js";
 // the bottleneck here, not the D1 write, and a single-item call means a
 // crash partway through the crawl loses no already-fetched progress.
 export async function handleUpdateHeadline(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
@@ -25,5 +23,5 @@ export async function handleUpdateHeadline(request, env) {
     .bind(headlines, id)
     .run();
 
-  return json({ success: true, id });
+  return json({ ok: true, id });
 }

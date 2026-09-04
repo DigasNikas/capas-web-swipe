@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, requireAdmin } from "../lib/http.js";
 
 // Public OAuth client ID — same Google client the Cloudflare Access IdP uses.
 // It is not a secret (it ships in the dashboard's source too); only the
@@ -67,12 +67,14 @@ export async function handlePostComment(request, env) {
   return json(comment, 201);
 }
 
-export async function handleDeleteComment(request, env, url) {
-  if (request.headers.get("Authorization") !== `Bearer ${env.ADMIN_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  const id = Number(url.searchParams.get("id"));
-  if (!id) return json({ error: "Missing id" }, 400);
+// DELETE /comments/:id — the id is a path segment rather than ?id=, which is
+// what every other write here does with its parameters (a JSON body); a DELETE
+// body is the one shape that isn't portable across HTTP clients.
+export async function handleDeleteComment(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  if (!Number.isInteger(id) || id < 1) return json({ error: "Invalid comment id" }, 400);
 
   await env.DB.prepare("DELETE FROM comments WHERE id = ?").bind(id).run();
   return json({ ok: true });

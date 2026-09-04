@@ -35,10 +35,10 @@ Every script in `scripts/` has a matching one-click workflow under **Actions**. 
 
 ```bash
 # Last 2 days
-curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?days=2"
+curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?days=2"
 
 # Specific date range (max 7 days per call)
-curl -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
+curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
 
 # One-off: backfill thumb_url for covers that predate thumbnails.
 # Processes 25 per call; loop until "remaining" hits 0.

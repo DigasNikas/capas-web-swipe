@@ -103,7 +103,7 @@ def mark_vectorized(cover_ids):
     from a batch that just upserted successfully — never in advance."""
     req = urllib.request.Request(
         f"{API_BASE}/vectorize-mark",
-        data=json.dumps({"coverIds": cover_ids}).encode("utf-8"),
+        data=json.dumps({"cover_ids": cover_ids}).encode("utf-8"),
         headers={
             "User-Agent": UA,  # Cloudflare 403s the default urllib UA — see fetch() above.
             "Authorization": f"Bearer {ADMIN_SECRET}",

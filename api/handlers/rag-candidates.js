@@ -1,4 +1,4 @@
-import { json } from "../lib/http.js";
+import { json, parseLimit, requireAdmin } from "../lib/http.js";
 
 // GET /rag-candidates?limit=10 (admin, bearer-protected). Lists covers still
 // missing ai_club — newest first — with what scripts/rag_classify.py needs
@@ -15,13 +15,14 @@ import { json } from "../lib/http.js";
 // by hand) works through the whole backlog instead of reprocessing the same
 // top N forever.
 export async function handleRagCandidates(request, env) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
-  const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit")) || 10, 50);
+  // Default 10, hard cap 50: this is the one endpoint whose size directly
+  // decides how many Llama4 calls a run makes, and rag.md's Quota section is
+  // the record of what an unbounded one costs.
+  const limit = parseLimit(new URL(request.url), 10, 50);
+  if (limit === null) return json({ error: "limit must be a positive integer" }, 400);
 
   const { results } = await env.DB
     .prepare("SELECT id, newspaper, date, r2_key, url FROM covers WHERE ai_club IS NULL ORDER BY date DESC, newspaper ASC LIMIT ?")

@@ -1,10 +1,9 @@
+import { json, requireAdmin } from "../lib/http.js";
 import { NEWSPAPERS, scrapeNewspaper } from "../lib/scraper.js";
 
 export async function handleScrape(request, env, ctx, url) {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${env.ADMIN_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
 
   const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   let startStr, endStr;
@@ -25,12 +24,12 @@ export async function handleScrape(request, env, ctx, url) {
   const endDate   = parseYMD(endStr);
 
   if (isNaN(startDate) || isNaN(endDate) || endDate < startDate) {
-    return new Response("Invalid date range", { status: 400 });
+    return json({ error: "Invalid date range" }, 400);
   }
 
   const totalDays = Math.round((endDate - startDate) / 86_400_000) + 1;
   if (totalDays > 7) {
-    return new Response("Max 7 days per call (subrequest limit)", { status: 400 });
+    return json({ error: "Max 7 days per call (subrequest limit)" }, 400);
   }
 
   ctx.waitUntil((async () => {
@@ -39,8 +38,6 @@ export async function handleScrape(request, env, ctx, url) {
     }
   })());
 
-  return new Response(
-    `Scraping ${totalDays} day(s) [${startStr}–${endStr}] for ${NEWSPAPERS.length} newspapers.`,
-    { status: 202 }
-  );
+  // 202, not 200: the scraping itself runs in waitUntil after this returns.
+  return json({ ok: true, days: totalDays, start: startStr, end: endStr, newspapers: NEWSPAPERS.length }, 202);
 }

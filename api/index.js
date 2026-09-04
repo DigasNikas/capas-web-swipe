@@ -20,7 +20,7 @@
  *                        dispatches are silently skipped — see lib/github.js.
  */
 
-import { CORS } from "./lib/http.js";
+import { CORS, json } from "./lib/http.js";
 import { NEWSPAPERS, scrapeNewspaper } from "./lib/scraper.js";
 import { dispatchGithubEvent } from "./lib/github.js";
 import { handleCovers } from "./handlers/covers.js";
@@ -74,7 +74,7 @@ export default {
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);
     if (method === "POST" && pathname === "/swipes")      return handleSwipe(request, env, ctx);
     if (method === "POST" && pathname === "/favorites")   return handleToggleFavorite(request, env);
-    if (method === "GET"  && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
+    if (method === "POST" && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
     if (method === "POST" && pathname === "/backfill-headlines") return handleBackfillHeadlines(request, env);
@@ -89,8 +89,12 @@ export default {
     if (method === "GET"  && pathname === "/headlines")            return handleHeadlines(env);
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
-    if (method === "DELETE" && pathname === "/comments") return handleDeleteComment(request, env, url);
+    if (method === "DELETE" && pathname.startsWith("/comments/")) {
+      return handleDeleteComment(request, env, Number(pathname.slice("/comments/".length)));
+    }
 
-    return new Response("Not found", { status: 404 });
+    // json(), not a bare Response: a 404 is the one reply that used to go out
+    // as plain text without the CORS headers every other reply carries.
+    return json({ error: "Not found" }, 404);
   },
 };

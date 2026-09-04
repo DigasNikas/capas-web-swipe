@@ -266,7 +266,7 @@ def embed_and_retrieve(model, processor, image_bytes):
     /reclassify-rag is the one place that actually calls Llama4 for a live
     cover; calling classify_via_llama here too would mean paying for the
     same classification twice per cover. Returns (few_shot_text, cover_ids)
-    — cover_ids is what run_live sends on as ragCoverIds, for provenance;
+    — cover_ids is what run_live sends on as rag_cover_ids, for provenance;
     --eval mode (rag_classify_one below) only ever uses the text half."""
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     vector = embed(model, processor, image)
@@ -306,13 +306,13 @@ def run_live(model, processor, limit):
         # The Worker's env.AI.run call is the one and only Llama4 call for
         # this cover — classifyAndStore does the classification and the D1
         # write together, and hands the club back so this loop can report it.
-        # ragCoverIds is stored as-is (ai_rag_covers), not read back here —
+        # rag_cover_ids is stored as-is (ai_rag_covers), not read back here —
         # it's provenance for later debugging, not something this loop uses.
         resp = json.loads(fetch(
             f"{API_BASE}/reclassify-rag",
             headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
             data=json.dumps({
-                "coverId": c["id"], "r2Key": c["r2_key"], "fewShot": few_shot, "ragCoverIds": rag_cover_ids,
+                "cover_id": c["id"], "r2_key": c["r2_key"], "few_shot": few_shot, "rag_cover_ids": rag_cover_ids,
             }).encode("utf-8"),
             method="POST",
         ))

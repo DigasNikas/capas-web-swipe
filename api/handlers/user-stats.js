@@ -30,24 +30,24 @@ export async function handleUserStats(request, env, url) {
     ORDER BY c.date ASC
   `).bind(email).all();
 
-  let bestStreak = 0, run = 0;
+  let best_streak = 0, run = 0;
   for (const d of days) {
-    if (d.voted_covers >= d.total_covers) { run++; bestStreak = Math.max(bestStreak, run); }
+    if (d.voted_covers >= d.total_covers) { run++; best_streak = Math.max(best_streak, run); }
     else run = 0;
   }
 
   // Current streak walks backward from the most recent day. If that latest
   // day isn't finished yet, that's "hasn't gotten to it", not a break — skip
   // it and start counting from the most recent *completed* day instead.
-  let currentStreak = 0;
+  let current_streak = 0;
   let i = days.length - 1;
   if (i >= 0 && days[i].voted_covers < days[i].total_covers) i--;
-  for (; i >= 0 && days[i].voted_covers >= days[i].total_covers; i--) currentStreak++;
+  for (; i >= 0 && days[i].voted_covers >= days[i].total_covers; i--) current_streak++;
 
   return json({
     email,
     breakdown: Object.fromEntries(breakdown.map(r => [r.decision, r.count])),
-    currentStreak,
-    bestStreak,
+    current_streak,
+    best_streak,
   });
 }

@@ -42,8 +42,8 @@ assert.deepEqual(data.breakdown, { benfica: 7, porto: 5 });
 data = await stats(fakeEnv({
   days: [day(0), day(3), day(3), day(3), day(3), day(3), day(0), day(0)],
 }));
-assert.equal(data.bestStreak, 5);
-assert.equal(data.currentStreak, 0);
+assert.equal(data.best_streak, 5);
+assert.equal(data.current_streak, 0);
 
 // Same run, but only the single most recent day is incomplete — "hasn't
 // gotten to today yet" shouldn't retroactively break an otherwise-live
@@ -51,12 +51,12 @@ assert.equal(data.currentStreak, 0);
 data = await stats(fakeEnv({
   days: [day(0), day(3), day(3), day(3), day(3), day(3), day(1)],
 }));
-assert.equal(data.currentStreak, 5);
+assert.equal(data.current_streak, 5);
 
 // No archive days at all.
 data = await stats(fakeEnv({ days: [] }));
-assert.equal(data.currentStreak, 0);
-assert.equal(data.bestStreak, 0);
+assert.equal(data.current_streak, 0);
+assert.equal(data.best_streak, 0);
 
 // Unauthenticated request.
 const anon = { headers: { get: () => null } };

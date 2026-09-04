@@ -92,8 +92,8 @@ async function openUserDetail(email) {
     if (!res.ok) throw new Error();
     const data = await res.json();
 
-    lbCurrentStreak.textContent = data.currentStreak;
-    lbBestStreak.textContent = data.bestStreak;
+    lbCurrentStreak.textContent = data.current_streak;
+    lbBestStreak.textContent = data.best_streak;
 
     const total = Object.values(data.breakdown).reduce((a, b) => a + b, 0);
     lbDetailBreakdown.innerHTML = '';
