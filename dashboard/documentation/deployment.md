@@ -2,7 +2,7 @@
 
 ## Worker
 
-Deploys automatically via GitHub Actions (`deploy-worker.yml`) on push to `api/**`, `wrangler.toml` or `migrations/**`.
+Deploys automatically via GitHub Actions (`deploy-worker.yml`) on push to **`main`** touching `api/**`, `wrangler.toml` or `migrations/**`. The branch filter matters as much as the paths: without it every feature-branch push deployed the Worker and applied its migrations to the production D1, so unreviewed code went live and a migration could land before the code that needs it. Deploying a branch deliberately is still a `workflow_dispatch` away.
 Manual deploy:
 
 ```bash

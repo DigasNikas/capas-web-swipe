@@ -2,6 +2,12 @@ name: Deploy Worker
 
 on:
   push:
+    # main only. Without this, every branch push touching these paths
+    # deployed the Worker and applied its migrations to the production D1 —
+    # so a feature branch went live before anyone reviewed it, and a
+    # migration shipped before its code did. Deploying a branch on purpose
+    # is still one workflow_dispatch away.
+    branches: [main]
     paths:
       - "api/**"
       - "wrangler.toml"
