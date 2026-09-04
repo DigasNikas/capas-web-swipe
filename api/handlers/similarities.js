@@ -42,7 +42,7 @@ export async function handleSimilarities(env) {
     // D1 rejects a query with too many bound parameters ("too many SQL
     // variables") well before SQLite's own 999 default, so a single IN (...)
     // over every referenced id breaks once the backlog grows past a
-    // couple dozen rows (RAG_TOP_K is 5, so it doesn't take many rows to
+    // couple dozen rows (RAG_TOP_K is 7, so it doesn't take many rows to
     // get there). Batching keeps this working regardless of how large
     // ai_rag_covers's backlog gets.
     const BATCH = 100;

@@ -140,9 +140,24 @@ export function buildHeadlinesBlock(headlines) {
 }
 
 // How many similar past covers scripts/rag_classify.py pulls as few-shot
-// context. Small on purpose: enough to show a majority signal, small enough
-// not to crowd out the actual instructions.
-export const RAG_TOP_K = 5;
+// context, across both indexes combined.
+//
+// 7 by measurement. Taking the neighbours' own majority vote as if it were
+// the answer, over the 1446 covers with a lead headline and a crowd label,
+// agreement climbs with k and flattens around 10: 65.6% at 1, 70.8% at 5,
+// 72.3% at 7, 73.2% at 15, and back down by 25. The neighbours themselves
+// barely get worse over that range (the worst kept match falls from 0.912 to
+// 0.888 cosine); what changes is the majority drifting toward the base rate,
+// and `others` recall goes with it — 54% at k=1, mid-40s from k=5 on. 7 is
+// where overall agreement gains without the others dip deepening further,
+// which matters because others is this classifier's weak class (see the
+// error analysis above).
+//
+// Costs almost nothing to raise now that the block is a tally over at most
+// four clubs: "5 benfica, 2 porto" is the same length as "3 benfica, 2
+// porto". Under the old list-every-club form this would have been a wall of
+// text crowding out the instructions.
+export const RAG_TOP_K = 7;
 
 // Turns Vectorize matches into a short few-shot block, or "" if there's
 // nothing usable.

@@ -14,7 +14,7 @@ this is the only place a cover gets classified at all now.
 `scripts/rag_classify.py` embeds a cover twice, with the same two models
 that built the indexes: CLIP for the image, multilingual-e5-base for the
 lead headline. Each index returns its nearest labelled covers, the two
-result sets merge into `RAG_TOP_K` (5), and their crowd-labelled clubs go
+result sets merge into `RAG_TOP_K` (7), and their crowd-labelled clubs go
 in front of the prompt as a short reference block, before the model reads
 the actual image.
 

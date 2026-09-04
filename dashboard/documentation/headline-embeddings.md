@@ -104,7 +104,7 @@ returned metadata, over-fetching a few, rather than as a Vectorize metadata
 filter — that would need a metadata index created up front for no gain at
 this size.
 
-**The channels alternate, headline first**, up to `RAG_TOP_K` (5) total.
+**The channels alternate, headline first**, up to `RAG_TOP_K` (7) total.
 Headline first because it is the better prior; alternating rather than
 filling from one channel keeps a cover with a thin headline index from
 losing its image context. A cover both channels return appears once,
