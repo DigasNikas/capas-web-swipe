@@ -126,6 +126,5 @@ and for the guard sentence it carries.
 Two scripts score prompts, and they measure different things.
 `scripts/eval-ai.mjs` sends `PROMPT` alone, no few-shot block and no
 headlines, and is the fixed baseline. `rag_classify.py --eval` sends what
-production sends, both blocks included, reading the headline text from
-`/stats?headlines=1` (opt-in on that endpoint, since the dashboard pulls
-every row on load and reads none of it).
+production sends, both blocks included, reading the crowd labels from
+`/stats` and the headline text from `/headlines`.

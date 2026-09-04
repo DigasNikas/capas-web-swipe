@@ -326,10 +326,11 @@ def run_live(model, processor, limit):
 
 
 def run_eval(model, processor, n, all_):
-    # ?headlines=1 is opt-in on /stats (see handleStats): the dashboard never
-    # reads the column and pays a megabyte for it otherwise. --eval needs it to
-    # rebuild the same prompt the Worker sends live.
-    rows = json.loads(fetch(f"{STATS}{'&' if '?' in STATS else '?'}headlines=1"))["rows"]
+    rows = json.loads(fetch(STATS))["rows"]
+    # Two requests because they are two resources: /stats is the crowd labels,
+    # /headlines is the scraped front-page text classifyAndStore reads from D1.
+    # Scoring without the second one measures a prompt production never sends.
+    headlines = {r["id"]: r["headlines"] for r in json.loads(fetch(f"{API_BASE}/headlines"))}
     labelled = [r for r in rows if r.get("club")]
     size = len(labelled) if all_ else min(n, len(labelled))
     sample = [labelled[int(i * len(labelled) / size)] for i in range(size)]
@@ -340,7 +341,7 @@ def run_eval(model, processor, n, all_):
     for i, row in enumerate(sample):
         try:
             image_bytes = fetch(row["url"])
-            result, _ = rag_classify_one(model, processor, image_bytes, row.get("headlines"))
+            result, _ = rag_classify_one(model, processor, image_bytes, headlines.get(row["cover_id"]))
         except Exception as e:
             print(f"\nStopped at {i} of {len(sample)}: {e}", file=sys.stderr)
             break
