@@ -116,52 +116,30 @@ backfill is many small runs, not one `--limit 1700` shot.
 
 ## Two blocks, one prompt
 
-The few-shot block is no longer the only context in front of the
-instructions. `classifyCover` assembles `fewShot` + the cover's own
-scraped headlines + `PROMPT`, and the second block is built in the
-Worker rather than here (see [AI Detector](#ai-detector)'s "What the
-prompt carries" for why, and for the guard sentence it has to keep).
+`classifyCover` assembles `fewShot` + the cover's own scraped headlines +
+`PROMPT`, in that order, with the instructions last so the reply-format
+spec sits next to the image. The second block is `covers.headlines`, read
+from D1 by `classifyAndStore` rather than sent in from here — see
+[AI Detector](#ai-detector)'s "What the prompt carries" for how it's built
+and for the guard sentence it carries.
 
-That matters for measurement more than for the pipeline: agreement% now
-moves for two independent reasons, so a run that changes both at once
-answers neither question. `scripts/eval-ai.mjs` stays the fixed
-zero-shot baseline with neither block, and `rag_classify.py --eval`
-sends both. Isolating one means editing one copy of the prompt
-assembly and holding the other fixed across the same sample.
-
-`--eval` gets the headline text from `/stats?headlines=1`, opt-in on
-that endpoint because the dashboard pulls every row on load and reads
-none of it.
+Two scripts score prompts, and they measure different things.
+`scripts/eval-ai.mjs` sends `PROMPT` alone, no few-shot block and no
+headlines, and is the fixed baseline. `rag_classify.py --eval` sends what
+production sends, both blocks included, reading the headline text from
+`/stats?headlines=1` (opt-in on that endpoint, since the dashboard pulls
+every row on load and reads none of it).
 
 ## Status
 
-Measured on 2026-09-04, three arms over the same 80 covers (evenly spaced
-through all 1833 labelled ones, 2025-01-01 to 2026-09-03, no abstentions
-in any arm):
+Over 80 covers evenly spaced through the archive: `PROMPT` alone agrees
+with the crowd 86.2% of the time, the few-shot block takes that to 90.0%,
+and both blocks together to 91.2%. `others` recall, the weakest class,
+runs 50% / 58% / 67% across the same three.
 
-| Prompt | Agreement | `others` recall |
-|---|---|---|
-| Bare `PROMPT` (`eval-ai.mjs`) | 86.2% (69/80) | 50% (6/12) |
-| + RAG few-shot | 90.0% (72/80) | 58% (7/12) |
-| + RAG + headlines | 91.2% (73/80) | 67% (8/12) |
-
-The few-shot context does move the number, by 3.8 points, and it moves it
-where the classifier was weakest: `porto` recall went to 100% and the
-`others → big three` confusion that dominated the original error analysis
-shrank. That answers the open question above. It is still 80 covers, so
-treat 3.8 points as a direction, not a measurement.
-
-The headlines block is not yet distinguishable from noise. Only 63 of the
-80 covers have scraped headlines at all, and restricted to those it goes
-87.3% → 88.9%: two covers fixed (a 2025-05-10 `others` and a 2026-02-17
-`benfica`, both previously called wrong), one broken (a 2025-02-15
-`porto`). Net one cover. The 17 covers with no headlines scored
-identically in both RAG arms, which is the useful negative result here:
-an empty block is genuinely inert, so nothing regressed for the ~20% of
-the archive the backfills never reached.
-
-Settling it needs a bigger sample on the two RAG arms, `--n 200` or more,
-which is a real draw on the day's neuron allowance (the three runs above
-were 240 classification calls). Worth doing before reading anything into
-the `others` column, since that is where both the theory and the one-cover
-movement point.
+The few-shot block is doing the visible work. The headlines block is
+within noise at this sample size, and only 63 of those 80 covers carry
+headlines at all; the other 17 get an empty block and are classified on
+the image alone, scoring exactly as they do without it. `--n 200` on
+`rag_classify.py --eval` is what would separate the two blocks' effects,
+at roughly 200 classification calls against the daily neuron allowance.
