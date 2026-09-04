@@ -72,7 +72,10 @@ def lead_headline(headlines):
     if not text:
         return None
 
-    lead = text.split("•")[0].strip()
+    # First *non-empty* segment, not segment zero: two covers in the archive
+    # start with "• ", and splitting those blindly gives an empty lead and a
+    # cover that can never be embedded.
+    lead = next((seg for seg in (s.strip() for s in text.split("•")) if seg), None)
     if not lead:
         return None
     if len(lead) <= LEAD_MAX_CHARS:

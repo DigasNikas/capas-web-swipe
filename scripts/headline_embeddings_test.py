@@ -17,6 +17,13 @@ assert lead_headline("Palhinha já é da casa • Zaidu com suspeita de lesão")
 assert lead_headline("Dragões\n\npasseiam   na Beira") == "Dragões passeiam na Beira"
 assert lead_headline("Sporting 2-0 Alverca<br>Ciclismo") == "Sporting 2-0 Alverca Ciclismo"
 
+# A leading separator: two covers in the archive (982 and 985, both
+# 2025-06-22) start with "• ", so taking split("•")[0] blindly returned an
+# empty string and the cover was skipped as unembeddable forever.
+assert lead_headline("• Kokçu e a fúria com Bruno Lage • Euro sub-21") == "Kokçu e a fúria com Bruno Lage"
+assert lead_headline("•") is None
+assert lead_headline(" • • ") is None
+
 # Unseparated rows (45% of the archive) get cut to a budget instead, on a
 # word boundary rather than mid-word.
 long_lead = "Benfica vence " * 40
