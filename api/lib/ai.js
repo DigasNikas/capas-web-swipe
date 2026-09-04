@@ -101,6 +101,44 @@ export function parseAnswer(text) {
   };
 }
 
+// Cap on the scraped headline text folded into the prompt. A busy "Titulos da
+// Capa" block runs well past 1000 characters, and by then it is all tail-end
+// rail teasers — the dominant story's headline is at the top of the list, so
+// the tail is the cheap half to drop.
+export const HEADLINES_MAX_CHARS = 600;
+
+// covers.headlines is the real front-page text, scraped from capasjornais.pt
+// (see headlines.md), which is worth handing the model directly: this
+// classifier is called by the Portuguese text far more than by kit colours
+// (the benchmark at the top of this file is a resolution story for exactly
+// that reason), so there is no sense making it re-read text already stored
+// one column over.
+//
+// The guard sentence is load-bearing, not padding. headlines is *every* title
+// on the page, including the SPORTING / FC PORTO side rails the prompt below
+// spends four lines telling the model to ignore, and over-calling those rails
+// is this classifier's documented failure mode (others recall 39%). Without
+// the guard the block reads as a club-name tally and makes that worse.
+//
+// "" for a cover with no scraped headlines, which is the archive's common
+// case rather than an error: past-date scrapes never set the column and
+// neither backfill reached every cover.
+export function buildHeadlinesBlock(headlines) {
+  const text = String(headlines ?? "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const clipped = text.length > HEADLINES_MAX_CHARS
+    ? `${text.slice(0, HEADLINES_MAX_CHARS).trimEnd()}…`
+    : text;
+
+  return (
+    `The titles printed on this page, scraped from the newspaper's own site, in page order:\n${clipped}\n\n` +
+    "That is every title on the page, the small side-rail and teaser ones included, not only " +
+    "the dominant story's. Read it to get the Portuguese wording right; which club is named " +
+    "most often in it does not decide the answer.\n\n"
+  );
+}
+
 // How many similar past covers scripts/rag_classify.py pulls as few-shot
 // context. Small on purpose: enough to show a majority signal, small enough
 // not to crowd out the actual instructions.
@@ -153,12 +191,15 @@ export function ragCoverIdsFromMatches(matches) {
 // this function itself never touches Vectorize or does any embedding. It
 // comes back "" only when no similar covers were found yet, which still
 // classifies the cover, just without RAG context (see ai-detector.md).
-export async function classifyCover(env, buffer, contentType = "image/jpeg", fewShot = "") {
+export async function classifyCover(env, buffer, contentType = "image/jpeg", fewShot = "", headlines = null) {
   const res = await env.AI.run(MODEL, {
     messages: [{
       role: "user",
       content: [
-        { type: "text", text: fewShot + PROMPT },
+        // Order matters: archive-wide context, then this page's own text, then
+        // the instructions, which stay last so the reply-format spec sits next
+        // to the image instead of behind a wall of Portuguese.
+        { type: "text", text: fewShot + buildHeadlinesBlock(headlines) + PROMPT },
         { type: "image_url", image_url: { url: `data:${contentType};base64,${toBase64(buffer)}` } },
       ],
     }],
@@ -175,6 +216,11 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
 // Never throws: called from /reclassify-rag, an admin request that must not
 // blow up on one bad cover, and an unlabelled cover is simply absent from the
 // AI section until the next rag-classify.yml run retries it.
+// headlines is read here rather than passed in the way fewShot is: fewShot has
+// to be built outside the Worker (no CLIP model in Workers AI), while headlines
+// is a column on the row this function already updates. One extra read, no
+// round trip through rag_classify.py, and no way for the script to send text
+// that disagrees with what is stored.
 // fewShot: see classifyCover above. ragCoverIds: the cover_ids the fewShot
 // block was built from (see ragCoverIdsFromMatches above), stored purely for
 // provenance — nothing reads ai_rag_covers back to build a prompt, it exists
@@ -185,7 +231,14 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCov
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
 
-    const { club, headline, why } = await classifyCover(env, await obj.arrayBuffer(), obj.httpMetadata?.contentType, fewShot);
+    const row = await env.DB
+      .prepare("SELECT headlines FROM covers WHERE id = ?")
+      .bind(coverId)
+      .first();
+
+    const { club, headline, why } = await classifyCover(
+      env, await obj.arrayBuffer(), obj.httpMetadata?.contentType, fewShot, row?.headlines,
+    );
     if (!club) return null;
 
     await env.DB

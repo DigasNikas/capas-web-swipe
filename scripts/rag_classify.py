@@ -36,9 +36,9 @@ optional: unset, the CLIP weight download is unauthenticated (works fine,
 just the lower rate limit + slower download HuggingFace applies to anonymous
 requests); set, it's passed straight to from_pretrained().
 
-PROMPT, MODEL, CLUBS, RAG_TOP_K and the few-shot block's exact wording are
-copied from api/lib/ai.js rather than shared — Python can't import a JS
-module. Keep both copies identical by hand; a mismatch here means this
+PROMPT, MODEL, CLUBS, RAG_TOP_K, HEADLINES_MAX_CHARS and the few-shot and
+headlines blocks' exact wording are copied from api/lib/ai.js rather than
+shared — Python can't import a JS module. Keep both copies identical by hand; a mismatch here means this
 script silently measures or produces something different from what the
 Worker's own classifyCover would given the same inputs.
 """
@@ -62,6 +62,7 @@ INDEX = "capas-cover-embeddings"
 MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 5
+HEADLINES_MAX_CHARS = 600
 STATS = os.environ.get("CAPAS_STATS", "https://capas.digasnikas.com/api/stats")
 API_BASE = os.environ.get("CAPAS_API", "https://capas.digasnikas.com/api")
 HF_TOKEN = os.environ.get("HF_TOKEN")  # optional: higher HF Hub rate limits, faster weight downloads
@@ -166,6 +167,25 @@ def build_few_shot_block(matches):
     )
 
 
+def build_headlines_block(headlines):
+    """Mirrors api/lib/ai.js's buildHeadlinesBlock exactly — same cap, same
+    whitespace collapsing, same wording. Only --eval calls this: live mode's
+    prompt is assembled in the Worker, which reads covers.headlines from D1
+    itself. That is precisely why the copy has to stay identical, since --eval
+    scoring a prompt production never sends measures nothing useful."""
+    text = re.sub(r"\s+", " ", str(headlines or "")).strip()
+    if not text:
+        return ""
+
+    clipped = (text[:HEADLINES_MAX_CHARS].rstrip() + "\u2026") if len(text) > HEADLINES_MAX_CHARS else text
+    return (
+        f"The titles printed on this page, scraped from the newspaper's own site, in page order:\n{clipped}\n\n"
+        "That is every title on the page, the small side-rail and teaser ones included, not only "
+        "the dominant story's. Read it to get the Portuguese wording right; which club is named "
+        "most often in it does not decide the answer.\n\n"
+    )
+
+
 def rag_cover_ids_from_matches(matches):
     """Mirrors api/lib/ai.js's ragCoverIdsFromMatches exactly — same filter
     as build_few_shot_block above, kept as a separate pass for the same
@@ -204,15 +224,18 @@ def parse_answer(text):
     }
 
 
-def classify_via_llama(image_bytes, few_shot_text):
+def classify_via_llama(image_bytes, few_shot_text, headlines=None):
     b64 = base64.b64encode(image_bytes).decode("ascii")
+    # Same order classifyCover uses: archive context, this page's own text,
+    # then the instructions last, next to the image.
+    prompt = few_shot_text + build_headlines_block(headlines) + PROMPT
     req = urllib.request.Request(
         f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}/ai/run/{MODEL}",
         data=json.dumps({
             "messages": [{
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": few_shot_text + PROMPT},
+                    {"type": "text", "text": prompt},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
                 ],
             }],
@@ -251,13 +274,13 @@ def embed_and_retrieve(model, processor, image_bytes):
     return build_few_shot_block(matches), rag_cover_ids_from_matches(matches)
 
 
-def rag_classify_one(model, processor, image_bytes):
+def rag_classify_one(model, processor, image_bytes, headlines=None):
     """Full pipeline for one cover: embed, retrieve, build few-shot text,
     classify. Used by --eval mode only, which needs the result locally to
     score against the crowd label and never touches the Worker at all.
     Returns (result_dict, few_shot_text)."""
     few_shot, _ = embed_and_retrieve(model, processor, image_bytes)
-    result = classify_via_llama(image_bytes, few_shot)
+    result = classify_via_llama(image_bytes, few_shot, headlines)
     return result, few_shot
 
 
@@ -303,7 +326,10 @@ def run_live(model, processor, limit):
 
 
 def run_eval(model, processor, n, all_):
-    rows = json.loads(fetch(STATS))["rows"]
+    # ?headlines=1 is opt-in on /stats (see handleStats): the dashboard never
+    # reads the column and pays a megabyte for it otherwise. --eval needs it to
+    # rebuild the same prompt the Worker sends live.
+    rows = json.loads(fetch(f"{STATS}{'&' if '?' in STATS else '?'}headlines=1"))["rows"]
     labelled = [r for r in rows if r.get("club")]
     size = len(labelled) if all_ else min(n, len(labelled))
     sample = [labelled[int(i * len(labelled) / size)] for i in range(size)]
@@ -314,7 +340,7 @@ def run_eval(model, processor, n, all_):
     for i, row in enumerate(sample):
         try:
             image_bytes = fetch(row["url"])
-            result, _ = rag_classify_one(model, processor, image_bytes)
+            result, _ = rag_classify_one(model, processor, image_bytes, row.get("headlines"))
         except Exception as e:
             print(f"\nStopped at {i} of {len(sample)}: {e}", file=sys.stderr)
             break

@@ -6,7 +6,7 @@ The Worker is routed on `/api/*` on **both** hostnames, running the same code ag
 |---|---|---|---|---|
 | `GET` | `/api/covers` | `app.` | Access | All covers, ordered by date desc |
 | `GET` | `/api/matches` | either | - | All match dates |
-| `GET` | `/api/stats` | `capas.` | - | Public aggregate results (per-paper breakdown, per-day winners, latest classified day). Reads only `analytics_covers` |
+| `GET` | `/api/stats` | `capas.` | - | Public aggregate results (per-paper breakdown, per-day winners, latest classified day). Reads only `analytics_covers`. `?headlines=1` adds `covers.headlines` to every row — opt-in because the dashboard reads none of it and pulls every row on load; `rag_classify.py --eval` is the caller that needs it |
 | `GET` | `/api/swipes` | `app.` | Access | Authenticated user's swipe history |
 | `POST` | `/api/swipes` | `app.` | Access | Record a swipe `{ cover_id, decision }`; also refreshes that cover's `analytics_covers` row |
 | `POST` | `/api/favorites` | `app.` | Access | Toggle a personal bookmark on an already-swiped cover `{ cover_id, favorite }`. Unrelated to `decision` |

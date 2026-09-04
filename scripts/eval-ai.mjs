@@ -7,7 +7,10 @@
  *   ... node scripts/eval-ai.mjs --n 80        # bigger sample
  *   ... node scripts/eval-ai.mjs --all         # every labelled cover, ~579 calls
  *
- * This scores the bare zero-shot PROMPT only. For the RAG-augmented version,
+ * This scores the bare zero-shot PROMPT only — no RAG few-shot block, and no
+ * scraped-headlines block either (see ai-detector.md's "What the prompt
+ * carries"), so it stays the fixed baseline the other numbers are read
+ * against. For the full prompt production actually sends,
  * see scripts/rag_classify.py --eval — that one needs a local CLIP embedding
  * step this script can't do (Node has no CLIP model), so the RAG measurement
  * lives in Python now, not here.

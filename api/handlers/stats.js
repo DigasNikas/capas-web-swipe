@@ -22,11 +22,19 @@ function verdict(rows, key) {
 // own guess), never swipes. Returns raw per-cover rows; the dashboard
 // aggregates them (by época, by paper, by day) client-side so filtering doesn't
 // need another round trip.
-export async function handleStats(env) {
+export async function handleStats(env, url) {
+  // ?headlines=1 adds the scraped front-page text (covers.headlines) to every
+  // row. Opt-in, not default: the dashboard pulls all ~1800 rows on load and
+  // reads none of it, so unconditionally this would add most of a megabyte to
+  // that request. scripts/rag_classify.py --eval is the caller that needs it,
+  // to rebuild the same prompt classifyCover sends live (headlines block
+  // included) instead of scoring a classifier production doesn't run.
+  const withHeadlines = url?.searchParams.get("headlines") === "1";
+
   const { results: rows } = await env.DB
     .prepare(`
       SELECT ac.cover_id, ac.newspaper, ac.date, ac.club, ac.votes_club, ac.votes_total,
-             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline, c.ai_why
+             c.url, COALESCE(c.thumb_url, c.url) AS thumb_url, c.ai_club, c.ai_headline, c.ai_why${withHeadlines ? ", c.headlines" : ""}
       FROM analytics_covers ac
       JOIN covers c ON c.id = ac.cover_id
       ORDER BY ac.date ASC

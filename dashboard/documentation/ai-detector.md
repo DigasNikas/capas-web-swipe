@@ -21,6 +21,44 @@ yet, the few-shot block comes back empty and the model answers without a
 reference, but the call still happens, on the same schedule as everything
 else.
 
+## What the prompt carries
+
+Two context blocks sit in front of the instructions, in this order: the
+few-shot block built from Vectorize matches ([RAG](#rag)), then the
+cover's own scraped front-page text, then `PROMPT` itself. The
+instructions stay last so the reply-format spec sits next to the image
+rather than behind a wall of Portuguese.
+
+The second block is `covers.headlines` (see [Headlines](#headlines)),
+the real titles from that day's page, read straight off capasjornais.pt
+at scrape time. The benchmark at the top of `api/lib/ai.js` is what
+argues for it: full-resolution images beat thumbnails by 14 points
+because most covers are called by the Portuguese text, not by kit
+colours. Making the model re-read text already stored one column over
+was work it didn't need to do.
+
+`buildHeadlinesBlock` caps the text at 600 characters and collapses
+whitespace, so a busy page can't reshape the prompt's layout or crowd
+out the instructions. The dominant story's headline is at the top of
+the "Títulos da Capa" list, so what a cap drops is tail-end rail
+teasers.
+
+The block carries a guard sentence, and it's load-bearing: `headlines`
+is *every* title on the page, including the small SPORTING / FC PORTO
+rails the prompt spends four lines telling the model to ignore.
+Over-calling those rails is this classifier's documented failure mode
+(`others` recall 39%). Without the guard, the block reads as an
+invitation to count club mentions and makes that worse.
+
+Unlike the few-shot block, this one is assembled in the Worker.
+`classifyAndStore` reads `headlines` from D1 on the row it is about to
+update, one query, no round trip through `rag_classify.py`, and no way
+for the script to send text that disagrees with what's stored. A cover
+with `headlines IS NULL` gets `""` and is classified on the image
+alone, which is the archive's normal case rather than a failure: 383 of
+1821 covers were never reached by either backfill, and every past-date
+scrape leaves the column empty.
+
 ## What triggers what
 
 Scraping happens in the Worker's daily `scheduled()` cron. Once every
