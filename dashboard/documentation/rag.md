@@ -1,7 +1,9 @@
 # RAG
 
-K-nearest-neighbor retrieval from [Image Embeddings](#image-embeddings),
-folded into the classifier's prompt as few-shot context. Runs outside the
+K-nearest-neighbor retrieval from two indexes — [Image
+Embeddings](#image-embeddings) for how the page looks, [Headline
+Embeddings](#headline-embeddings) for what it says — folded into the
+classifier's prompt as few-shot context. Runs outside the
 Worker, in `scripts/rag_classify.py`, via
 `.github/workflows/rag-classify.yml`, not live at scrape time. See
 [AI Detector](#ai-detector): there's no separate zero-shot pass anymore,
@@ -9,17 +11,27 @@ this is the only place a cover gets classified at all now.
 
 ## What it does
 
-`scripts/rag_classify.py` embeds a cover with the same CLIP model
-`build_vectorize_index.py` used to build the index, queries
-`capas-cover-embeddings` for the `RAG_TOP_K` (5) nearest labelled covers,
-and prepends their crowd-labelled clubs to the prompt as a short reference
-block, before the model reads the actual image. The block explicitly
-names the caveat from [Image Embeddings](#image-embeddings): raw CLIP
-similarity tracks newspaper layout as much as subject, so it reads as a
-weak prior, not a verdict. The self-vote-leakage guard lives in this
-function too (dropping a match with score ≥ 0.999, a cover matching
-itself), so a cover already in the index never gets handed its own crowd
-vote when reclassified.
+`scripts/rag_classify.py` embeds a cover twice, with the same two models
+that built the indexes: CLIP for the image, multilingual-e5-base for the
+lead headline. Each index returns its nearest labelled covers, the two
+result sets merge into `RAG_TOP_K` (5), and their crowd-labelled clubs go
+in front of the prompt as a short reference block, before the model reads
+the actual image.
+
+The block is a tally rather than a list, and it says which channel found
+what, because the two are worth different amounts: a headline match is
+about the same story, while raw CLIP similarity tracks newspaper layout as
+much as subject ([Image Embeddings](#image-embeddings)' own finding).
+Both stay a weak prior, and the block says so.
+
+Three rules keep the retrieval honest, all in `usable_matches` and
+`merge_channels`. A match scoring ≥ 0.999 is the cover matching itself and
+is dropped, so a reclassified cover never gets handed its own crowd vote. A
+match from the same date is dropped, because the three papers print the
+same story that day in near-identical words and the text channel would
+otherwise just copy the neighbouring paper. And the channels alternate,
+headline first, so a cover with a thin headline index keeps its image
+context.
 
 Live mode stops there and POSTs the finished few-shot block, plus the ids
 it was built from, to the Worker's `/reclassify-rag` admin endpoint, which

@@ -1,0 +1,45 @@
+name: Vectorize Headlines
+
+# The text half of the RAG context (see
+# dashboard/documentation/headline-embeddings.md). Same trigger and same
+# self-converging shape as Vectorize Covers: a cover getting its first crowd
+# vote fires cover-first-vote, and this run pulls the whole
+# /vectorize-candidates?index=headline backlog rather than the one cover_id
+# in the payload, so a burst of votes does real work once and the rest exit
+# on an empty backlog. A missed dispatch self-heals the next time anything
+# triggers this workflow.
+#
+# Separate workflow rather than a step inside Vectorize Covers: the two
+# indexes take different models (CLIP vs multilingual-e5-base) and fill from
+# different backlogs — a cover with a vote but no scraped headlines is a
+# candidate for one and not the other — so failing them together would mean
+# one index's problem stalling the other.
+
+on:
+  repository_dispatch:
+    types: [cover-first-vote]
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max covers to embed this run"
+        required: false
+        default: "500"
+
+jobs:
+  vectorize-headlines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy torch transformers
+      - name: Embed the headline backlog
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # inputs.limit is only set on workflow_dispatch — repository_dispatch
+        # has no `inputs` context, so this falls back to the same default.
+        run: python3 scripts/build_headline_index.py --limit "${{ inputs.limit || '500' }}"

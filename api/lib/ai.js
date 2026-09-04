@@ -145,31 +145,60 @@ export function buildHeadlinesBlock(headlines) {
 export const RAG_TOP_K = 5;
 
 // Turns Vectorize matches into a short few-shot block, or "" if there's
-// nothing usable. The caveat line matters: image-embeddings.md's own
-// findings show raw CLIP similarity tracks newspaper layout as much as
-// subject, so this must read as a weak prior, not a verdict, or the model
-// will over-trust it.
+// nothing usable.
 //
-// The Worker has no way to embed an image itself (no CLIP model in Workers
-// AI, and no live embedding service — see rag.md for why), so this runs
-// outside the Worker entirely: scripts/rag_classify.py computes the
-// embedding and the Vectorize query in Python, builds the identical block
-// (its own copy of this exact wording — keep both in sync by hand), and
-// POSTs the finished text to /reclassify-rag, which threads it into
-// classifyCover below as the fewShot parameter. This JS copy stays mainly
-// as the source-of-truth wording and for its test coverage.
+// Matches now arrive from two indexes: capas-cover-embeddings (CLIP, the
+// page's look) and capas-headline-embeddings (MiniLM over the lead headline,
+// the day's story). Each carries `via` saying which found it, and the block
+// says so, because the two are worth different amounts: a headline match is
+// about the same subject, while image-embeddings.md's own findings show raw
+// CLIP similarity tracks newspaper layout as much as subject. Both stay a
+// weak prior — say it plainly or the model over-trusts the block.
+//
+// A tally rather than a list of clubs in retrieval order: "3 benfica" reads
+// as a majority, "benfica, sporting, benfica, benfica" reads as noise. Ties
+// break by CLUBS order so the same neighbours always produce the same
+// prompt, which is what makes two --eval runs comparable.
+//
+// The Worker has no way to embed anything itself (no CLIP or sentence model
+// in Workers AI, and no live embedding service — see rag.md), so this runs
+// outside the Worker entirely: scripts/rag_classify.py does both embeddings
+// and both queries in Python, builds the identical block (its own copy of
+// this exact wording — keep both in sync by hand), and POSTs the finished
+// text to /reclassify-rag, which threads it into classifyCover above as the
+// fewShot parameter. This JS copy stays mainly as the source-of-truth
+// wording and for its test coverage.
 export function buildFewShotBlock(matches) {
-  // A cover already in the index matches itself at ~0.99999 — dropping the
+  // A cover already in either index matches itself at ~0.99999 — dropping the
   // near-identical hit is what keeps a re-classified cover from being handed
   // its own crowd vote (both rag_classify.py's live and --eval modes
   // re-embed covers that are already indexed).
-  const clubs = (matches ?? []).filter(m => (m.score ?? 0) < 0.999).map(m => m.metadata?.club).filter(Boolean);
-  if (!clubs.length) return "";
+  const usable = (matches ?? []).filter(m => (m.score ?? 0) < 0.999 && m.metadata?.club);
+  if (!usable.length) return "";
+
+  const counts = new Map();
+  for (const m of usable) counts.set(m.metadata.club, (counts.get(m.metadata.club) ?? 0) + 1);
+  const tally = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || CLUBS.indexOf(a[0]) - CLUBS.indexOf(b[0]))
+    .map(([club, n]) => `${n} ${club}`)
+    .join(", ");
+
+  // Anything that predates the second index has no `via` and is a layout
+  // match, which is what the image index has always been.
+  const byHeadline = usable.filter(m => m.via === "headline").length;
+  const byLayout = usable.length - byHeadline;
+  // One channel means every match came from it, so "both" reads better than
+  // "2" on the common two-neighbour case.
+  const all = usable.length === 2 ? "both" : `${usable.length}`;
+  const channels =
+    byHeadline && byLayout ? `${byHeadline} matched by headline wording, ${byLayout} by page layout`
+    : byHeadline ? `${all} matched by headline wording`
+    : `${all} matched by page layout`;
 
   return (
-    `Reference: ${clubs.length} visually similar past front pages from this archive ` +
-    `were crowd-labelled: ${clubs.join(", ")}. Visual similarity here tracks newspaper ` +
-    "layout as much as subject matter — treat this only as a weak prior, not a verdict.\n\n"
+    `Reference: ${usable.length} past front pages from this archive were crowd-labelled: ` +
+    `${tally} (${channels}). A headline match is about the same story; a layout match tracks ` +
+    "newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
   );
 }
 

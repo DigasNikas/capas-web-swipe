@@ -11,8 +11,10 @@ the same as the JS ones.
 from rag_classify import (
     build_few_shot_block,
     build_headlines_block,
+    merge_channels,
     parse_answer,
     rag_cover_ids_from_matches,
+    usable_matches,
 )
 
 # --- parse_answer ---
@@ -48,37 +50,78 @@ assert parse_answer("ANSWER: liverpool")["club"] is None
 # No matches: no block.
 assert build_few_shot_block([]) == ""
 assert build_few_shot_block(None) == ""
-
-# Matches with no usable label are dropped, not counted as signal.
 assert build_few_shot_block([{"metadata": {}}, {"metadata": {"club": None}}]) == ""
 
-# A cover's own near-identical match (score >= 0.999) never appears, alone
-# or mixed with real matches — this is the self-vote-leakage guard.
-assert build_few_shot_block([{"score": 0.99999, "metadata": {"club": "porto"}}]) == ""
-
 block = build_few_shot_block([
-    {"score": 0.99999, "metadata": {"club": "benfica"}},
-    {"score": 0.87, "metadata": {"club": "sporting"}},
-    {"score": 0.81, "metadata": {"club": "porto"}},
+    {"metadata": {"club": "sporting"}, "via": "layout"},
+    {"metadata": {"club": "sporting"}, "via": "headline"},
+    {"metadata": {"club": "benfica"}, "via": "layout"},
 ])
-assert "benfica" not in block
-assert "sporting, porto" in block
+assert "2 sporting, 1 benfica" in block
+assert "1 matched by headline wording, 2 by page layout" in block
 assert "weak prior" in block
 
+# Ties break by CLUBS order, so the same neighbours always build the same
+# prompt whichever order retrieval returned them in.
+assert build_few_shot_block([{"metadata": {"club": "porto"}}, {"metadata": {"club": "benfica"}}]) == \
+       build_few_shot_block([{"metadata": {"club": "benfica"}}, {"metadata": {"club": "porto"}}])
+
+assert "both matched by page layout" in build_few_shot_block([
+    {"metadata": {"club": "porto"}, "via": "layout"},
+    {"metadata": {"club": "porto"}, "via": "layout"},
+])
+assert "page layout" in build_few_shot_block([{"metadata": {"club": "benfica"}}]), "no via means layout"
+
+# Self-match guard, unchanged by the second channel.
+assert build_few_shot_block([{"metadata": {"club": "benfica"}, "score": 0.99999}]) == ""
+
 # --- rag_cover_ids_from_matches ---
-# Same filter as build_few_shot_block, so run it on the exact same inputs
-# above and check the ids line up with the matches that made it into block.
+#
+# Same filter as build_few_shot_block, so the ids stored as provenance are
+# exactly the covers whose clubs the prompt was built from.
 
 assert rag_cover_ids_from_matches([]) == []
 assert rag_cover_ids_from_matches(None) == []
 assert rag_cover_ids_from_matches([{"id": "1", "metadata": {}}]) == []
-assert rag_cover_ids_from_matches([{"id": "1", "score": 0.99999, "metadata": {"club": "porto"}}]) == []
-
+assert rag_cover_ids_from_matches([{"id": "1", "metadata": {"club": "benfica"}, "score": 0.99999}]) == []
 assert rag_cover_ids_from_matches([
-    {"id": "1", "score": 0.99999, "metadata": {"club": "benfica"}},
-    {"id": "2", "score": 0.87, "metadata": {"club": "sporting"}},
-    {"id": "3", "score": 0.81, "metadata": {"club": "porto"}},
+    {"id": "1", "metadata": {"club": "benfica"}, "score": 0.99999},
+    {"id": "2", "metadata": {"club": "sporting"}, "score": 0.87},
+    {"id": "3", "metadata": {"club": "porto"}, "score": 0.81},
 ]) == ["2", "3"]
+
+# --- usable_matches ---
+
+MATCHES = [
+    {"id": "1", "score": 0.99999, "metadata": {"club": "benfica", "date": "2025-01-02"}},
+    {"id": "2", "score": 0.91, "metadata": {"club": "porto", "date": "2025-01-01"}},
+    {"id": "3", "score": 0.88, "metadata": {"club": None, "date": "2025-01-03"}},
+    {"id": "4", "score": 0.80, "metadata": {"club": "sporting", "date": "2025-01-04"}},
+]
+
+kept = usable_matches(MATCHES, "headline", cover_date="2025-01-01")
+assert [m["id"] for m in kept] == ["4"], "drops the self-match, the unlabelled one, and the same-day sibling"
+assert kept[0]["via"] == "headline"
+
+# Without a date to compare against, only the score and label rules apply.
+assert [m["id"] for m in usable_matches(MATCHES, "layout", cover_date=None)] == ["2", "4"]
+assert usable_matches(None, "layout", None) == []
+
+# --- merge_channels ---
+
+h = [{"id": "h1"}, {"id": "h2"}, {"id": "h3"}]
+i = [{"id": "i1"}, {"id": "i2"}, {"id": "i3"}]
+assert [m["id"] for m in merge_channels(h, i)] == ["h1", "i1", "h2", "i2", "h3"], "alternates, headline first, caps at 5"
+
+# A cover both channels found appears once, credited to the channel that is
+# the better reason for it being there.
+dup = merge_channels([{"id": "x", "via": "headline"}], [{"id": "x", "via": "layout"}])
+assert len(dup) == 1 and dup[0]["via"] == "headline"
+
+# Either channel empty still fills from the other — a cover with no scraped
+# headlines gets image matches alone, exactly as before this index existed.
+assert [m["id"] for m in merge_channels([], i)] == ["i1", "i2", "i3"]
+assert [m["id"] for m in merge_channels(h, [])] == ["h1", "h2", "h3"]
 
 # --- build_headlines_block ---
 #

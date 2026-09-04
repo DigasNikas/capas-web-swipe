@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""RAG-augmented cover reclassification: embed a cover with CLIP, retrieve
-K similar labelled covers from Vectorize, fold their labels into the
-Llama4 prompt as few-shot context, classify, and (in live mode) write the
-result to D1 through the Worker's admin API.
+"""RAG-augmented cover reclassification: embed a cover twice — the image
+with CLIP, the lead headline with multilingual-e5-base — retrieve similar
+labelled covers from both Vectorize indexes, merge them, fold their labels
+into the Llama4 prompt as few-shot context, classify, and (in live mode)
+write the result to D1 through the Worker's admin API.
+
+The two channels answer different questions: capas-cover-embeddings finds
+covers that look like this page, capas-headline-embeddings finds covers
+about this story. See dashboard/documentation/headline-embeddings.md for
+why the second one exists and what it is measured to be worth.
 
 Runs outside the Worker because Workers AI has no CLIP model and no live
 embedding service exists for this project — see dashboard/documentation/rag.md
@@ -38,7 +44,10 @@ requests); set, it's passed straight to from_pretrained().
 
 PROMPT, MODEL, CLUBS, RAG_TOP_K, HEADLINES_MAX_CHARS and the few-shot and
 headlines blocks' exact wording are copied from api/lib/ai.js rather than
-shared — Python can't import a JS module. Keep both copies identical by hand; a mismatch here means this
+shared — Python can't import a JS module. (lead_headline and the text model
+live in headline_embeddings.py, imported by both this script and
+build_headline_index.py, because a query vector built differently from the
+indexed ones silently skews every similarity against them.) Keep both copies identical by hand; a mismatch here means this
 script silently measures or produces something different from what the
 Worker's own classifyCover would given the same inputs.
 """
@@ -50,15 +59,19 @@ import os
 import re
 import sys
 import urllib.request
+from itertools import zip_longest
 
 import numpy as np
 import torch
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
+from headline_embeddings import embed_text, lead_headline, load_text_model
+
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) capas-rag-classify/1.0"
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
-INDEX = "capas-cover-embeddings"
+IMAGE_INDEX = "capas-cover-embeddings"
+HEADLINE_INDEX = "capas-headline-embeddings"
 MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 5
@@ -135,35 +148,105 @@ def embed(model, processor, image):
     return (vec / np.linalg.norm(vec)).tolist()
 
 
-def query_vectorize(vector):
+def query_vectorize(index, vector, top_k):
     req = urllib.request.Request(
-        f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}/vectorize/v2/indexes/{INDEX}/query",
-        data=json.dumps({"vector": vector, "topK": RAG_TOP_K, "returnMetadata": "all"}).encode("utf-8"),
+        f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}/vectorize/v2/indexes/{index}/query",
+        data=json.dumps({"vector": vector, "topK": top_k, "returnMetadata": "all"}).encode("utf-8"),
         headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=30) as r:
         result = json.loads(r.read())
     if not result.get("success"):
-        raise RuntimeError(f"Vectorize query failed: {result.get('errors')}")
+        raise RuntimeError(f"Vectorize query failed on {index}: {result.get('errors')}")
     return result["result"]["matches"]
 
 
+def usable_matches(matches, via, cover_date):
+    """Drops what must never reach the prompt, in both channels.
+
+    The same-date rule is the one that matters for the headline index:
+    Record, A Bola and O Jogo print the same story the same day in
+    near-identical words, so an unfiltered text query returns today's
+    siblings and the prior collapses into copying the neighbouring paper's
+    crowd vote. Filtered here rather than as a Vectorize metadata filter
+    because that would need a metadata index created up front, and
+    over-fetching a few and dropping them locally costs nothing at this size.
+
+    The score rule is the existing self-match guard: a cover already in an
+    index matches itself at ~0.99999.
+    """
+    kept = []
+    for m in matches or []:
+        if m.get("score", 0) >= 0.999:
+            continue
+        meta = m.get("metadata") or {}
+        if not meta.get("club"):
+            continue
+        if cover_date and meta.get("date") == cover_date:
+            continue
+        kept.append({**m, "via": via})
+    return kept
+
+
+def merge_channels(headline_matches, image_matches, top_k=RAG_TOP_K):
+    """Alternates between the two channels, headline first, until top_k.
+
+    Headline first because it is the better prior: measured over the archive,
+    a nearest text neighbour agrees with the crowd about two thirds of the
+    time (see headline_embeddings.py), while image similarity is documented
+    to track newspaper layout as much as subject. Alternating rather than
+    filling from one channel keeps a cover with a thin headline index from
+    losing its image context entirely.
+
+    A cover found by both channels appears once, credited to the headline
+    channel, since that is the stronger reason for it being there.
+    """
+    merged, seen = [], set()
+    for pair in zip_longest(headline_matches, image_matches):
+        for m in pair:
+            if m is None or m["id"] in seen or len(merged) >= top_k:
+                continue
+            seen.add(m["id"])
+            merged.append(m)
+    return merged
+
+
 def build_few_shot_block(matches):
-    """Mirrors api/lib/ai.js's buildFewShotBlock exactly — same score
-    filter (drops a cover's own near-identical match, score >= 0.999, so a
-    re-classified cover never gets handed its own crowd vote), same
-    wording. Keep both in sync by hand."""
-    clubs = [
-        m["metadata"]["club"] for m in (matches or [])
-        if m.get("score", 0) < 0.999 and m.get("metadata", {}).get("club")
+    """Mirrors api/lib/ai.js's buildFewShotBlock exactly — same filter, same
+    tally, same tie-break, same wording. Keep both in sync by hand."""
+    usable = [
+        m for m in (matches or [])
+        if m.get("score", 0) < 0.999 and (m.get("metadata") or {}).get("club")
     ]
-    if not clubs:
+    if not usable:
         return ""
+
+    counts = {}
+    for m in usable:
+        club = m["metadata"]["club"]
+        counts[club] = counts.get(club, 0) + 1
+    tally = ", ".join(
+        f"{n} {club}" for club, n in
+        sorted(counts.items(), key=lambda kv: (-kv[1], CLUBS.index(kv[0])))
+    )
+
+    # Anything that predates the second index has no "via" and is a layout
+    # match, which is what the image index has always been.
+    by_headline = sum(1 for m in usable if m.get("via") == "headline")
+    by_layout = len(usable) - by_headline
+    both = "both" if len(usable) == 2 else str(len(usable))
+    if by_headline and by_layout:
+        channels = f"{by_headline} matched by headline wording, {by_layout} by page layout"
+    elif by_headline:
+        channels = f"{both} matched by headline wording"
+    else:
+        channels = f"{both} matched by page layout"
+
     return (
-        f"Reference: {len(clubs)} visually similar past front pages from this archive "
-        f"were crowd-labelled: {', '.join(clubs)}. Visual similarity here tracks newspaper "
-        "layout as much as subject matter — treat this only as a weak prior, not a verdict.\n\n"
+        f"Reference: {len(usable)} past front pages from this archive were crowd-labelled: "
+        f"{tally} ({channels}). A headline match is about the same story; a layout match tracks "
+        "newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
     )
 
 
@@ -261,30 +344,48 @@ def load_clip():
     return model, processor
 
 
-def embed_and_retrieve(model, processor, image_bytes):
-    """Embed and retrieve only, no Llama4 call — what live mode needs.
-    /reclassify-rag is the one place that actually calls Llama4 for a live
-    cover; calling classify_via_llama here too would mean paying for the
-    same classification twice per cover. Returns (few_shot_text, cover_ids)
-    — cover_ids is what run_live sends on as rag_cover_ids, for provenance;
-    --eval mode (rag_classify_one below) only ever uses the text half."""
+def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
+    """Both channels for one cover: the image against capas-cover-embeddings,
+    the lead headline against capas-headline-embeddings, merged into one
+    ranked list. No Llama4 call — /reclassify-rag is the one place that
+    happens for a live cover, and calling it here too would pay for the same
+    classification twice.
+
+    A cover with no scraped headlines (every past-date scrape, see
+    headlines.md) simply skips the text channel and gets image matches alone,
+    which is what every cover got before this index existed.
+
+    Returns (few_shot_text, cover_ids) — the ids are what run_live sends on as
+    rag_cover_ids, for provenance; --eval only ever uses the text half."""
+    clip, processor, text_model, tokenizer = models
+
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    vector = embed(model, processor, image)
-    matches = query_vectorize(vector)
-    return build_few_shot_block(matches), rag_cover_ids_from_matches(matches)
+    image_matches = usable_matches(
+        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), RAG_TOP_K + 3), "layout", cover_date,
+    )
+
+    headline_matches = []
+    lead = lead_headline(headlines)
+    if lead:
+        headline_matches = usable_matches(
+            query_vectorize(HEADLINE_INDEX, embed_text(text_model, tokenizer, lead), RAG_TOP_K + 3),
+            "headline", cover_date,
+        )
+
+    merged = merge_channels(headline_matches, image_matches)
+    return build_few_shot_block(merged), rag_cover_ids_from_matches(merged)
 
 
-def rag_classify_one(model, processor, image_bytes, headlines=None):
-    """Full pipeline for one cover: embed, retrieve, build few-shot text,
-    classify. Used by --eval mode only, which needs the result locally to
-    score against the crowd label and never touches the Worker at all.
-    Returns (result_dict, few_shot_text)."""
-    few_shot, _ = embed_and_retrieve(model, processor, image_bytes)
+def rag_classify_one(models, image_bytes, headlines=None, cover_date=None):
+    """Full pipeline for one cover: retrieve, build both prompt blocks,
+    classify. Used by --eval only, which needs the result locally to score
+    against the crowd label and never touches the Worker at all."""
+    few_shot, _ = embed_and_retrieve(models, image_bytes, headlines, cover_date)
     result = classify_via_llama(image_bytes, few_shot, headlines)
     return result, few_shot
 
 
-def run_live(model, processor, limit):
+def run_live(models, limit):
     if not ADMIN_SECRET:
         print("Set ADMIN_SECRET (the Worker's admin bearer token, not a Cloudflare token).", file=sys.stderr)
         sys.exit(1)
@@ -298,7 +399,7 @@ def run_live(model, processor, limit):
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
-            few_shot, rag_cover_ids = embed_and_retrieve(model, processor, image_bytes)
+            few_shot, rag_cover_ids = embed_and_retrieve(models, image_bytes, c.get("headlines"), c.get("date"))
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
             continue
@@ -325,7 +426,7 @@ def run_live(model, processor, limit):
         print(f"  {c['newspaper']} {c['date']}: {resp['club']}{tag}")
 
 
-def run_eval(model, processor, n, all_):
+def run_eval(models, n, all_):
     rows = json.loads(fetch(STATS))["rows"]
     # Two requests because they are two resources: /stats is the crowd labels,
     # /headlines is the scraped front-page text classifyAndStore reads from D1.
@@ -341,7 +442,7 @@ def run_eval(model, processor, n, all_):
     for i, row in enumerate(sample):
         try:
             image_bytes = fetch(row["url"])
-            result, _ = rag_classify_one(model, processor, image_bytes, headlines.get(row["cover_id"]))
+            result, _ = rag_classify_one(models, image_bytes, headlines.get(row["cover_id"]), row.get("date"))
         except Exception as e:
             print(f"\nStopped at {i} of {len(sample)}: {e}", file=sys.stderr)
             break
@@ -399,12 +500,15 @@ def main():
     ap.add_argument("--all", action="store_true", help="--eval mode: score every labelled cover")
     args = ap.parse_args()
 
-    model, processor = load_clip()
+    clip, processor = load_clip()
+    text_model, tokenizer = load_text_model(HF_TOKEN)
+    print("headline model loaded")
+    models = (clip, processor, text_model, tokenizer)
 
     if args.eval:
-        run_eval(model, processor, args.n, args.all)
+        run_eval(models, args.n, args.all)
     else:
-        run_live(model, processor, args.limit)
+        run_live(models, args.limit)
 
 
 if __name__ == "__main__":

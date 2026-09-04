@@ -2,6 +2,8 @@
 
 A Vectorize index of cover images, so "covers that looked like this one" is a query instead of something a human has to eyeball. Not part of the AI Detector card and doesn't touch `ai_club`; a separate building block for similarity search over the archive.
 
+The text sibling of this index is [Headline Embeddings](#headline-embeddings), which embeds each cover's lead headline instead of its pixels. Both feed the same few-shot block; this one is the channel with the layout bias described below.
+
 ## What's embedded
 
 Every crowd-labelled cover, same filter as `avg_cover.py` and `train_classic_classifier.py`: a vote in `analytics_covers`. An unvoted cover has no trustworthy label, so there's nothing useful to attach to it.
