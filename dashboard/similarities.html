@@ -8,11 +8,11 @@
      covers RAG actually matched it against, for eyeballing whether the
      CLIP image embeddings retrieve genuinely similar covers or just
      same-newspaper layout (see dashboard/documentation/rag.md and
-     image-embeddings.md for the background). Not linked from anywhere in
-     the public UI; reachable only if you know the URL, same as
-     /documentation. Public, no auth, same reasoning as /documentation:
-     nothing here is a secret, just AI guesses and retrieval matches with
-     no user attached to them. -->
+     image-embeddings.md for the background). Linked from the footer of
+     every dashboard page, like /documentation — public, no auth, same
+     reasoning: nothing here is a secret, just AI guesses and retrieval
+     matches with no user attached to them. It stays noindex, though: it
+     is a diagnostic view, not something to land on from a search engine. -->
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,6 +64,25 @@
   main { max-width: 1100px; margin: 0 auto; padding: 28px 22px 80px; }
 
   #status { color: var(--muted); font-size: 0.8rem; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
+
+  .site-footer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 22px 40px;
+    border-top: 1px solid var(--panel2);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .site-footer-nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+  .site-footer-nav a { color: var(--text); text-decoration: none; letter-spacing: 0.04em; }
+  .site-footer-nav a:hover { color: var(--yellow); }
+  .footer-dot { color: var(--muted); }
+  .site-footer-copy { font-size: 0.68rem; opacity: 0.7; }
   #status.error { color: #f87171; }
 
   #groups { margin-top: 26px; display: flex; flex-direction: column; gap: 26px; }
@@ -128,6 +147,20 @@
   <div id="status"></div>
   <div id="groups"></div>
 </main>
+
+<footer class="site-footer">
+  <nav class="site-footer-nav">
+    <a href="/">Dashboard</a>
+    <span class="footer-dot">·</span>
+    <a href="/documentation">Documentação</a>
+    <span class="footer-dot">·</span>
+    <a href="/search.html">Pesquisa</a>
+    <span class="footer-dot">·</span>
+    <a href="https://github.com/DigasNikas" target="_blank" rel="noopener">GitHub</a>
+    <span class="footer-dot">·</span>
+    <span class="site-footer-copy">© 2026 Diogo Nicolau</span>
+  </nav>
+</footer>
 
 <script>
 const PAPER_NAMES = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
