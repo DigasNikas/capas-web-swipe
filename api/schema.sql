@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS covers (
   ai_headline TEXT,                   -- headline the model quoted back, so a wrong guess is debuggable: ALTER TABLE covers ADD COLUMN ai_headline TEXT
   ai_why     TEXT,                    -- one-line reason the model gave for the club (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_why TEXT
   ai_rag_covers TEXT,                 -- JSON array of cover_ids the RAG few-shot block was built from, "[]" if none (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_rag_covers TEXT
+  ai_source  TEXT,                    -- 'model' (a Llama4 call) or 'consensus' (the RAG neighbours agreed strongly enough to skip it), nullable alongside ai_club: ALTER TABLE covers ADD COLUMN ai_source TEXT
   vectorized_at TEXT,                 -- set once this cover is embedded into capas-cover-embeddings (nullable, backfilled): ALTER TABLE covers ADD COLUMN vectorized_at TEXT
   headlines  TEXT,                    -- real scraped "Títulos da Capa" text from capasjornais.pt, forward-only from the scrape date it ran on (nullable): ALTER TABLE covers ADD COLUMN headlines TEXT
   headline_vectorized_at TEXT,        -- set once this cover's lead headline is embedded into capas-headline-embeddings (nullable, backfilled): ALTER TABLE covers ADD COLUMN headline_vectorized_at TEXT

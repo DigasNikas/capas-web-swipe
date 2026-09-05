@@ -8,7 +8,7 @@
 import assert from "node:assert";
 import {
   parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches,
-  buildHeadlinesBlock, classifyCover, classifyAndStore, PROMPT,
+  buildHeadlinesBlock, classifyCover, classifyAndStore, consensusClub, PROMPT,
 } from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
@@ -226,5 +226,58 @@ const fakeEnv = ({ headlines = null, capture = [] } = {}) => ({
   assert.equal(capture[0].messages[0].content[0].text, PROMPT);
 }
 
+
+// --- consensusClub ---
+//
+// The fast path: when this many of the retrieved neighbours carry the same
+// crowd label, that label is written directly and the Llama4 call is skipped.
+// Measured over all 1836 crowd-labelled covers, by size of the winning bloc:
+// 7/7 is right 96% of the time, 6/7 94%, 5/7 85%, 4/7 69%. 6 is the cut
+// because it is the last band that beats the model's own 91.2%.
+
+assert.equal(consensusClub([]), null);
+assert.equal(consensusClub(undefined), null);
+
+// Six of seven agreeing is enough; the seventh disagreeing changes nothing.
+assert.deepEqual(
+  consensusClub([
+    ...Array(6).fill({ metadata: { club: "porto" } }),
+    { metadata: { club: "benfica" } },
+  ]),
+  { club: "porto", agreed: 6, of: 7 },
+);
+
+// Five of seven is where accuracy falls to 85%, below the model. No shortcut.
+assert.equal(
+  consensusClub([
+    ...Array(5).fill({ metadata: { club: "porto" } }),
+    { metadata: { club: "benfica" } },
+    { metadata: { club: "sporting" } },
+  ]),
+  null,
+);
+
+// A short neighbour list can still qualify: six of six is stronger evidence
+// than six of seven, not weaker.
+assert.deepEqual(
+  consensusClub(Array(6).fill({ metadata: { club: "sporting" } })),
+  { club: "sporting", agreed: 6, of: 6 },
+);
+
+// Filtered the same way the few-shot block is, so the two never disagree
+// about which neighbours counted: a self-match contributes nothing, and six
+// real neighbours plus a self-match is still six.
+assert.equal(
+  consensusClub(Array(7).fill({ metadata: { club: "porto" }, score: 0.99999 })),
+  null,
+  "self-matches cannot vote",
+);
+assert.deepEqual(
+  consensusClub([
+    ...Array(6).fill({ metadata: { club: "porto" } }),
+    { metadata: { club: "porto" }, score: 0.99999 },
+  ]),
+  { club: "porto", agreed: 6, of: 6 },
+);
 
 console.log("ai.js self-check ok");

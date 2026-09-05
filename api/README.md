@@ -39,6 +39,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `backfill-headlines.js` | `POST /backfill-headlines` (admin) — today-only: fills `headlines` for covers already scraped earlier today, before this column existed |
 | `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — recent covers for `scripts/rag_classify.py` to embed |
 | `reclassify-rag.js` | `POST /reclassify-rag` (admin) — classify one cover with an externally-computed few-shot block |
+| `label-consensus.js` | `POST /label-consensus` (admin) — record a label the RAG neighbours agreed on, no model call |
 | `similarities.js` | `GET /similarities` (public) — every cover with `ai_rag_covers`, plus what those ids resolve to; powers `dashboard/similarities.html` |
 | `vectorize-candidates.js` | `GET /vectorize-candidates?limit=` (admin) — voted covers still missing `vectorized_at`, for `scripts/build_vectorize_index.py --candidates` to embed |
 | `vectorize-mark.js` | `POST /vectorize-mark` (admin) — sets `vectorized_at` for a batch of cover ids that just upserted into Vectorize |

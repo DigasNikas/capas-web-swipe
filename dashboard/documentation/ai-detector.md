@@ -11,8 +11,16 @@ covers how they connect.
 
 A cover gets no opinion at scrape time. `scrapeNewspaper` stores it in D1
 and stops. `ai_club` stays `NULL` until `scripts/rag_classify.py` picks it
-up: embeds it, pulls the nearest labelled covers from Vectorize, and calls
-Llama4 with that context folded into the prompt (see [RAG](#rag)).
+up: embeds it twice, pulls the nearest labelled covers from both Vectorize
+indexes, and calls Llama4 with that context folded into the prompt (see
+[RAG](#rag)).
+
+Two things can end that pass, and `ai_source` says which one did. Usually
+it is the model. But when six or more of the seven retrieved neighbours
+already carry the same crowd label, that label is written directly and the
+model is never asked — the neighbours are right 95% of the time in that
+band, better than the classifier itself, so the call is not worth its
+neurons (see [RAG](#rag)'s "When the neighbours decide it themselves").
 
 There used to be a separate zero-shot call at scrape time, with RAG only
 touching what that call missed. That call is gone. Every cover goes

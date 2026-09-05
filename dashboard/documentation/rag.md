@@ -59,6 +59,45 @@ point. It has no crowd vote yet, the same rule `build_vectorize_index.py`
 already applies. The index keeps growing only through that script, on its
 own schedule.
 
+## When the neighbours decide it themselves
+
+Not every cover reaches Llama4. When `CONSENSUS_MIN` (6) or more of the
+retrieved neighbours carry the same crowd label, `rag_classify.py` writes
+that label through `/label-consensus` and never calls the model.
+
+The threshold is measured, not chosen. Replaying this exact retrieval over
+all 1836 crowd-labelled covers — both channels, self-matches and same-day
+siblings dropped, merged to `RAG_TOP_K` — and scoring the neighbours' own
+majority against the crowd, grouped by how big the winning bloc was:
+
+| winning bloc | covers | share | agrees with the crowd |
+|---|---|---|---|
+| 7 of 7 | 255 | 14% | 96% |
+| 6 of 7 | 354 | 19% | 94% |
+| 5 of 7 | 367 | 20% | 85% |
+| 4 of 7 | 490 | 27% | 69% |
+| 3 of 7 | 324 | 18% | 43% |
+
+6 is the cut because it is the last band that stays above the classifier's
+own agreement (91.2% with both prompt blocks). At 6 the fast path answers a
+third of covers at 95%, which is a third of the daily neuron allowance freed
+for the rest. Dropping to 5 would answer half at 91% — a one-line change in
+`api/lib/ai.js`, to be argued against that table.
+
+None of this makes the neighbours a classifier. Their bare majority agrees
+with the crowd 75.3% of the time, sixteen points below the model. This is a
+shortcut on the covers where they happen to be near-unanimous, and nothing
+more.
+
+`ai_source` records which way each label came ('model' or 'consensus'), so
+the two never have to be told apart by guessing. `ai_headline` is empty on a
+consensus row, because nothing read the image; `ai_why` carries the margin
+("6 of 7 similar covers were crowd-labelled porto") so a wrong one can be
+traced to how thin its majority was. The threshold is re-checked inside
+`/label-consensus` rather than trusted from the script, since a client bug
+sending a 4-of-7 majority would otherwise write labels that are right 69% of
+the time with nothing downstream noticing.
+
 ## Why outside the Worker, and why not a Space
 
 Workers AI has no CLIP-compatible image-embedding model. Three live

@@ -217,6 +217,46 @@ export function buildFewShotBlock(matches) {
   );
 }
 
+// How many retrieved neighbours must carry the same crowd label before that
+// label is written straight to D1 and the Llama4 call is skipped entirely.
+//
+// Measured over all 1836 crowd-labelled covers, replaying the exact
+// retrieval this pipeline performs (both channels, self-matches and same-day
+// siblings dropped, merged to RAG_TOP_K) and scoring the neighbours' majority
+// against the crowd, grouped by how big the winning bloc was:
+//
+//   7 of 7   255 covers (14%)   96% right
+//   6 of 7   354 covers (19%)   94%
+//   5 of 7   367 covers (20%)   85%
+//   4 of 7   490 covers (27%)   69%
+//   3 of 7   324 covers (18%)   43%
+//
+// 6 is the cut because it is the last band that stays above the classifier's
+// own measured agreement (91.2% with both prompt blocks). At >= 6 the fast
+// path takes a third of covers at 95%; dropping to 5 would take half at 91%,
+// trading fidelity for backlog speed. That is a one-line change here, and
+// the number to change it against is the table above.
+//
+// The neighbours are a weak prior in general — their bare majority agrees
+// with the crowd 75.3% of the time — which is exactly why this is a
+// high-agreement shortcut and not a classifier.
+export const CONSENSUS_MIN = 6;
+
+// The club to write without asking the model, or null to run the model.
+// Filters matches the same way buildFewShotBlock does, so the block's tally
+// and this decision can never disagree about which neighbours counted.
+export function consensusClub(matches) {
+  const usable = (matches ?? []).filter(m => (m.score ?? 0) < 0.999 && m.metadata?.club);
+
+  const counts = new Map();
+  for (const m of usable) counts.set(m.metadata.club, (counts.get(m.metadata.club) ?? 0) + 1);
+
+  for (const [club, agreed] of counts) {
+    if (agreed >= CONSENSUS_MIN) return { club, agreed, of: usable.length };
+  }
+  return null;
+}
+
 // Same filter as buildFewShotBlock above (score < 0.999, has a club), kept
 // as a separate pass rather than returned alongside the text so a caller
 // that only wants the prompt block (classifyCover's callers) doesn't have
@@ -286,7 +326,7 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCov
     if (!club) return null;
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ? WHERE id = ?")
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_source = 'model' WHERE id = ?")
       // Empty string, not null: ai_headline/ai_why being NULL is what marks a
       // cover as classified by an older prompt and puts it back in the
       // backfill queue. ai_rag_covers carries no such meaning, "[]" for no
