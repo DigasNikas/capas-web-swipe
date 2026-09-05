@@ -8,7 +8,8 @@
 import assert from "node:assert";
 import {
   parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches,
-  buildHeadlinesBlock, classifyCover, classifyAndStore, consensusClub, PROMPT,
+  buildHeadlinesBlock, classifyCover, classifyAndStore, consensusClub,
+  ragSourcesFromMatches, PROMPT,
 } from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
@@ -279,5 +280,28 @@ assert.deepEqual(
   ]),
   { club: "porto", agreed: 6, of: 6 },
 );
+
+// --- ragSourcesFromMatches ---
+//
+// Runs the same filter as ragCoverIdsFromMatches so the two arrays line up
+// index for index: ai_rag_covers[i] was found by ai_rag_source[i]. Any drift
+// between them mislabels which channel retrieved a cover on /similarities,
+// silently and forever.
+assert.deepEqual(ragSourcesFromMatches([]), []);
+assert.deepEqual(ragSourcesFromMatches(undefined), []);
+
+{
+  const matches = [
+    { id: "1", metadata: { club: "benfica" }, score: 0.99999, via: "headline" },
+    { id: "2", metadata: {} , via: "headline" },
+    { id: "3", metadata: { club: "sporting" }, score: 0.9, via: "headline" },
+    { id: "4", metadata: { club: "porto" }, score: 0.8, via: "layout" },
+  ];
+  assert.deepEqual(ragCoverIdsFromMatches(matches), ["3", "4"]);
+  assert.deepEqual(ragSourcesFromMatches(matches), ["headline", "layout"], "same matches, same order");
+}
+
+// A match with no via predates the second index and is a layout match.
+assert.deepEqual(ragSourcesFromMatches([{ id: "1", metadata: { club: "porto" } }]), ["layout"]);
 
 console.log("ai.js self-check ok");

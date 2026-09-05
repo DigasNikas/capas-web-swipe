@@ -65,6 +65,30 @@
 
   #status { color: var(--muted); font-size: 0.8rem; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
 
+  .channels { display: flex; gap: 6px; margin: 16px 0 4px; flex-wrap: wrap; }
+  .channels button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--panel2);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  .channels button:hover { color: var(--text); }
+  .channels button.on { color: var(--bg); background: var(--yellow); border-color: var(--yellow); }
+
+  .via-tag {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
   .site-footer {
     max-width: 900px;
     margin: 0 auto;
@@ -142,8 +166,15 @@
 <main>
   <p style="color:var(--muted); font-size:0.85rem; max-width: 640px;">
     Every cover with RAG matches recorded, next to the covers retrieval actually pulled for it.
-    For assessing whether the image embeddings find real similarity or just same-newspaper layout.
+    Retrieval runs two channels — the lead headline against the text index, the page against the
+    image index — so this is where you see whether either finds real similarity or just
+    same-newspaper layout.
   </p>
+  <div class="channels" role="group" aria-label="Canal de retrieval">
+    <button type="button" data-via="all" class="on">Todas</button>
+    <button type="button" data-via="headline">Por texto</button>
+    <button type="button" data-via="layout">Por imagem</button>
+  </div>
   <div id="status"></div>
   <div id="groups"></div>
 </main>
@@ -170,6 +201,19 @@ const CLUB_SHORT = { sporting: 'SCP', porto: 'FCP', benfica: 'SLB', others: 'RES
 const status = document.getElementById('status');
 const groupsEl = document.getElementById('groups');
 
+// Everything /api/similarities returned, kept so the filter is a re-render
+// rather than a re-fetch: the channel is already on every match.
+let allGroups = [];
+let via = 'all';
+
+document.querySelectorAll('.channels button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    via = btn.dataset.via;
+    document.querySelectorAll('.channels button').forEach(b => b.classList.toggle('on', b === btn));
+    render(allGroups);
+  });
+});
+
 load();
 
 async function load() {
@@ -194,9 +238,8 @@ async function load() {
     return;
   }
 
-  const groups = await res.json();
-  status.textContent = `${groups.length} capas com correspondências RAG.`;
-  render(groups);
+  allGroups = await res.json();
+  render(allGroups);
 }
 
 function coverBlock(c, { showAi }) {
@@ -225,9 +268,33 @@ function coverBlock(c, { showAi }) {
   return div;
 }
 
+// A cover whose matches all came from the other channel drops out entirely
+// rather than rendering an empty row — the point of the filter is to see what
+// one channel found, and a wall of covers with nothing under them is noise.
 function render(groups) {
+  const shown = via === 'all'
+    ? groups
+    : groups
+        .map(g => ({ ...g, ragCovers: g.ragCovers.filter(c => (c.via ?? 'layout') === via) }))
+        .filter(g => g.ragCovers.length > 0);
+
+  const matches = shown.reduce((n, g) => n + g.ragCovers.length, 0);
+  const label = via === 'all' ? '' : via === 'headline' ? ' por texto' : ' por imagem';
+  status.textContent = `${shown.length} capas, ${matches} correspondências${label}.`;
+  status.classList.remove('error');
+  return renderGroups(shown);
+}
+
+function renderGroups(groups) {
+  // Clear first: this used to run once per page load, straight after load()
+  // emptied the list itself. Switching channels calls it again, and without
+  // this the new rows stacked under the old ones.
+  groupsEl.innerHTML = '';
+
   if (groups.length === 0) {
-    groupsEl.innerHTML = '<div class="empty">Nenhuma capa com ai_rag_covers ainda.</div>';
+    groupsEl.innerHTML = via === 'all'
+      ? '<div class="empty">Nenhuma capa com ai_rag_covers ainda.</div>'
+      : `<div class="empty">Nenhuma correspondência ${via === 'headline' ? 'por texto' : 'por imagem'}.</div>`;
     return;
   }
 
@@ -250,6 +317,12 @@ function render(groups) {
     g.ragCovers.forEach(rc => {
       const block = coverBlock(rc, { showAi: false });
       block.className = 'ref-cover';
+      if (via === 'all') {
+        const tag = document.createElement('span');
+        tag.className = 'via-tag';
+        tag.textContent = (rc.via ?? 'layout') === 'headline' ? 'texto' : 'imagem';
+        block.appendChild(tag);
+      }
       refs.appendChild(block);
     });
     row.appendChild(refs);

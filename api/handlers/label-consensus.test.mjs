@@ -22,7 +22,10 @@ const post = (body, auth = "s3cret") =>
     body: JSON.stringify(body),
   });
 
-const good = { cover_id: 42, club: "porto", agreed: 6, of: 7, rag_cover_ids: ["1", "2"] };
+const good = {
+  cover_id: 42, club: "porto", agreed: 6, of: 7,
+  rag_cover_ids: ["1", "2"], rag_sources: ["headline", "layout"],
+};
 
 assert.equal((await handleLabelConsensus(post(good, "wrong"), fakeEnv())).status, 401);
 
@@ -31,11 +34,12 @@ assert.equal((await handleLabelConsensus(post(good, "wrong"), fakeEnv())).status
   const res = await handleLabelConsensus(post(good), env);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { ok: true, cover_id: 42, club: "porto" });
-  const [club, headline, why, rag, source, id] = env.DB.args;
+  const [club, headline, why, rag, ragSource, source, id] = env.DB.args;
   assert.equal(club, "porto");
   assert.equal(headline, "", "no model read the image, so nothing was quoted");
   assert.match(why, /6 of 7/, "the margin is recorded, not just the verdict");
   assert.equal(rag, '["1","2"]');
+  assert.equal(ragSource, '["headline","layout"]', "which channel found each neighbour, for /similarities' filter");
   assert.equal(source, "consensus", "tellable apart from a model label in one query");
   assert.equal(id, 42);
 }
