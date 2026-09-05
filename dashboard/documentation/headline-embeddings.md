@@ -112,9 +112,12 @@ credited to the headline channel.
 
 `ai_rag_source` records the channel per match, alongside the ids in
 `ai_rag_covers`. That is what lets `/similarities` (linked as "Parecidas")
-filter its view to one channel — the fastest way to see the difference the
+show one channel at a time — the fastest way to see the difference the
 recall numbers above describe, which is that the text channel finds the
-`others` covers the image channel walks past.
+`others` covers the image channel walks past. It shows one or the other and
+never both at once: a combined view would be the merged set that reached the
+prompt, which is a third thing again and reads as "everything retrieval
+found" when it is not.
 
 The block then says which channel found what, so the model can weigh a
 story match above a layout match:

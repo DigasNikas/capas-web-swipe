@@ -80,15 +80,6 @@
   .channels button:hover { color: var(--text); }
   .channels button.on { color: var(--bg); background: var(--yellow); border-color: var(--yellow); }
 
-  .via-tag {
-    display: inline-block;
-    margin-top: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-  }
-
   .site-footer {
     max-width: 900px;
     margin: 0 auto;
@@ -168,11 +159,11 @@
     Every cover with RAG matches recorded, next to the covers retrieval actually pulled for it.
     Retrieval runs two channels — the lead headline against the text index, the page against the
     image index — so this is where you see whether either finds real similarity or just
-    same-newspaper layout.
+    same-newspaper layout. Only the matches that reached the prompt are recorded, not every
+    cover each index proposed.
   </p>
   <div class="channels" role="group" aria-label="Canal de retrieval">
-    <button type="button" data-via="all" class="on">Todas</button>
-    <button type="button" data-via="headline">Por texto</button>
+    <button type="button" data-via="headline" class="on">Por texto</button>
     <button type="button" data-via="layout">Por imagem</button>
   </div>
   <div id="status"></div>
@@ -204,7 +195,7 @@ const groupsEl = document.getElementById('groups');
 // Everything /api/similarities returned, kept so the filter is a re-render
 // rather than a re-fetch: the channel is already on every match.
 let allGroups = [];
-let via = 'all';
+let via = 'headline';
 
 document.querySelectorAll('.channels button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -272,15 +263,13 @@ function coverBlock(c, { showAi }) {
 // rather than rendering an empty row — the point of the filter is to see what
 // one channel found, and a wall of covers with nothing under them is noise.
 function render(groups) {
-  const shown = via === 'all'
-    ? groups
-    : groups
-        .map(g => ({ ...g, ragCovers: g.ragCovers.filter(c => (c.via ?? 'layout') === via) }))
-        .filter(g => g.ragCovers.length > 0);
+  const shown = groups
+    .map(g => ({ ...g, ragCovers: g.ragCovers.filter(c => (c.via ?? 'layout') === via) }))
+    .filter(g => g.ragCovers.length > 0);
 
   const matches = shown.reduce((n, g) => n + g.ragCovers.length, 0);
-  const label = via === 'all' ? '' : via === 'headline' ? ' por texto' : ' por imagem';
-  status.textContent = `${shown.length} capas, ${matches} correspondências${label}.`;
+  status.textContent =
+    `${shown.length} capas, ${matches} correspondências ${via === 'headline' ? 'por texto' : 'por imagem'}.`;
   status.classList.remove('error');
   return renderGroups(shown);
 }
@@ -292,9 +281,8 @@ function renderGroups(groups) {
   groupsEl.innerHTML = '';
 
   if (groups.length === 0) {
-    groupsEl.innerHTML = via === 'all'
-      ? '<div class="empty">Nenhuma capa com ai_rag_covers ainda.</div>'
-      : `<div class="empty">Nenhuma correspondência ${via === 'headline' ? 'por texto' : 'por imagem'}.</div>`;
+    groupsEl.innerHTML =
+      `<div class="empty">Nenhuma correspondência ${via === 'headline' ? 'por texto' : 'por imagem'}.</div>`;
     return;
   }
 
@@ -317,12 +305,6 @@ function renderGroups(groups) {
     g.ragCovers.forEach(rc => {
       const block = coverBlock(rc, { showAi: false });
       block.className = 'ref-cover';
-      if (via === 'all') {
-        const tag = document.createElement('span');
-        tag.className = 'via-tag';
-        tag.textContent = (rc.via ?? 'layout') === 'headline' ? 'texto' : 'imagem';
-        block.appendChild(tag);
-      }
       refs.appendChild(block);
     });
     row.appendChild(refs);
