@@ -110,6 +110,12 @@ filling from one channel keeps a cover with a thin headline index from
 losing its image context. A cover both channels return appears once,
 credited to the headline channel.
 
+`ai_rag_source` records the channel per match, alongside the ids in
+`ai_rag_covers`. That is what lets `/similarities` (linked as "Parecidas")
+filter its view to one channel — the fastest way to see the difference the
+recall numbers above describe, which is that the text channel finds the
+`others` covers the image channel walks past.
+
 The block then says which channel found what, so the model can weigh a
 story match above a layout match:
 

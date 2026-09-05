@@ -2,7 +2,7 @@ import { json, requireAdmin } from "../lib/http.js";
 import { CLUBS, CONSENSUS_MIN } from "../lib/ai.js";
 
 // POST /label-consensus (admin, bearer-protected). Body: {cover_id, club,
-// agreed, of, rag_cover_ids}. Records a label the RAG neighbours agreed on
+// agreed, of, rag_cover_ids, rag_sources}. Records a label the RAG neighbours agreed on
 // without any model call.
 //
 // The counterpart to /reclassify-rag, which stays the one place Llama4 runs.
@@ -22,7 +22,7 @@ export async function handleLabelConsensus(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  const { cover_id, club, agreed, of, rag_cover_ids } = body;
+  const { cover_id, club, agreed, of, rag_cover_ids, rag_sources } = body;
   if (!cover_id) return json({ error: "cover_id required" }, 400);
   if (!CLUBS.includes(club)) return json({ error: `club must be one of ${CLUBS.join(", ")}` }, 400);
   if (!Number.isInteger(agreed) || agreed < CONSENSUS_MIN) {
@@ -30,7 +30,7 @@ export async function handleLabelConsensus(request, env) {
   }
 
   await env.DB
-    .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_source = ? WHERE id = ?")
+    .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = ? WHERE id = ?")
     // ai_headline is "" because nothing read the image to quote from it, and
     // NULL there means "classified by an older prompt, retry me" (see
     // classifyAndStore). ai_why carries the margin, so a wrong consensus
@@ -40,6 +40,7 @@ export async function handleLabelConsensus(request, env) {
       "",
       `${agreed} of ${of ?? agreed} similar covers were crowd-labelled ${club}`,
       JSON.stringify(rag_cover_ids ?? []),
+      JSON.stringify(rag_sources ?? []),
       "consensus",
       cover_id,
     )

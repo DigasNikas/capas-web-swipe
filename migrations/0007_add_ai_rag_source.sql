@@ -1,0 +1,15 @@
+-- Which channel found each of the covers in ai_rag_covers: a JSON array of
+-- "headline" / "layout", same length and same order as that column.
+--
+-- Retrieval has had two channels since capas-headline-embeddings shipped —
+-- the lead-headline text index and the CLIP image index — and the merged
+-- result threw that away at write time, so nothing downstream could tell a
+-- story match from a layout match. /similarities' channel filter is the
+-- first thing that needs it; the few-shot block already says the split in
+-- prose, but only as counts.
+--
+-- No backfill: every ai_* column was cleared before this shipped, so there
+-- are no rows carrying ids without sources. A row that somehow has one and
+-- not the other reads as "layout" downstream, which is what the only
+-- channel that existed before would have been.
+ALTER TABLE covers ADD COLUMN ai_rag_source TEXT;

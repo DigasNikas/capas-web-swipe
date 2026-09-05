@@ -300,6 +300,17 @@ def rag_cover_ids_from_matches(matches):
     ]
 
 
+def rag_sources_from_matches(matches):
+    """Mirrors api/lib/ai.js's ragSourcesFromMatches exactly — same filter as
+    rag_cover_ids_from_matches, so the two lists line up index for index.
+    Stored as ai_rag_source, which is what lets /similarities separate a
+    cover's story matches from its layout matches."""
+    return [
+        m.get("via", "layout") for m in (matches or [])
+        if m.get("score", 0) < 0.999 and (m.get("metadata") or {}).get("club")
+    ]
+
+
 def parse_answer(text):
     """Mirrors api/lib/ai.js's parseAnswer exactly: last ANSWER: marker
     wins, club matched by position in the text after it (not CLUBS order),
@@ -448,6 +459,7 @@ def run_live(models, limit):
                 data=json.dumps({
                     "cover_id": c["id"], "club": agreed["club"], "agreed": agreed["agreed"],
                     "of": agreed["of"], "rag_cover_ids": rag_cover_ids,
+                    "rag_sources": rag_sources_from_matches(matches),
                 }).encode("utf-8"),
                 method="POST",
             )
@@ -464,7 +476,8 @@ def run_live(models, limit):
             f"{API_BASE}/reclassify-rag",
             headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
             data=json.dumps({
-                "cover_id": c["id"], "r2_key": c["r2_key"], "few_shot": few_shot, "rag_cover_ids": rag_cover_ids,
+                "cover_id": c["id"], "r2_key": c["r2_key"], "few_shot": few_shot,
+                "rag_cover_ids": rag_cover_ids, "rag_sources": rag_sources_from_matches(matches),
             }).encode("utf-8"),
             method="POST",
         ))

@@ -20,7 +20,7 @@ export async function handleSimilarities(env) {
   try {
     const { results: rows } = await env.DB
       .prepare(`
-        SELECT id, newspaper, date, url, thumb_url, ai_club, ai_headline, ai_rag_covers
+        SELECT id, newspaper, date, url, thumb_url, ai_club, ai_headline, ai_rag_covers, ai_rag_source
         FROM covers
         WHERE ai_rag_covers IS NOT NULL AND ai_rag_covers != '[]'
         ORDER BY date DESC
@@ -28,13 +28,24 @@ export async function handleSimilarities(env) {
       .all();
 
     // ai_rag_covers is a JSON array of cover_id strings (see ai.js's
-    // ragCoverIdsFromMatches). Parse each row's once, and collect every id
-    // referenced anywhere so the covers they point to can be fetched in one
-    // second query instead of one per row.
+    // ragCoverIdsFromMatches), and ai_rag_source the channel that found each
+    // one, same order (ragSourcesFromMatches). Parse each row's once, and
+    // collect every id referenced anywhere so the covers they point to can be
+    // fetched in one second query instead of one per row.
     const parsed = rows.map(r => {
-      let ids = [];
-      try { ids = JSON.parse(r.ai_rag_covers); } catch { /* malformed, treat as none */ }
-      return { ...r, ragIds: ids.map(Number).filter(Number.isInteger) };
+      // JSON.parse(null) is null rather than a throw, so the catch alone
+      // does not make these arrays — a row with no ai_rag_source has to
+      // survive as an empty list, not as null being indexed.
+      const asArray = raw => {
+        try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : []; }
+        catch { return []; }
+      };
+      const ragIds = asArray(r.ai_rag_covers).map(Number).filter(Number.isInteger);
+      const sources = asArray(r.ai_rag_source);
+      // Positional pairing, so a row written before ai_rag_source existed —
+      // or one whose two columns somehow disagree in length — reads as
+      // layout, the only channel there was when that could have happened.
+      return { ...r, ragIds, ragVia: ragIds.map((_, i) => sources[i] ?? "layout") };
     }).filter(r => r.ragIds.length > 0);
 
     const allIds = [...new Set(parsed.flatMap(r => r.ragIds))];
@@ -61,9 +72,14 @@ export async function handleSimilarities(env) {
       refs.forEach(r => refById.set(r.id, r));
     }
 
-    const result = parsed.map(({ ragIds, ai_rag_covers, ...cover }) => ({
+    const result = parsed.map(({ ragIds, ragVia, ai_rag_covers, ai_rag_source, ...cover }) => ({
       ...cover,
-      ragCovers: ragIds.map(id => refById.get(id)).filter(Boolean),
+      ragCovers: ragIds
+        .map((id, i) => {
+          const ref = refById.get(id);
+          return ref && { ...ref, via: ragVia[i] };
+        })
+        .filter(Boolean),
     }));
 
     return json(result);

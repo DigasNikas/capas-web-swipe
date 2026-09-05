@@ -17,6 +17,7 @@ from rag_classify import (
     merge_channels,
     parse_answer,
     rag_cover_ids_from_matches,
+    rag_sources_from_matches,
     usable_matches,
 )
 
@@ -92,6 +93,23 @@ assert rag_cover_ids_from_matches([
     {"id": "2", "metadata": {"club": "sporting"}, "score": 0.87},
     {"id": "3", "metadata": {"club": "porto"}, "score": 0.81},
 ]) == ["2", "3"]
+
+# --- rag_sources_from_matches ---
+#
+# Index-aligned with rag_cover_ids_from_matches: ai_rag_covers[i] was found by
+# ai_rag_source[i]. Drift between them mislabels a channel on /similarities,
+# silently and permanently.
+
+MIXED = [
+    {"id": "1", "metadata": {"club": "benfica"}, "score": 0.99999, "via": "headline"},
+    {"id": "2", "metadata": {}, "via": "headline"},
+    {"id": "3", "metadata": {"club": "sporting"}, "score": 0.9, "via": "headline"},
+    {"id": "4", "metadata": {"club": "porto"}, "score": 0.8, "via": "layout"},
+]
+assert rag_cover_ids_from_matches(MIXED) == ["3", "4"]
+assert rag_sources_from_matches(MIXED) == ["headline", "layout"]
+assert rag_sources_from_matches([]) == []
+assert rag_sources_from_matches([{"id": "1", "metadata": {"club": "porto"}}]) == ["layout"]
 
 # --- usable_matches ---
 

@@ -270,6 +270,20 @@ export function ragCoverIdsFromMatches(matches) {
     .map(m => m.id);
 }
 
+// Which channel retrieved each of ragCoverIdsFromMatches' ids, aligned index
+// for index with it — same filter, deliberately a separate pass for the same
+// reason. Stored as ai_rag_source so /similarities can show a cover's story
+// matches apart from its layout matches; the few-shot block already says the
+// split, but only as counts.
+//
+// A match with no `via` predates capas-headline-embeddings and is a layout
+// match, which is what the only channel that existed then was.
+export function ragSourcesFromMatches(matches) {
+  return (matches ?? [])
+    .filter(m => (m.score ?? 0) < 0.999 && m.metadata?.club)
+    .map(m => m.via ?? "layout");
+}
+
 // fewShot is a pre-built block (see buildFewShotBlock above), computed
 // upstream in scripts/rag_classify.py and threaded through /reclassify-rag —
 // this function itself never touches Vectorize or does any embedding. It
@@ -310,7 +324,7 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
 // provenance — nothing reads ai_rag_covers back to build a prompt, it exists
 // so a bad classification can be traced to the covers that biased it instead
 // of re-deriving them by hand.
-export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCoverIds = []) {
+export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCoverIds = [], ragSources = []) {
   try {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
@@ -326,12 +340,12 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCov
     if (!club) return null;
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_source = 'model' WHERE id = ?")
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = 'model' WHERE id = ?")
       // Empty string, not null: ai_headline/ai_why being NULL is what marks a
       // cover as classified by an older prompt and puts it back in the
       // backfill queue. ai_rag_covers carries no such meaning, "[]" for no
       // RAG context is just as valid a stored value as a populated array.
-      .bind(club, headline ?? "", why ?? "", JSON.stringify(ragCoverIds ?? []), coverId)
+      .bind(club, headline ?? "", why ?? "", JSON.stringify(ragCoverIds ?? []), JSON.stringify(ragSources ?? []), coverId)
       .run();
     return club;
   } catch (err) {
