@@ -75,6 +75,7 @@ HEADLINE_INDEX = "capas-headline-embeddings"
 MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 7
+CONSENSUS_MIN = 6
 HEADLINES_MAX_CHARS = 600
 STATS = os.environ.get("CAPAS_STATS", "https://capas.digasnikas.com/api/stats")
 API_BASE = os.environ.get("CAPAS_API", "https://capas.digasnikas.com/api")
@@ -269,6 +270,25 @@ def build_headlines_block(headlines):
     )
 
 
+def consensus_club(matches):
+    """Mirrors api/lib/ai.js's consensusClub exactly — same filter, same
+    threshold. Returns the club to write without a Llama4 call, or None."""
+    usable = [
+        m for m in (matches or [])
+        if m.get("score", 0) < 0.999 and (m.get("metadata") or {}).get("club")
+    ]
+
+    counts = {}
+    for m in usable:
+        club = m["metadata"]["club"]
+        counts[club] = counts.get(club, 0) + 1
+
+    for club, agreed in counts.items():
+        if agreed >= CONSENSUS_MIN:
+            return {"club": club, "agreed": agreed, "of": len(usable)}
+    return None
+
+
 def rag_cover_ids_from_matches(matches):
     """Mirrors api/lib/ai.js's ragCoverIdsFromMatches exactly — same filter
     as build_few_shot_block above, kept as a separate pass for the same
@@ -355,8 +375,9 @@ def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
     headlines.md) simply skips the text channel and gets image matches alone,
     which is what every cover got before this index existed.
 
-    Returns (few_shot_text, cover_ids) — the ids are what run_live sends on as
-    rag_cover_ids, for provenance; --eval only ever uses the text half."""
+    Returns (few_shot_text, cover_ids, matches) — the ids are what run_live
+    sends on as rag_cover_ids, for provenance, and the matches are what the
+    consensus check reads."""
     clip, processor, text_model, tokenizer = models
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -373,14 +394,22 @@ def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
         )
 
     merged = merge_channels(headline_matches, image_matches)
-    return build_few_shot_block(merged), rag_cover_ids_from_matches(merged)
+    return build_few_shot_block(merged), rag_cover_ids_from_matches(merged), merged
 
 
 def rag_classify_one(models, image_bytes, headlines=None, cover_date=None):
     """Full pipeline for one cover: retrieve, build both prompt blocks,
     classify. Used by --eval only, which needs the result locally to score
     against the crowd label and never touches the Worker at all."""
-    few_shot, _ = embed_and_retrieve(models, image_bytes, headlines, cover_date)
+    few_shot, _, matches = embed_and_retrieve(models, image_bytes, headlines, cover_date)
+
+    # --eval scores what production does, and production skips the model when
+    # the neighbours agree strongly enough. Scoring the model on covers it
+    # would never be asked about would measure a pipeline nobody runs.
+    agreed = consensus_club(matches)
+    if agreed:
+        return {"club": agreed["club"], "headline": None, "why": None, "consensus": agreed}, few_shot
+
     result = classify_via_llama(image_bytes, few_shot, headlines)
     return result, few_shot
 
@@ -399,9 +428,31 @@ def run_live(models, limit):
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
-            few_shot, rag_cover_ids = embed_and_retrieve(models, image_bytes, c.get("headlines"), c.get("date"))
+            few_shot, rag_cover_ids, matches = embed_and_retrieve(
+                models, image_bytes, c.get("headlines"), c.get("date"),
+            )
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
+            continue
+
+        # When CONSENSUS_MIN of the neighbours already carry the same crowd
+        # label, they are right 95% of the time — better than the classifier's
+        # own 91.2% — so the label goes straight to D1 and the model is never
+        # asked. That is a third of covers on the current archive, which is a
+        # third of the daily neuron allowance left for the rest.
+        agreed = consensus_club(matches)
+        if agreed:
+            fetch(
+                f"{API_BASE}/label-consensus",
+                headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
+                data=json.dumps({
+                    "cover_id": c["id"], "club": agreed["club"], "agreed": agreed["agreed"],
+                    "of": agreed["of"], "rag_cover_ids": rag_cover_ids,
+                }).encode("utf-8"),
+                method="POST",
+            )
+            print(f"  {c['newspaper']} {c['date']}: {agreed['club']} "
+                  f"(consensus {agreed['agreed']}/{agreed['of']}, no model call)")
             continue
 
         # The Worker's env.AI.run call is the one and only Llama4 call for
@@ -437,7 +488,8 @@ def run_eval(models, n, all_):
     sample = [labelled[int(i * len(labelled) / size)] for i in range(size)]
 
     matrix, misses, scored, abstained = {}, [], 0, 0
-    print(f"{len(sample)} covers, {MODEL} + RAG few-shot\n")
+    by_consensus = consensus_hits = 0
+    print(f"{len(sample)} covers, {MODEL} + RAG few-shot, consensus fast path at {CONSENSUS_MIN}/{RAG_TOP_K}\n")
 
     for i, row in enumerate(sample):
         try:
@@ -451,6 +503,10 @@ def run_eval(models, n, all_):
         if not club:
             abstained += 1
             continue
+
+        if result.get("consensus"):
+            by_consensus += 1
+            consensus_hits += club == row["club"]
 
         scored += 1
         matrix.setdefault(row["club"], {})
@@ -467,6 +523,12 @@ def run_eval(models, n, all_):
 
     agreed = scored - len(misses)
     print(f"\n\nagreement  {agreed / scored * 100:.1f}%  ({agreed}/{scored})")
+    if by_consensus:
+        # How much of the score the model never touched, and how it did on
+        # that share. If this line ever drops near the overall number, the
+        # threshold in CONSENSUS_MIN is too low.
+        print(f"consensus  {by_consensus} covers answered without a model call "
+              f"({by_consensus / scored * 100:.0f}%), {consensus_hits / by_consensus * 100:.0f}% right")
     if abstained:
         print(f"abstained  {abstained}  (no ANSWER: in the reply)")
 

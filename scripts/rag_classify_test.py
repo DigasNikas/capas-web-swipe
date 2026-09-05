@@ -9,9 +9,11 @@ rag_classify.py). Not a coincidence these tests read almost line-for-line
 the same as the JS ones.
 """
 from rag_classify import (
+    CONSENSUS_MIN,
     RAG_TOP_K,
     build_few_shot_block,
     build_headlines_block,
+    consensus_club,
     merge_channels,
     parse_answer,
     rag_cover_ids_from_matches,
@@ -153,5 +155,32 @@ block = build_headlines_block(long_text)
 assert "FIMDOTEXTO" not in block
 assert "\u2026" in block
 assert len(block) < len(long_text)
+
+# --- consensus_club ---
+#
+# Mirrors api/lib/ai.js's consensusClub. The threshold is measured: over all
+# 1836 crowd-labelled covers, a 6-of-7 bloc is right 94% of the time and a
+# 5-of-7 bloc 85%, against the classifier's own 91.2%.
+
+assert consensus_club([]) is None
+assert consensus_club(None) is None
+
+assert consensus_club(
+    [{"metadata": {"club": "porto"}}] * 6 + [{"metadata": {"club": "benfica"}}]
+) == {"club": "porto", "agreed": 6, "of": 7}
+
+assert consensus_club(
+    [{"metadata": {"club": "porto"}}] * 5
+    + [{"metadata": {"club": "benfica"}}, {"metadata": {"club": "sporting"}}]
+) is None
+
+# Six of six is stronger than six of seven, not weaker.
+assert consensus_club([{"metadata": {"club": "sporting"}}] * 6) == {
+    "club": "sporting", "agreed": 6, "of": 6,
+}
+
+# Self-matches cannot vote, same filter as the few-shot block.
+assert consensus_club([{"metadata": {"club": "porto"}, "score": 0.99999}] * 7) is None
+assert CONSENSUS_MIN <= RAG_TOP_K, "an unreachable threshold would silently disable the fast path"
 
 print("rag_classify.py self-check ok")

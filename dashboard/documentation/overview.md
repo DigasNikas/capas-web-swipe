@@ -46,6 +46,7 @@ One row per newspaper per day.
 | `ai_why` | TEXT, nullable | the one-line reason the model gave for the club: a name, nickname or kit colour word it leaned on. Same older-prompt marker as `ai_headline` |
 | `ai_rag_covers` | TEXT, nullable | JSON array of `covers.id` values: which already-labelled covers the RAG few-shot block was built from for this classification, `"[]"` if none were found. Provenance only, nothing reads it back to build a prompt; see [RAG](#rag) |
 | `vectorized_at` | TEXT, nullable | set once this cover is embedded into `capas-cover-embeddings`. The real source of truth for "is this cover in the index," not "does it have a vote"; see [Image Embeddings](#image-embeddings) |
+| `ai_source` | TEXT, nullable | how `ai_club` was decided: `model` (a Llama4 call) or `consensus` (the RAG neighbours agreed, no call made); see [RAG](#rag) |
 | `headline_vectorized_at` | TEXT, nullable | the same marker for `capas-headline-embeddings`, the lead-headline text index. Separate column because the two fill independently — this one also needs `headlines` to be set; see [Headline Embeddings](#headline-embeddings) |
 | `headlines` | TEXT, nullable | real scraped "Títulos da Capa" text from capasjornais.pt, distinct from the model-quoted `ai_headline`. Forward-only from each cover's scrape day unless backfilled; see [Headlines](#headlines) for why a chunk of the pre-existing archive stays `NULL` permanently |
 | `created_at` | TEXT | defaults to now |
