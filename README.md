@@ -7,6 +7,16 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**
 
 **This README only says where things are.** The reasoning lives at **[capas.digasnikas.com/documentation](https://capas.digasnikas.com/documentation)**: the scraper's fallback source, the AI classifier's prompt history, the alignment math behind "A capa média", the full D1 schema and API.
 
+## The app
+
+Picking a day and swiping through its covers:
+
+https://github.com/user-attachments/assets/06f82ef3-0821-4392-8e00-982ff8239526
+
+Then the account view and the leaderboard:
+
+https://github.com/user-attachments/assets/b2397298-2c05-43b0-8b09-664d1033c64f
+
 ---
 
 ## Where things live
