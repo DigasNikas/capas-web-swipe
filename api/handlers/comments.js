@@ -42,29 +42,32 @@ export async function handlePostComment(request, env) {
   const date = await latestDate(env);
   if (!date) return json({ error: "Ainda não há capas para comentar." }, 409);
 
-  // One query covers both limits: comments are day-scoped, so the daily
-  // count and the cooldown read off the same rows.
-  const limit = await env.DB
-    .prepare(`
-      SELECT COUNT(*) AS n,
-             COALESCE(strftime('%s','now') - strftime('%s', MAX(created_at)), 9999) AS since
-      FROM comments WHERE author_sub = ? AND date = ?
-    `)
-    .bind(identity.sub, date)
-    .first();
-  if (limit.n >= MAX_PER_DAY) return json({ error: `Máximo ${MAX_PER_DAY} comentários por dia.` }, 429);
-  if (limit.since < COOLDOWN_S) return json({ error: "Calma — espera um minuto." }, 429);
-
+  // The limits are the insert's own WHERE clause, so checking and writing are
+  // one statement. As a SELECT then an INSERT, parallel posts all read the
+  // same pre-insert count and every one of them got through. Comments are
+  // day-scoped, so the daily count and the cooldown read off the same rows.
   const comment = await env.DB
     .prepare(`
       INSERT INTO comments (date, author, author_sub, body)
-      VALUES (?, ?, ?, ?)
+      SELECT ?1, ?2, ?3, ?4
+      WHERE (SELECT COUNT(*) FROM comments WHERE author_sub = ?3 AND date = ?1) < ?5
+        AND NOT EXISTS (
+          SELECT 1 FROM comments
+          WHERE author_sub = ?3 AND date = ?1 AND created_at > datetime('now', ?6)
+        )
       RETURNING id, author, body, created_at
     `)
-    .bind(date, identity.name, identity.sub, body)
+    .bind(date, identity.name, identity.sub, body, MAX_PER_DAY, `-${COOLDOWN_S} seconds`)
     .first();
+  if (comment) return json(comment, 201);
 
-  return json(comment, 201);
+  // Refused. Only now read the count, and only to say which limit it was.
+  const { n } = await env.DB
+    .prepare("SELECT COUNT(*) AS n FROM comments WHERE author_sub = ? AND date = ?")
+    .bind(identity.sub, date)
+    .first();
+  if (n >= MAX_PER_DAY) return json({ error: `Máximo ${MAX_PER_DAY} comentários por dia.` }, 429);
+  return json({ error: "Calma — espera um minuto." }, 429);
 }
 
 // DELETE /comments/:id — the id is a path segment rather than ?id=, which is
