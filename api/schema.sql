@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS swipes (
   swiped_at   TEXT DEFAULT (datetime('now')),
   UNIQUE (user_email, cover_id)       -- one record per user per cover; re-swipes update it
 );
+CREATE INDEX IF NOT EXISTS idx_swipes_cover_id ON swipes(cover_id);  -- per-vote analytics recompute
 
 CREATE VIEW IF NOT EXISTS users AS
   SELECT

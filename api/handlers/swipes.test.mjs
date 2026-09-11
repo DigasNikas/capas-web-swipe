@@ -103,4 +103,12 @@ for (let gap = 0; ; gap++) {
   assert.equal(dispatched.length, 1, `first-vote dispatches, B after trip ${gap}`);
 }
 
+// The recompute must look swipes up by cover, not scan the whole table.
+{
+  const src = (await import("node:fs")).readFileSync(new URL("./swipes.js", import.meta.url), "utf8");
+  const upsert = src.match(/INSERT INTO analytics_covers[\s\S]*?updated_at = excluded.updated_at/)[0];
+  const plan = seed().prepare(`EXPLAIN QUERY PLAN ${upsert}`).all(1).map(r => r.detail);
+  assert.ok(!plan.some(d => /^SCAN (s|swipes)\b/.test(d)), `full scan of swipes:\n${plan.join("\n")}`);
+}
+
 console.log("swipes: ok");
