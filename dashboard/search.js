@@ -1,4 +1,4 @@
-const PAPER_NAMES = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
+import { PAPER_NAMES } from '/src/domain.js';
 
 const coverageEl = document.getElementById('coverage');
 const statusEl   = document.getElementById('status');

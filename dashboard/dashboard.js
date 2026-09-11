@@ -1,13 +1,10 @@
+import { CLUB_IDS, CLUB_NAMES, CLUB_SHORT, PAPER_NAMES } from '/src/domain.js';
+
 const API_URL = '/api';
 
-const CLUB_KEYS = ['sporting', 'porto', 'benfica', 'others'];
-const CLUB_META = {
-  sporting: { name: 'Sporting', short: 'SCP', color: 'var(--d-sporting)' },
-  porto:    { name: 'Porto',    short: 'FCP', color: 'var(--d-porto)' },
-  benfica:  { name: 'Benfica',  short: 'SLB', color: 'var(--d-benfica)' },
-  others:   { name: 'Restantes', short: 'RES', color: 'var(--d-others)' },
-};
-const PAPERS_BY_ID = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
+const CLUB_META = Object.fromEntries(CLUB_IDS.map(id => [id, {
+  name: CLUB_NAMES[id], short: CLUB_SHORT[id], color: `var(--d-${id})`,
+}]));
 
 const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
@@ -151,9 +148,9 @@ function renderEpoca(rows, epoca, matchesByDate) {
     byDate.get(r.date).urls[r.newspaper] = { url: r.url, thumb: r.thumb_url };
   });
   const days = [...byDate.entries()].map(([date, { covers, urls }]) => {
-    const tally = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
+    const tally = Object.fromEntries(CLUB_IDS.map(c => [c, 0]));
     Object.values(covers).forEach(c => tally[c]++);
-    const winner = CLUB_KEYS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUB_KEYS[0]);
+    const winner = CLUB_IDS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUB_IDS[0]);
     return { date, covers, urls, winner, tally };
   });
 
@@ -171,13 +168,13 @@ function renderPapers(rows) {
   const container = document.getElementById('papers');
   container.innerHTML = '';
 
-  const papers = Object.keys(PAPERS_BY_ID).map(id => {
+  const papers = Object.keys(PAPER_NAMES).map(id => {
     const paperRows = rows.filter(r => r.newspaper === id);
-    const counts = Object.fromEntries(CLUB_KEYS.map(c => [c, 0]));
+    const counts = Object.fromEntries(CLUB_IDS.map(c => [c, 0]));
     paperRows.forEach(r => counts[r.club]++);
     const total = paperRows.length;
-    const topClub = CLUB_KEYS.reduce((a, b) => (counts[b] > counts[a] ? b : a), CLUB_KEYS[0]);
-    return { id, name: PAPERS_BY_ID[id], counts, total, topClub, topPct: total ? counts[topClub] / total : 0 };
+    const topClub = CLUB_IDS.reduce((a, b) => (counts[b] > counts[a] ? b : a), CLUB_IDS[0]);
+    return { id, name: PAPER_NAMES[id], counts, total, topClub, topPct: total ? counts[topClub] / total : 0 };
   }).sort((a, b) => b.topPct - a.topPct);
 
   papers.forEach(paper => {
@@ -186,7 +183,7 @@ function renderPapers(rows) {
     card.className = 'paper-card';
     card.style.setProperty('--club-color', top.color);
 
-    const bars = CLUB_KEYS
+    const bars = CLUB_IDS
       .map(k => ({ k, count: paper.counts[k] }))
       .sort((a, b) => b.count - a.count)
       .map(({ k, count }) => {
@@ -293,7 +290,7 @@ function suspeitoResultsHtml(stats) {
   return `
     <div class="s-card">
       <h3>Ofensor · por jornal</h3>
-      ${suspeitoRowsHtml(offenderRows, id => PAPERS_BY_ID[id] || id)}
+      ${suspeitoRowsHtml(offenderRows, id => PAPER_NAMES[id] || id)}
     </div>
     <div class="s-card">
       <h3>Vítima · por clube</h3>
@@ -302,7 +299,7 @@ function suspeitoResultsHtml(stats) {
     <div class="s-card d-suspeito-incidents">
       <h3>Incidentes (${incidents.length})</h3>
       ${incidents.length ? incidents.map(i => `
-        <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${joinList(i.offenders.map(p => PAPERS_BY_ID[p] || p))}</div>
+        <div class="s-inc"><b>${i.date}</b> · ${CLUB_META[i.club].name} ignorado por ${joinList(i.offenders.map(p => PAPER_NAMES[p] || p))}</div>
       `).join('') : '<div class="s-empty">Sem incidentes nesta época.</div>'}
     </div>
   `;
@@ -338,7 +335,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
   const filterEl = document.getElementById('paper-filter');
 
   filterEl.innerHTML = '';
-  [{ id: null, name: 'Todos' }, ...Object.keys(PAPERS_BY_ID).map(id => ({ id, name: PAPERS_BY_ID[id] }))]
+  [{ id: null, name: 'Todos' }, ...Object.keys(PAPER_NAMES).map(id => ({ id, name: PAPER_NAMES[id] }))]
     .forEach(p => {
       const btn = document.createElement('button');
       btn.textContent = p.name;
@@ -348,7 +345,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
     });
 
   function legendMarkup() {
-    const clubs = CLUB_KEYS.map(k => `<span><i style="background:${CLUB_META[k].color}"></i>${CLUB_META[k].name}</span>`).join('');
+    const clubs = CLUB_IDS.map(k => `<span><i style="background:${CLUB_META[k].color}"></i>${CLUB_META[k].name}</span>`).join('');
     const noMajority = paperFilter ? '' : `<span><i style="background:var(--d-yellow)"></i>Inconclusivo</span>`;
     return `${clubs}${noMajority}<span>🚨 Atenção</span>`;
   }
@@ -357,7 +354,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
     const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
     if (paperFilter && !focusClub) {
       const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
-      panelEl.innerHTML = `<div class="d-day-hint">${PAPERS_BY_ID[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
+      panelEl.innerHTML = `<div class="d-day-hint">${PAPER_NAMES[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
       return;
     }
     const { hasMajority } = dayStats(day);
@@ -365,14 +362,14 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
 
-    const papersHtml = Object.keys(PAPERS_BY_ID).map(id => {
+    const papersHtml = Object.keys(PAPER_NAMES).map(id => {
       const club = day.covers[id];
       const u = day.urls[id];
-      const cover = club && u ? `<img src="${u.thumb}" data-full="${u.url}" alt="${PAPERS_BY_ID[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
+      const cover = club && u ? `<img src="${u.thumb}" data-full="${u.url}" alt="${PAPER_NAMES[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
       return `
         <div>
           ${cover}
-          <div class="dp-name">${PAPERS_BY_ID[id]}</div>
+          <div class="dp-name">${PAPER_NAMES[id]}</div>
           <div class="dp-club" style="color:${club ? CLUB_META[club].color : 'var(--d-muted)'}">${club ? CLUB_META[club].short : '—'}</div>
         </div>
       `;
@@ -402,10 +399,10 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
 
   function draw() {
     eyebrowEl.textContent = paperFilter
-      ? `CALENDÁRIO · ÉPOCA ${epoca} · LENTE: ${PAPERS_BY_ID[paperFilter].toUpperCase()}`
+      ? `CALENDÁRIO · ÉPOCA ${epoca} · LENTE: ${PAPER_NAMES[paperFilter].toUpperCase()}`
       : `CALENDÁRIO · ÉPOCA ${epoca} · 1 CLUBE POR DIA`;
     [...filterEl.children].forEach((btn, i) => {
-      const ids = [null, ...Object.keys(PAPERS_BY_ID)];
+      const ids = [null, ...Object.keys(PAPER_NAMES)];
       btn.classList.toggle('active', ids[i] === paperFilter);
     });
     legendEl.innerHTML = legendMarkup();
@@ -445,7 +442,7 @@ function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, filterB
         if (paperFilter && !focusClub) {
           cell.className = 'cal-day no-data';
           cell.style.background = 'var(--d-panel2)';
-          cell.dataset.tip = `${day.date} · sem votos de ${PAPERS_BY_ID[paperFilter]}`;
+          cell.dataset.tip = `${day.date} · sem votos de ${PAPER_NAMES[paperFilter]}`;
         } else {
           const { unanimous, hasMajority } = dayStats(day);
           cell.className = 'cal-day' + (unanimous ? ' unanimous' : hasMajority ? ' majority' : '');
@@ -516,11 +513,11 @@ function renderBarcode(days, onSelect) {
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
   el.innerHTML = '';
 
-  Object.keys(PAPERS_BY_ID).forEach(paper => {
+  Object.keys(PAPER_NAMES).forEach(paper => {
     const row = document.createElement('div');
     row.className = 'd-barcode-row';
     row.dataset.paper = paper;
-    row.innerHTML = `<span class="bc-label">${PAPERS_BY_ID[paper]}</span>`;
+    row.innerHTML = `<span class="bc-label">${PAPER_NAMES[paper]}</span>`;
 
     const strip = document.createElement('div');
     strip.className = 'bc-strip';
@@ -749,7 +746,7 @@ function aiMonthCard({ key, label, items }) {
 // SCP/SLB/FCP code is just the confirmation.
 function aiDiffCard(r, i) {
   const d = new Date(r.date + 'T00:00:00');
-  const paper = PAPERS_BY_ID[r.newspaper];
+  const paper = PAPER_NAMES[r.newspaper];
   const side = (tag, k) =>
     `<span class="ad-v" style="background:${CLUB_META[k].color}"><i>${tag}</i>${CLUB_META[k].short}</span>`;
   return `
@@ -790,7 +787,7 @@ async function renderAvgCovers() {
     return;
   }
 
-  const papers = Object.keys(PAPERS_BY_ID).filter(p => counts[p]);
+  const papers = Object.keys(PAPER_NAMES).filter(p => counts[p]);
   if (!papers.length) return;
 
   const card = (key, label) => `
@@ -807,12 +804,12 @@ async function renderAvgCovers() {
   function draw(club) {
     gridEl.innerHTML = papers
       .filter(p => !club || counts[`${p}-${club}`])
-      .map(p => card(club ? `${p}-${club}` : p, PAPERS_BY_ID[p]))
+      .map(p => card(club ? `${p}-${club}` : p, PAPER_NAMES[p]))
       .join('');
     [...filterEl.children].forEach(b => b.classList.toggle('active', b.dataset.club === (club || 'todos')));
   }
 
-  filterEl.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CLUB_KEYS.map(c => ({ id: c, name: CLUB_META[c].name }))]
+  filterEl.innerHTML = [{ id: 'todos', name: 'Todos' }, ...CLUB_IDS.map(c => ({ id: c, name: CLUB_META[c].name }))]
     .map(c => `<button data-club="${c.id}">${c.name}</button>`).join('');
   filterEl.addEventListener('click', e => {
     if (!e.target.dataset.club) return;
@@ -879,7 +876,7 @@ function stepDiffModal(delta) {
 
 function renderDiffModal() {
   const r = diffModalItems[diffModalIndex];
-  const paper = PAPERS_BY_ID[r.newspaper];
+  const paper = PAPER_NAMES[r.newspaper];
 
   const img = document.getElementById('cover-modal-img');
   img.src = r.url;

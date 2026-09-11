@@ -1,6 +1,6 @@
-const PAPER_NAMES = { abola: 'A Bola', ojogo: 'O Jogo', record: 'Record' };
+import { CLUB_SHORT, PAPER_NAMES } from '/src/domain.js';
+
 const CLUB_COLOR = { sporting: 'var(--sporting)', porto: 'var(--porto)', benfica: 'var(--benfica)', others: 'var(--others)' };
-const CLUB_SHORT = { sporting: 'SCP', porto: 'FCP', benfica: 'SLB', others: 'RES' };
 
 const status = document.getElementById('status');
 const groupsEl = document.getElementById('groups');

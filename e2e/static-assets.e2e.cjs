@@ -41,6 +41,15 @@ const PAGES = [
       roots.add(`${dir}:${url}`);
     }
   }
+  // Absolute ES module imports too: a 404 there just stops the importing
+  // script, with no page error.
+  for (const dir of ["dashboard", "app"]) {
+    for (const f of fs.readdirSync(path.join(REPO_ROOT, dir), { recursive: true })) {
+      if (!f.endsWith(".js") || f.startsWith("node_modules")) continue;
+      const js = fs.readFileSync(path.join(REPO_ROOT, dir, f), "utf8");
+      for (const m of js.matchAll(/\bfrom\s+['"](\/[^'"]+)['"]/g)) roots.add(`${dir}:${m[1].split(/[?#]/)[0]}`);
+    }
+  }
   const broken = [];
   for (const entry of roots) {
     const [dir, url] = entry.split(":");
@@ -54,6 +63,7 @@ const PAGES = [
   checkTrue("...and dashboard.js", roots.has("dashboard:/dashboard.js"));
   checkTrue("...and app's style.css", roots.has("app:/style.css"));
   checkTrue("...and app.js", roots.has("app:/app.js"));
+  checkTrue("...and module imports", roots.has("dashboard:/src/domain.js"));
 
   console.log("no page throws or repeats a DOM id");
   const context = await browser.newContext();
