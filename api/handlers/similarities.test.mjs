@@ -58,4 +58,25 @@ const refs = [
   assert.deepEqual(row.ragCovers.map(c => [c.id, c.via]), [[8, "layout"]]);
 }
 
+// ?id= narrows to one cover (search.html's modal), in SQL, not after the fact.
+{
+  const seen = [];
+  const env = fakeEnv([cover()], refs);
+  const prepare = env.DB.prepare;
+  env.DB.prepare = sql => {
+    const stmt = prepare(sql);
+    const bind = stmt.bind;
+    stmt.bind = (...args) => (seen.push([sql, args]), bind(...args));
+    return stmt;
+  };
+  const [row] = await handleSimilarities(env, new URL("https://x/similarities?id=1")).then(r => r.json());
+  assert.equal(row.id, 1);
+  const [sql, args] = seen[0];
+  assert.match(sql, /ai_rag_covers/);
+  assert.match(sql, /id = \?/);
+  assert.deepEqual(args, [1]);
+
+  assert.equal((await handleSimilarities(env, new URL("https://x/similarities?id=abc"))).status, 400);
+}
+
 console.log("similarities: ok");

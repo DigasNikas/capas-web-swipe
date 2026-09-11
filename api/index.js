@@ -20,7 +20,7 @@
  *                        dispatches are silently skipped — see lib/github.js.
  */
 
-import { CORS, json } from "./lib/http.js";
+import { CORS, edgeCached, json } from "./lib/http.js";
 import { NEWSPAPERS, scrapeNewspaper } from "./lib/scraper.js";
 import { dispatchGithubEvent } from "./lib/github.js";
 import { handleCovers } from "./handlers/covers.js";
@@ -69,7 +69,7 @@ export default {
 
     if (method === "GET"  && pathname === "/covers")      return handleCovers(request, env);
     if (method === "GET"  && pathname === "/matches")     return handleGetMatches(env);
-    if (method === "GET"  && pathname === "/stats")       return handleStats(env);
+    if (method === "GET"  && pathname === "/stats")       return edgeCached(request, ctx, 60, () => handleStats(env));
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/user-stats")  return handleUserStats(request, env, url);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);
@@ -82,13 +82,13 @@ export default {
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
     if (method === "POST" && pathname === "/label-consensus")  return handleLabelConsensus(request, env);
-    if (method === "GET"  && pathname === "/similarities")    return handleSimilarities(env);
+    if (method === "GET"  && pathname === "/similarities")    return edgeCached(request, ctx, 60, () => handleSimilarities(env, url));
     if (method === "GET"  && pathname === "/vectorize-candidates") return handleVectorizeCandidates(request, env);
     if (method === "POST" && pathname === "/vectorize-mark")       return handleVectorizeMark(request, env);
     if (method === "GET"  && pathname === "/headline-candidates")  return handleHeadlineCandidates(request, env);
     if (method === "POST" && pathname === "/update-headline")      return handleUpdateHeadline(request, env);
     if (method === "GET"  && pathname === "/search")               return handleSearch(request, env, url);
-    if (method === "GET"  && pathname === "/headlines")            return handleHeadlines(env);
+    if (method === "GET"  && pathname === "/headlines")            return edgeCached(request, ctx, 60, () => handleHeadlines(env));
     if (method === "GET"    && pathname === "/comments") return handleGetComments(env);
     if (method === "POST"   && pathname === "/comments") return handlePostComment(request, env);
     if (method === "DELETE" && pathname.startsWith("/comments/")) {

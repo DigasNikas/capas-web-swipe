@@ -264,15 +264,17 @@ qEl.addEventListener('input', () => {
 
 search('');
 
-// The 5 RAG few-shot matches per cover, resolved by /api/similarities —
-// only covers the AI Detector has actually classified with RAG context
-// have any, everything else's modal just skips the strip. Fetched once,
-// not re-fetched per modal open.
-let similaritiesById = new Map();
-fetch('/api/similarities')
-  .then(res => (res.ok ? res.json() : []))
-  .then(list => list.forEach(entry => similaritiesById.set(entry.id, entry)))
-  .catch(() => { /* similar-covers strip just stays empty */ });
+// One cover's RAG matches, fetched when its modal opens. Covers the AI
+// Detector never classified with RAG context have none; the strip stays hidden.
+async function loadSimilar(id) {
+  try {
+    const res = await fetch(`/api/similarities?id=${id}`);
+    const [entry] = res.ok ? await res.json() : [];
+    return entry?.ragCovers ?? [];
+  } catch {
+    return [];
+  }
+}
 
 async function search(q) {
   statusEl.textContent = 'A procurar…';
@@ -341,10 +343,15 @@ function openModal1(r) {
   modal1Img.src = r.url;
   modal1Img.alt = PAPER_NAMES[r.newspaper] || r.newspaper;
 
-  const ragCovers = similaritiesById.get(r.id)?.ragCovers ?? [];
   similarStrip.innerHTML = '';
-  similarStrip.classList.toggle('hidden', ragCovers.length === 0);
-  if (ragCovers.length) {
+  similarStrip.classList.add('hidden');
+  modal1.dataset.coverId = r.id;
+  modal1.classList.remove('hidden');
+
+  loadSimilar(r.id).then(ragCovers => {
+    // Another cover's modal may have opened while this one was loading.
+    if (modal1.dataset.coverId !== String(r.id) || !ragCovers.length) return;
+    similarStrip.classList.remove('hidden');
     const label = document.createElement('span');
     label.className = 'sim-label';
     label.textContent = 'Parecidas:';
@@ -358,9 +365,7 @@ function openModal1(r) {
       img.addEventListener('click', () => openModal2(ragCovers, i));
       similarStrip.appendChild(img);
     });
-  }
-
-  modal1.classList.remove('hidden');
+  });
 }
 
 function closeModal1() {

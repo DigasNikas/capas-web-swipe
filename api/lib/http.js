@@ -14,6 +14,23 @@ export function json(data, status = 200) {
   });
 }
 
+// Serves a public GET from this data centre's cache for `ttl` seconds, so a
+// burst of dashboard loads is one D1 read, not one each. Errors aren't
+// cached. No Cache API (node tests, some wrangler dev setups): pass-through.
+export async function edgeCached(request, ctx, ttl, produce) {
+  const cache = globalThis.caches?.default;
+  if (!cache) return produce();
+
+  const hit = await cache.match(request);
+  if (hit) return hit;
+
+  const res = await produce();
+  if (!res.ok) return res;
+  res.headers.set("Cache-Control", `public, max-age=${ttl}`);
+  ctx.waitUntil(cache.put(request, res.clone()));
+  return res;
+}
+
 // Shared bearer check for the admin endpoints. Returns null to continue, or
 // the response to send back — nine handlers used to carry their own copy of
 // this, four of them answering in bare text without CORS while the rest

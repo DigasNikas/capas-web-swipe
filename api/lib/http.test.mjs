@@ -7,7 +7,41 @@
  * for a week (see rag.md).
  */
 import assert from "node:assert";
-import { json, parseLimit, requireAdmin } from "./http.js";
+import { edgeCached, json, parseLimit, requireAdmin } from "./http.js";
+
+// --- edgeCached ---
+{
+  const store = new Map();
+  globalThis.caches = {
+    default: {
+      match: async req => store.get(req.url)?.clone(),
+      put: async (req, res) => { store.set(req.url, res); },
+    },
+  };
+  const pending = [];
+  const ctx = { waitUntil: p => pending.push(p) };
+  let calls = 0;
+  const produce = status => async () => (calls++, json({ n: calls }, status));
+  const get = u => new Request(`https://x${u}`);
+
+  const first = await edgeCached(get("/stats"), ctx, 60, produce(200));
+  await Promise.all(pending);
+  assert.equal(first.headers.get("Cache-Control"), "public, max-age=60");
+  assert.deepEqual(await first.json(), { n: 1 });
+  assert.deepEqual(await (await edgeCached(get("/stats"), ctx, 60, produce(200))).json(), { n: 1 }, "second hit served from cache");
+  assert.equal(calls, 1);
+
+  await edgeCached(get("/stats?x=1"), ctx, 60, produce(200));
+  assert.equal(calls, 2, "query string is part of the key");
+
+  const err = await edgeCached(get("/boom"), ctx, 60, produce(500));
+  await Promise.all(pending);
+  assert.equal(err.headers.get("Cache-Control"), null);
+  assert.equal(store.has("https://x/boom"), false, "errors not cached");
+
+  delete globalThis.caches;
+  assert.equal((await edgeCached(get("/stats"), ctx, 60, produce(200))).status, 200, "no Cache API (tests, wrangler dev) -> straight through");
+}
 
 const at = qs => new URL(`https://x/y${qs}`);
 

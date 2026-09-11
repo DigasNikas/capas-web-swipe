@@ -11,7 +11,12 @@ import { json } from "../lib/http.js";
 // No auth: same reasoning as /documentation, this is internal-interest
 // data (AI guesses, retrieval matches) with no user attached to it, not a
 // secret.
-export async function handleSimilarities(env) {
+export async function handleSimilarities(env, url) {
+  // ?id= returns just that cover: search.html's modal needs one, not all.
+  const rawId = url?.searchParams.get("id");
+  const id = rawId == null ? null : Number(rawId);
+  if (id !== null && !(Number.isInteger(id) && id > 0)) return json({ error: "id must be a positive integer" }, 400);
+
   // Diagnostic-only try/catch: this endpoint exists purely for debugging
   // RAG retrieval quality, so a plain D1 error message back to the caller
   // is more useful here than the bare 500 a thrown error would otherwise
@@ -23,8 +28,10 @@ export async function handleSimilarities(env) {
         SELECT id, newspaper, date, url, thumb_url, ai_club, ai_headline, ai_rag_covers, ai_rag_source
         FROM covers
         WHERE ai_rag_covers IS NOT NULL AND ai_rag_covers != '[]'
+          AND (?1 IS NULL OR id = ?1)
         ORDER BY date DESC
       `)
+      .bind(id)
       .all();
 
     // ai_rag_covers is a JSON array of cover_id strings (see ai.js's
