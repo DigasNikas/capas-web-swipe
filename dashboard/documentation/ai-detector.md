@@ -115,14 +115,13 @@ first run to actually start finds work; the rest see an empty backlog and
 exit before paying for a CLIP download at all.
 
 That's the only automatic path in. There's no scheduled rebuild behind it
-anymore. A dispatch that never lands, or a cover whose label changes
-because a later vote flips the winning decision after its embedding
-already went in, stays stale until something re-triggers the workflow or
-someone reruns `build_vectorize_index.py` by hand, either through
-`vectorize-covers.yml`'s own `workflow_dispatch` or the script directly.
-Vectorize's upsert overwrites by id, so any rerun is safe to repeat. The
-lag until someone actually runs it is a known cost, not a bug waiting to
-be found.
+anymore. A dispatch that never lands leaves that cover out of the index
+until the next dispatch, which picks up the whole backlog.
+
+A later vote that flips a cover's winner doesn't re-embed it, and nothing
+needs to: `rag_classify.py` takes each neighbour's club from `/stats` at
+retrieval time, not from the vector's `club` metadata. That metadata is the
+label at embed time and nothing reads it as current.
 
 ## Reading the card
 

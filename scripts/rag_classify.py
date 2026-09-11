@@ -163,8 +163,12 @@ def query_vectorize(index, vector, top_k):
     return result["result"]["matches"]
 
 
-def usable_matches(matches, via, cover_date):
+def usable_matches(matches, via, cover_date, labels):
     """Drops what must never reach the prompt, in both channels.
+
+    Club comes from `labels` (live, see crowd_labels), not the vector's
+    metadata: that is the label when the cover was embedded, and a later vote
+    can flip the winner without anything re-embedding it.
 
     The same-date rule is the one that matters for the headline index:
     Record, A Bola and O Jogo print the same story the same day in
@@ -182,12 +186,18 @@ def usable_matches(matches, via, cover_date):
         if m.get("score", 0) >= 0.999:
             continue
         meta = m.get("metadata") or {}
-        if not meta.get("club"):
+        club = labels.get(str(m.get("id")))
+        if not club:
             continue
         if cover_date and meta.get("date") == cover_date:
             continue
-        kept.append({**m, "via": via})
+        kept.append({**m, "metadata": {**meta, "club": club}, "via": via})
     return kept
+
+
+def crowd_labels(stats_rows):
+    """cover_id -> current crowd winner, from /stats rows."""
+    return {str(r["cover_id"]): r["club"] for r in stats_rows if r.get("club")}
 
 
 def merge_channels(headline_matches, image_matches, top_k=RAG_TOP_K):
@@ -375,7 +385,7 @@ def load_clip():
     return model, processor
 
 
-def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
+def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=None):
     """Both channels for one cover: the image against capas-cover-embeddings,
     the lead headline against capas-headline-embeddings, merged into one
     ranked list. No Llama4 call — /reclassify-rag is the one place that
@@ -393,7 +403,7 @@ def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image_matches = usable_matches(
-        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), RAG_TOP_K + 3), "layout", cover_date,
+        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), RAG_TOP_K + 3), "layout", cover_date, labels,
     )
 
     headline_matches = []
@@ -401,18 +411,18 @@ def embed_and_retrieve(models, image_bytes, headlines=None, cover_date=None):
     if lead:
         headline_matches = usable_matches(
             query_vectorize(HEADLINE_INDEX, embed_text(text_model, tokenizer, lead), RAG_TOP_K + 3),
-            "headline", cover_date,
+            "headline", cover_date, labels,
         )
 
     merged = merge_channels(headline_matches, image_matches)
     return build_few_shot_block(merged), rag_cover_ids_from_matches(merged), merged
 
 
-def rag_classify_one(models, image_bytes, headlines=None, cover_date=None):
+def rag_classify_one(models, image_bytes, labels, headlines=None, cover_date=None):
     """Full pipeline for one cover: retrieve, build both prompt blocks,
     classify. Used by --eval only, which needs the result locally to score
     against the crowd label and never touches the Worker at all."""
-    few_shot, _, matches = embed_and_retrieve(models, image_bytes, headlines, cover_date)
+    few_shot, _, matches = embed_and_retrieve(models, image_bytes, labels, headlines, cover_date)
 
     # --eval scores what production does, and production skips the model when
     # the neighbours agree strongly enough. Scoring the model on covers it
@@ -435,12 +445,13 @@ def run_live(models, limit):
         headers={"Authorization": f"Bearer {ADMIN_SECRET}"},
     ))
     print(f"{len(candidates)} candidates")
+    labels = crowd_labels(json.loads(fetch(STATS))["rows"])
 
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
             few_shot, rag_cover_ids, matches = embed_and_retrieve(
-                models, image_bytes, c.get("headlines"), c.get("date"),
+                models, image_bytes, labels, c.get("headlines"), c.get("date"),
             )
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
@@ -496,6 +507,7 @@ def run_eval(models, n, all_):
     # /headlines is the scraped front-page text classifyAndStore reads from D1.
     # Scoring without the second one measures a prompt production never sends.
     headlines = {r["id"]: r["headlines"] for r in json.loads(fetch(f"{API_BASE}/headlines"))}
+    labels = crowd_labels(rows)
     labelled = [r for r in rows if r.get("club")]
     size = len(labelled) if all_ else min(n, len(labelled))
     sample = [labelled[int(i * len(labelled) / size)] for i in range(size)]
@@ -507,7 +519,7 @@ def run_eval(models, n, all_):
     for i, row in enumerate(sample):
         try:
             image_bytes = fetch(row["url"])
-            result, _ = rag_classify_one(models, image_bytes, headlines.get(row["cover_id"]), row.get("date"))
+            result, _ = rag_classify_one(models, image_bytes, labels, headlines.get(row["cover_id"]), row.get("date"))
         except Exception as e:
             print(f"\nStopped at {i} of {len(sample)}: {e}", file=sys.stderr)
             break

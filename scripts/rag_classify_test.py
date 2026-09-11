@@ -14,6 +14,7 @@ from rag_classify import (
     build_few_shot_block,
     build_headlines_block,
     consensus_club,
+    crowd_labels,
     merge_channels,
     parse_answer,
     rag_cover_ids_from_matches,
@@ -120,13 +121,26 @@ MATCHES = [
     {"id": "4", "score": 0.80, "metadata": {"club": "sporting", "date": "2025-01-04"}},
 ]
 
-kept = usable_matches(MATCHES, "headline", cover_date="2025-01-01")
+# The crowd label as of now, from /stats. Vector metadata is the label at embed time.
+LABELS = {"1": "benfica", "2": "porto", "4": "sporting"}
+
+kept = usable_matches(MATCHES, "headline", "2025-01-01", LABELS)
 assert [m["id"] for m in kept] == ["4"], "drops the self-match, the unlabelled one, and the same-day sibling"
 assert kept[0]["via"] == "headline"
 
 # Without a date to compare against, only the score and label rules apply.
-assert [m["id"] for m in usable_matches(MATCHES, "layout", cover_date=None)] == ["2", "4"]
-assert usable_matches(None, "layout", None) == []
+assert [m["id"] for m in usable_matches(MATCHES, "layout", None, LABELS)] == ["2", "4"]
+assert usable_matches(None, "layout", None, LABELS) == []
+
+# A later vote flipped cover 2's winner after it was embedded: the live label wins.
+flipped = usable_matches(MATCHES, "layout", None, {**LABELS, "2": "benfica"})
+assert [m["metadata"]["club"] for m in flipped] == ["benfica", "sporting"]
+assert MATCHES[1]["metadata"]["club"] == "porto", "input not mutated"
+
+# Embedded with a label, but no crowd label now: not usable.
+assert [m["id"] for m in usable_matches(MATCHES, "layout", None, {"4": "sporting"})] == ["4"]
+
+assert crowd_labels([{"cover_id": 7, "club": "porto"}, {"cover_id": 8, "club": None}]) == {"7": "porto"}
 
 # --- merge_channels ---
 
