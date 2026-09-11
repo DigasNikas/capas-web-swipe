@@ -8,15 +8,16 @@ const { execSync } = require("node:child_process");
 const { DASHBOARD_URL, launchBrowser, check, checkTrue, failureCount } = require("./helpers.cjs");
 
 const HEADLINE = "E2E teste palhinha derby";
-const COVER_URL = "https://example.com/e2e-cover.jpg";
+// On the CSP img-src host, so the fixture itself isn't a violation.
+const COVER_URL = "https://capas-storage.digasnikas.com/e2e-cover.jpg";
 
-// INSERT OR IGNORE: reruns against an already-seeded local D1 (dev left the
-// server up, a previous run didn't clean up) must not fail on the
-// (newspaper, date) unique constraint.
+// Upsert: reruns hit an already-seeded local D1 (the (newspaper, date) key),
+// and the row must still match the constants above if they change.
 execSync(
   `npx wrangler d1 execute capas-db --local --command "` +
-    `INSERT OR IGNORE INTO covers (newspaper, date, r2_key, url, thumb_url, headlines) ` +
-    `VALUES ('record', '2020-01-01', 'e2e/test.jpg', '${COVER_URL}', '${COVER_URL}', '${HEADLINE}')"`,
+    `INSERT INTO covers (newspaper, date, r2_key, url, thumb_url, headlines) ` +
+    `VALUES ('record', '2020-01-01', 'e2e/test.jpg', '${COVER_URL}', '${COVER_URL}', '${HEADLINE}') ` +
+    `ON CONFLICT (newspaper, date) DO UPDATE SET url = excluded.url, thumb_url = excluded.thumb_url, headlines = excluded.headlines"`,
   { stdio: "ignore" },
 );
 

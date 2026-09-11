@@ -9,5 +9,17 @@
 /*.css
   Cache-Control: public, max-age=300, must-revalidate
 
+# Security headers, every path. style-src allows inline: pages and the JS
+# they run set style attributes.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://capas-storage.digasnikas.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Frame-Options: DENY
+
+# HTML: no-transform stops Bot Fight Mode injecting its inline JavaScript
+# Detections script, which the CSP above would block (no nonces on static
+# Pages). Listed per route since /search etc. don't match /*.html.
+/
+  Cache-Control: no-cache, no-transform
+
 /*.html
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-transform

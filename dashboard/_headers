@@ -31,8 +31,30 @@
 # HTML, and the documentation source markdown documentation.html fetches
 # at runtime, must never be served stale — explicit here rather than left
 # to whatever Cloudflare Pages' unconfigured default is.
+# Security headers, every path. style-src allows inline: pages and the JS
+# they run set style attributes.
+# accounts.google.com/gsi: Google sign-in for comments.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src https://fonts.gstatic.com; img-src 'self' data: https://capas-storage.digasnikas.com https://*.googleusercontent.com; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Frame-Options: DENY
+
+# HTML: no-transform stops Bot Fight Mode injecting its inline JavaScript
+# Detections script, which the CSP above would block (no nonces on static
+# Pages). Listed per route since /search etc. don't match /*.html.
+/
+  Cache-Control: no-cache, no-transform
+
 /*.html
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-transform
+
+/search
+  Cache-Control: no-cache, no-transform
+
+/similarities
+  Cache-Control: no-cache, no-transform
+
+/documentation
+  Cache-Control: no-cache, no-transform
 
 /documentation/*.md
   Cache-Control: no-cache

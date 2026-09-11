@@ -58,9 +58,25 @@ const PAGES = [
   console.log("no page throws or repeats a DOM id");
   const context = await browser.newContext();
   await withAccessUser(context);
+
+  // http-server ignores _headers, so apply each project's CSP here and fail
+  // on any violation. Otherwise a blocked script only shows up in production.
+  const cspOf = (dir) =>
+    fs.readFileSync(path.join(REPO_ROOT, dir, "_headers"), "utf8").match(/^\s*Content-Security-Policy:\s*(.+)$/m)[1];
+  const CSP = { dashboard: cspOf("dashboard"), app: cspOf("app") };
+  let currentDir = "dashboard";
+  await context.route(/localhost:878[89]/, async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ response: res, headers: { ...res.headers(), "content-security-policy": CSP[currentDir] } });
+  });
+
   const page = await context.newPage();
   const errors = [];
+  const cspViolations = [];
   page.on("pageerror", (err) => errors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && /Content Security Policy/i.test(msg.text())) cspViolations.push(msg.text());
+  });
 
   const dupesByPage = {};
   async function visit(label, url, readySelector) {
@@ -84,6 +100,7 @@ const PAGES = [
   }
 
   for (const [dir, base, file, readySelector] of PAGES) {
+    currentDir = dir;
     await visit(`${dir}/${file}`, `${base}/${file}`, readySelector);
   }
 
@@ -91,6 +108,7 @@ const PAGES = [
     check(`${pageName}: no duplicate id`, dupes, []);
   }
   check("no page threw (pageerror)", errors, []);
+  check("no CSP violation", cspViolations, []);
 
   await browser.close();
   process.exit(failureCount() > 0 ? 1 : 0);
