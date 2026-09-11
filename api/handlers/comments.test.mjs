@@ -8,7 +8,7 @@
  */
 import assert from "node:assert";
 import { handlePostComment } from "./comments.js";
-import { freshDb, sqliteD1 } from "../lib/sqlite-d1.mjs";
+import { freshDb, sqliteD1 } from "../test-utils/sqlite-d1.mjs";
 
 const CLIENT_ID = "107331929504-16jvt0ml8gago9iofrd2sqtg1barsob6.apps.googleusercontent.com";
 const GOOD = {

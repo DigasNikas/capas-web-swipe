@@ -7,7 +7,7 @@
  */
 import assert from "node:assert";
 import { handleSwipe } from "./swipes.js";
-import { freshDb, sqliteD1 } from "../lib/sqlite-d1.mjs";
+import { freshDb, sqliteD1 } from "../test-utils/sqlite-d1.mjs";
 
 function seed() {
   const db = freshDb();

@@ -23,7 +23,14 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `access.js` | `accessEmail()`: the app user's email from the Access JWT (`Cf-Access-Jwt-Assertion`), verified against the team's certs. Used by every app-side handler |
 | `access.test.mjs` | Self-check: forged header, wrong aud/iss, expired, bad signature. Run `node api/lib/access.test.mjs` |
 | `github.js` | Fires `repository_dispatch` events (scrape done, cover's first vote) so GitHub Actions can react |
-| `sqlite-d1.mjs` | Test-only: a D1 binding over `node:sqlite` (Node 22.5+) loaded with `schema.sql`, plus a hook for replaying concurrent requests. Used by the swipes and comments self-checks |
+
+## `test-utils/`
+
+Node-only helpers for the self-checks. Nothing here is imported by `index.js`.
+
+| File | What |
+|---|---|
+| `sqlite-d1.mjs` | A D1 binding over `node:sqlite` (Node 22.5+) loaded with `schema.sql`, plus a hook for replaying concurrent requests. Used by the swipes and comments self-checks |
 
 ## `handlers/`
 
