@@ -21,6 +21,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `ai.test.mjs` | Self-check for the `ANSWER:` parser. Run `node api/lib/ai.test.mjs` |
 | `email.js` | Outbound mail for `/notify` |
 | `github.js` | Fires `repository_dispatch` events (scrape done, cover's first vote) so GitHub Actions can react |
+| `sqlite-d1.mjs` | Test-only: a D1 binding over `node:sqlite` (Node 22.5+) loaded with `schema.sql`, plus a hook for replaying concurrent requests. Used by the swipes and comments self-checks |
 
 ## `handlers/`
 

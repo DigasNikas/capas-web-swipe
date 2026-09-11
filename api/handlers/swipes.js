@@ -1,6 +1,11 @@
 import { json } from "../lib/http.js";
 import { dispatchGithubEvent } from "../lib/github.js";
 
+// The app's four swipe directions (app/src/state.js). The winner of these
+// becomes the public analytics_covers.club, and the dashboard looks each one
+// up in its own club table, so anything else here breaks it for everyone.
+const CLUBS = ["sporting", "benfica", "porto", "others"];
+
 export async function handleGetSwipes(request, env) {
   const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
@@ -39,23 +44,32 @@ export async function handleSwipe(request, env, ctx) {
 
   const { cover_id, decision } = body;
   if (!cover_id || !decision) return json({ error: "Missing cover_id or decision" }, 400);
+  if (!CLUBS.includes(decision)) return json({ error: "Unknown decision" }, 400);
 
-  await env.DB
-    .prepare(`
-      INSERT INTO swipes (user_email, cover_id, decision)
-      VALUES (?, ?, ?)
-      ON CONFLICT (user_email, cover_id)
-      DO UPDATE SET decision = excluded.decision, swiped_at = datetime('now')
-    `)
-    .bind(userEmail, cover_id, decision)
-    .run();
+  // One batch, which D1 commits as a single transaction: the first-vote
+  // check, the vote, and the analytics recompute can't have another
+  // request's writes land between them. Done as separate round-trips, a
+  // request that read the totals before a concurrent vote could write them
+  // back after it, and two simultaneous first votes both saw no row and
+  // both fired the dispatch below.
+  const [existing] = await env.DB.batch([
+    env.DB.prepare("SELECT 1 FROM analytics_covers WHERE cover_id = ?").bind(cover_id),
+    env.DB
+      .prepare(`
+        INSERT INTO swipes (user_email, cover_id, decision)
+        VALUES (?, ?, ?)
+        ON CONFLICT (user_email, cover_id)
+        DO UPDATE SET decision = excluded.decision, swiped_at = datetime('now')
+      `)
+      .bind(userEmail, cover_id, decision),
+    refreshAnalytics(env, cover_id),
+  ]);
 
-  const isFirstVote = await refreshAnalytics(env, cover_id);
   // A cover only becomes embeddable once it has a crowd label (see
   // build_vectorize_index.py's CLUBS filter) — this is the moment that
   // becomes true, so it's the right trigger for a single-vector Vectorize
   // upsert instead of waiting for the weekly full re-embed.
-  if (isFirstVote) {
+  if (existing.results.length === 0) {
     ctx.waitUntil(dispatchGithubEvent(env, "cover-first-vote", { cover_id }));
   }
 
@@ -64,37 +78,23 @@ export async function handleSwipe(request, env, ctx) {
 
 // Keeps the public analytics_covers table (no user_email, safe to expose)
 // in sync with the winning decision for one cover, right after it changes.
-// Returns whether this was the cover's first-ever analytics_covers row.
-async function refreshAnalytics(env, coverId) {
-  const { results } = await env.DB
-    .prepare(`
-      SELECT c.newspaper, c.date, s.decision, COUNT(*) as votes, MAX(s.swiped_at) as last_at
-      FROM swipes s JOIN covers c ON c.id = s.cover_id
-      WHERE s.cover_id = ?
-      GROUP BY s.decision, c.newspaper, c.date
-    `)
-    .bind(coverId)
-    .all();
-  if (results.length === 0) return false;
-
-  const votesTotal = results.reduce((sum, r) => sum + r.votes, 0);
-  const winner = results.sort((a, b) => b.votes - a.votes || b.last_at.localeCompare(a.last_at))[0];
-
-  const existing = await env.DB
-    .prepare("SELECT 1 FROM analytics_covers WHERE cover_id = ?")
-    .bind(coverId)
-    .first();
-
-  await env.DB
+// The winner is the club with most votes, ties going to whichever was voted
+// most recently. The count and the write are one statement, so the totals
+// written are the totals at the moment of writing.
+function refreshAnalytics(env, coverId) {
+  return env.DB
     .prepare(`
       INSERT INTO analytics_covers (cover_id, newspaper, date, club, votes_club, votes_total, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      SELECT c.id, c.newspaper, c.date, s.decision, COUNT(*),
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id), datetime('now')
+      FROM swipes s JOIN covers c ON c.id = s.cover_id
+      WHERE s.cover_id = ?
+      GROUP BY s.decision
+      ORDER BY COUNT(*) DESC, MAX(s.swiped_at) DESC
+      LIMIT 1
       ON CONFLICT (cover_id)
       DO UPDATE SET club = excluded.club, votes_club = excluded.votes_club,
         votes_total = excluded.votes_total, updated_at = excluded.updated_at
     `)
-    .bind(coverId, winner.newspaper, winner.date, winner.decision, winner.votes, votesTotal)
-    .run();
-
-  return !existing;
+    .bind(coverId);
 }
