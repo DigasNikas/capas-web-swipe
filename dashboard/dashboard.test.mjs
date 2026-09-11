@@ -7,7 +7,9 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 
 const dir = new URL('.', import.meta.url);
-const js = readFileSync(new URL('dashboard.js', dir), 'utf8');
+import { readdirSync } from 'node:fs';
+const js = ['dashboard.js', ...readdirSync(new URL('src/', dir)).map(f => `src/${f}`)]
+  .map(f => readFileSync(new URL(f, dir), 'utf8')).join('\n');
 const html = readFileSync(new URL('index.html', dir), 'utf8');
 
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
@@ -18,7 +20,7 @@ const wanted = [...js.matchAll(/getElementById\('([^']+)'\)/g)].map(m => m[1]);
 assert.ok(wanted.length > 10, 'no getElementById calls found — did the file move?');
 
 const missing = wanted.filter(id => !ids.has(id));
-assert.deepStrictEqual(missing, [], `dashboard.js reads ids that index.html does not define: ${missing}`);
+assert.deepStrictEqual(missing, [], `the dashboard's JS reads ids that index.html does not define: ${missing}`);
 
 // renderVerdict() is shared by the crowd's card and the model's, and only the
 // crowd's shows thumbnails. Guard the pair so a future edit can't half-remove it.
