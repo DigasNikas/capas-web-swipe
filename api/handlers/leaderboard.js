@@ -1,7 +1,8 @@
 import { json } from "../lib/http.js";
+import { accessEmail } from "../lib/access.js";
 
 export async function handleLeaderboard(request, env) {
-  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  const userEmail = await accessEmail(request, env);
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   const { results } = await env.DB

@@ -59,12 +59,9 @@ async function launchBrowser() {
   return chromium.launch({ executablePath: chromiumExecutable() || undefined });
 }
 
-// Access ("app.capas.digasnikas.com") is a Cloudflare edge product with no
-// local equivalent under `wrangler dev` — the worker just trusts
-// Cf-Access-Authenticated-User-Email on every app-side handler (see
-// api/handlers/covers.js, swipes.js). Locally that means setting the same
-// header ourselves reproduces exactly the trust boundary Access provides
-// in production, nothing more.
+// No Access under `wrangler dev`, so no signed JWT. run.cjs sets
+// TRUST_ACCESS_EMAIL_HEADER there and the worker takes this header instead
+// (api/lib/access.js).
 async function withAccessUser(context, email = "e2e@test.local") {
   await context.setExtraHTTPHeaders({ "Cf-Access-Authenticated-User-Email": email });
 }

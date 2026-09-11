@@ -24,7 +24,7 @@ globalThis.fetch = async (_url, init) => {
 
 async function swipe(DB, user, decision, cover_id = 1) {
   const pending = [];
-  const env = { DB, GH_DISPATCH_TOKEN: "t" };
+  const env = { DB, GH_DISPATCH_TOKEN: "t", TRUST_ACCESS_EMAIL_HEADER: "1" };
   const req = new Request("https://x/swipes", {
     method: "POST",
     headers: { "Cf-Access-Authenticated-User-Email": user },
@@ -37,6 +37,19 @@ async function swipe(DB, user, decision, cover_id = 1) {
 
 const analytics = db =>
   db.prepare("SELECT club, votes_club, votes_total FROM analytics_covers WHERE cover_id = 1").get();
+
+// Without the dev flag, the email header alone is not a login.
+{
+  const db = seed();
+  const req = new Request("https://x/swipes", {
+    method: "POST",
+    headers: { "Cf-Access-Authenticated-User-Email": "a@x" },
+    body: JSON.stringify({ cover_id: 1, decision: "porto" }),
+  });
+  const env = { DB: sqliteD1(db), ACCESS_TEAM_DOMAIN: "t.cloudflareaccess.com", ACCESS_AUD: "a" };
+  assert.equal((await handleSwipe(req, env, { waitUntil() {} })).status, 401, "forged header -> 401");
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM swipes").get().n, 0);
+}
 
 // Only the four clubs the app's swipe directions map to. Anything else would
 // become a public analytics_covers.club the dashboard has no colour for.

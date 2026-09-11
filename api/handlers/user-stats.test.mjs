@@ -10,6 +10,7 @@ import { handleUserStats } from "./user-stats.js";
 
 function fakeEnv({ breakdown = [], days = [] }) {
   return {
+    TRUST_ACCESS_EMAIL_HEADER: "1",
     DB: {
       prepare: sql => ({
         bind: () => ({

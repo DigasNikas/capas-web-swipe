@@ -13,6 +13,12 @@ zone_name = "digasnikas.com"
 pattern   = "app.capas.digasnikas.com/api/*"
 zone_name = "digasnikas.com"
 
+# Access app on app.capas.digasnikas.com. api/lib/access.js checks its JWTs
+# against these. The AUD tag is in Zero Trust > Access > Applications.
+[vars]
+ACCESS_TEAM_DOMAIN = "digasnikas-digital.cloudflareaccess.com"
+ACCESS_AUD         = "fcf7c786d5c3e993e0f0c5a72c0e04d01226390233c71f32059efb697e23f407"
+
 [[r2_buckets]]
 binding     = "COVERS_BUCKET"
 bucket_name = "capas-storage"

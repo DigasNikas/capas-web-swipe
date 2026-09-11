@@ -1,4 +1,5 @@
 import { json } from "../lib/http.js";
+import { accessEmail } from "../lib/access.js";
 
 // Called from the leaderboard's per-row drill-down (app/src/leaderboard.js).
 // Access-gated like every other app-side handler, but not scoped to the
@@ -6,7 +7,7 @@ import { json } from "../lib/http.js";
 // user's stats, same exposure the leaderboard list already has (names +
 // counts are visible to the whole group there too).
 export async function handleUserStats(request, env, url) {
-  const requester = request.headers.get("Cf-Access-Authenticated-User-Email");
+  const requester = await accessEmail(request, env);
   if (!requester) return json({ error: "Unauthorized" }, 401);
 
   const email = url.searchParams.get("email");

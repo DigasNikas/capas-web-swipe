@@ -1,4 +1,5 @@
 import { json } from "../lib/http.js";
+import { accessEmail } from "../lib/access.js";
 import { dispatchGithubEvent } from "../lib/github.js";
 
 // The app's four swipe directions (app/src/state.js). The winner of these
@@ -7,7 +8,7 @@ import { dispatchGithubEvent } from "../lib/github.js";
 const CLUBS = ["sporting", "benfica", "porto", "others"];
 
 export async function handleGetSwipes(request, env) {
-  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  const userEmail = await accessEmail(request, env);
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   const { results } = await env.DB
@@ -18,7 +19,7 @@ export async function handleGetSwipes(request, env) {
 }
 
 export async function handleToggleFavorite(request, env) {
-  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  const userEmail = await accessEmail(request, env);
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   let body;
@@ -36,7 +37,7 @@ export async function handleToggleFavorite(request, env) {
 }
 
 export async function handleSwipe(request, env, ctx) {
-  const userEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+  const userEmail = await accessEmail(request, env);
   if (!userEmail) return json({ error: "Unauthorized" }, 401);
 
   let body;

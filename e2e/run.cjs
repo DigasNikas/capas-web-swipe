@@ -119,7 +119,7 @@ process.on("SIGINT", () => {
   startServer(
     "worker",
     "npx",
-    ["wrangler", "dev", "--port", "8787", "--var", "ADMIN_SECRET:e2e-test-secret"],
+    ["wrangler", "dev", "--port", "8787", "--var", "ADMIN_SECRET:e2e-test-secret", "--var", "TRUST_ACCESS_EMAIL_HEADER:1"],
     REPO_ROOT,
     API_LOG,
   );
