@@ -18,8 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install wrangler
-        run: npm install -g wrangler
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Pinned wrangler from package-lock.json; import_matches.py calls it by name.
+      - run: npm ci && echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Run import_matches.py
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}

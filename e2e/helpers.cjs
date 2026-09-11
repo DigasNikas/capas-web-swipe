@@ -7,12 +7,9 @@ const API_URL = "http://localhost:8787";
 const DASHBOARD_URL = "http://localhost:8788";
 const APP_URL = "http://localhost:8789";
 
-// Playwright and Chromium come from the environment rather than
-// package.json: they're only needed to run these suites, and adding
-// ~300MB of devDependency to a repo that deploys as a plain Cloudflare
-// Worker + two static Pages projects isn't worth it. A list tried in
-// order, overridable by env var, so a machine with Playwright already in
-// node_modules or Chrome in /Applications just works.
+// Playwright is a pinned devDependency (the npm package is small; browsers
+// are a separate `npx playwright install chromium`). PLAYWRIGHT_PATH and
+// CHROMIUM_PATH override, and an installed Chrome is used if present.
 const PLAYWRIGHT_CANDIDATES = [
   process.env.PLAYWRIGHT_PATH,
   "playwright",

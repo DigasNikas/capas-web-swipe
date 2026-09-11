@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install numpy pillow torch transformers
+      - run: pip install -c scripts/requirements.txt numpy pillow torch transformers
       - name: Reclassify recent covers with RAG few-shot context
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

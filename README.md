@@ -28,6 +28,8 @@ https://github.com/user-attachments/assets/b2397298-2c05-43b0-8b09-664d1033c64f
 | `api/` | Cloudflare Worker: scraper + REST API, one D1 database behind both frontends | [api/README.md](api/README.md) |
 | `scripts/` | Local tooling; each script has a matching one-click GitHub Action | [scripts/README.md](scripts/README.md) |
 
-`wrangler.toml` is the Worker's config (routes, cron, R2/D1/Images/AI bindings); `package.json` only exists to pin the `wrangler` dev dependency. There is no build step anywhere in this repo, frontend included.
+`wrangler.toml` is the Worker's config (routes, cron, R2/D1/Images/AI bindings); `package.json` pins the dev tools (wrangler, Playwright, http-server); CI installs them from `package-lock.json` with `npm ci`, and the Python workflows pin versions through `scripts/requirements.txt`. There is no build step anywhere in this repo, frontend included.
 
 > **Note:** the frontends use native ES modules and can't be opened via `file://`. Use `wrangler dev` or any local HTTP server for local testing.
+
+Tests: `node <file>.test.mjs` for any self-check. Browser suite: `npm ci`, `npx playwright install chromium` (skip if Chrome is installed), then `npm run test:e2e`.
