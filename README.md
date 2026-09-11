@@ -27,6 +27,7 @@ https://github.com/user-attachments/assets/b2397298-2c05-43b0-8b09-664d1033c64f
 | `app/` | Swipe app, behind Cloudflare Access (Pages, `app.capas.digasnikas.com`) | [app/README.md](app/README.md) |
 | `api/` | Cloudflare Worker: scraper + REST API, one D1 database behind both frontends | [api/README.md](api/README.md) |
 | `scripts/` | Local tooling; each script has a matching one-click GitHub Action | [scripts/README.md](scripts/README.md) |
+| `shared/` | `classifier-cases.json`: cases both classifier copies (`api/lib/ai.js`, `scripts/rag_classify.py`) must pass, plus a hash of the prompt | run by `api/lib/ai.test.mjs` and `scripts/rag_classify_test.py` |
 
 `wrangler.toml` is the Worker's config (routes, cron, R2/D1/Images/AI bindings); `package.json` pins the dev tools (wrangler, Playwright, http-server); CI installs them from `package-lock.json` with `npm ci`, and the Python workflows pin versions through `scripts/requirements.txt`. There is no build step anywhere in this repo, frontend included.
 

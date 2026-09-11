@@ -215,4 +215,24 @@ assert consensus_club([{"metadata": {"club": "sporting"}}] * 6) == {
 assert consensus_club([{"metadata": {"club": "porto"}, "score": 0.99999}] * 7) is None
 assert CONSENSUS_MIN <= RAG_TOP_K, "an unreachable threshold would silently disable the fast path"
 
+# --- shared/classifier-cases.json: the same cases api/lib/ai.test.mjs runs ---
+
+import hashlib
+import json
+import pathlib
+import re
+
+import rag_classify
+
+shared = json.loads((pathlib.Path(__file__).parent.parent / "shared" / "classifier-cases.json").read_text())
+for name, value in shared["constants"].items():
+    got = getattr(rag_classify, name)
+    assert (list(got) if isinstance(got, tuple) else got) == value, f"constant {name}: {got!r} != {value!r}"
+assert hashlib.sha256(rag_classify.PROMPT.encode()).hexdigest() == shared["prompt_sha256"], "PROMPT differs from api/lib/ai.js"
+
+snake = lambda name: re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+for case in shared["cases"]:
+    got = getattr(rag_classify, snake(case["fn"]))(case["input"])
+    assert got == case["expected"], f"{case['fn']}({json.dumps(case['input'])[:60]}): {got!r} != {case['expected']!r}"
+
 print("rag_classify.py self-check ok")

@@ -1,0 +1,651 @@
+{
+  "//": "Behaviour both classifier copies must share: api/lib/ai.js and scripts/rag_classify.py. Each self-check runs every case. Change the code and this file together.",
+  "constants": {
+    "CLUBS": [
+      "benfica",
+      "sporting",
+      "porto",
+      "others"
+    ],
+    "RAG_TOP_K": 7,
+    "CONSENSUS_MIN": 6,
+    "HEADLINES_MAX_CHARS": 600,
+    "MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct"
+  },
+  "prompt_sha256": "54efbd930c1fb21e1a3c9d685b59de692696a70fb33a6702eb5496536bd7d89e",
+  "cases": [
+    {
+      "fn": "parseAnswer",
+      "input": "HEADLINE: MEIO BILHETE\nANSWER: benfica",
+      "expected": {
+        "club": "benfica",
+        "headline": "MEIO BILHETE",
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "HEADLINE: MEIO BILHETE\nWHY: Benfica named in the headline\nANSWER: benfica",
+      "expected": {
+        "club": "benfica",
+        "headline": "MEIO BILHETE",
+        "why": "Benfica named in the headline"
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "HEADLINE: X\nAnswer: **Sporting**",
+      "expected": {
+        "club": "sporting",
+        "headline": "X",
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "The page is dominated by a Sporting win over Porto.",
+      "expected": {
+        "club": null,
+        "headline": null,
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "HEADLINE: LEAO RUGE EM ALVALADE E O BENFICA",
+      "expected": {
+        "club": null,
+        "headline": null,
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "ANSWER: porto (not benfica)",
+      "expected": {
+        "club": "porto",
+        "headline": null,
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "HEADLINE: BENFICA HUMILHADO\nANSWER: others",
+      "expected": {
+        "club": "others",
+        "headline": "BENFICA HUMILHADO",
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "ANSWER: <benfica|sporting|porto|others>\nHEADLINE: DRAGAO VOA\nANSWER: porto",
+      "expected": {
+        "club": "porto",
+        "headline": "DRAGAO VOA",
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": "ANSWER: liverpool",
+      "expected": {
+        "club": null,
+        "headline": null,
+        "why": null
+      }
+    },
+    {
+      "fn": "parseAnswer",
+      "input": null,
+      "expected": {
+        "club": null,
+        "headline": null,
+        "why": null
+      }
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [],
+      "expected": ""
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": null,
+      "expected": ""
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {}
+        },
+        {
+          "metadata": {
+            "club": null
+          }
+        }
+      ],
+      "expected": ""
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "sporting"
+          },
+          "via": "layout"
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          },
+          "via": "headline"
+        },
+        {
+          "metadata": {
+            "club": "benfica"
+          },
+          "via": "layout"
+        }
+      ],
+      "expected": "Reference: 3 past front pages from this archive were crowd-labelled: 2 sporting, 1 benfica (1 matched by headline wording, 2 by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "benfica"
+          }
+        }
+      ],
+      "expected": "Reference: 2 past front pages from this archive were crowd-labelled: 1 benfica, 1 porto (both matched by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "benfica"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        }
+      ],
+      "expected": "Reference: 2 past front pages from this archive were crowd-labelled: 1 benfica, 1 porto (both matched by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "via": "layout"
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "via": "layout"
+        }
+      ],
+      "expected": "Reference: 2 past front pages from this archive were crowd-labelled: 2 porto (both matched by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "via": "headline"
+        }
+      ],
+      "expected": "Reference: 1 past front pages from this archive were crowd-labelled: 1 porto (1 matched by headline wording). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "metadata": {
+            "club": "benfica"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "others"
+          },
+          "via": "headline"
+        },
+        {
+          "metadata": {
+            "club": "others"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        }
+      ],
+      "expected": "Reference: 3 past front pages from this archive were crowd-labelled: 2 others, 1 sporting (1 matched by headline wording, 2 by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "buildFewShotBlock",
+      "input": [
+        {
+          "id": "1",
+          "metadata": {
+            "club": "benfica"
+          },
+          "score": 0.99999,
+          "via": "headline"
+        },
+        {
+          "id": "2",
+          "metadata": {},
+          "via": "headline"
+        },
+        {
+          "id": "3",
+          "metadata": {
+            "club": "sporting"
+          },
+          "score": 0.9,
+          "via": "headline"
+        },
+        {
+          "id": "4",
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.8,
+          "via": "layout"
+        }
+      ],
+      "expected": "Reference: 2 past front pages from this archive were crowd-labelled: 1 sporting, 1 porto (1 matched by headline wording, 1 by page layout). A headline match is about the same story; a layout match tracks newspaper design as much as subject. Treat this only as a weak prior, not a verdict.\n\n"
+    },
+    {
+      "fn": "consensusClub",
+      "input": [],
+      "expected": null
+    },
+    {
+      "fn": "consensusClub",
+      "input": null,
+      "expected": null
+    },
+    {
+      "fn": "consensusClub",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "benfica"
+          }
+        }
+      ],
+      "expected": {
+        "club": "porto",
+        "agreed": 6,
+        "of": 7
+      }
+    },
+    {
+      "fn": "consensusClub",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "benfica"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        }
+      ],
+      "expected": null
+    },
+    {
+      "fn": "consensusClub",
+      "input": [
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        },
+        {
+          "metadata": {
+            "club": "sporting"
+          }
+        }
+      ],
+      "expected": {
+        "club": "sporting",
+        "agreed": 6,
+        "of": 6
+      }
+    },
+    {
+      "fn": "consensusClub",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        }
+      ],
+      "expected": null
+    },
+    {
+      "fn": "consensusClub",
+      "input": [
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          }
+        },
+        {
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.99999
+        }
+      ],
+      "expected": {
+        "club": "porto",
+        "agreed": 6,
+        "of": 6
+      }
+    },
+    {
+      "fn": "ragCoverIdsFromMatches",
+      "input": [],
+      "expected": []
+    },
+    {
+      "fn": "ragCoverIdsFromMatches",
+      "input": null,
+      "expected": []
+    },
+    {
+      "fn": "ragCoverIdsFromMatches",
+      "input": [
+        {
+          "id": "1",
+          "metadata": {
+            "club": "benfica"
+          },
+          "score": 0.99999,
+          "via": "headline"
+        },
+        {
+          "id": "2",
+          "metadata": {},
+          "via": "headline"
+        },
+        {
+          "id": "3",
+          "metadata": {
+            "club": "sporting"
+          },
+          "score": 0.9,
+          "via": "headline"
+        },
+        {
+          "id": "4",
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.8,
+          "via": "layout"
+        }
+      ],
+      "expected": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "fn": "ragSourcesFromMatches",
+      "input": [],
+      "expected": []
+    },
+    {
+      "fn": "ragSourcesFromMatches",
+      "input": null,
+      "expected": []
+    },
+    {
+      "fn": "ragSourcesFromMatches",
+      "input": [
+        {
+          "id": "1",
+          "metadata": {
+            "club": "benfica"
+          },
+          "score": 0.99999,
+          "via": "headline"
+        },
+        {
+          "id": "2",
+          "metadata": {},
+          "via": "headline"
+        },
+        {
+          "id": "3",
+          "metadata": {
+            "club": "sporting"
+          },
+          "score": 0.9,
+          "via": "headline"
+        },
+        {
+          "id": "4",
+          "metadata": {
+            "club": "porto"
+          },
+          "score": 0.8,
+          "via": "layout"
+        }
+      ],
+      "expected": [
+        "headline",
+        "layout"
+      ]
+    },
+    {
+      "fn": "ragSourcesFromMatches",
+      "input": [
+        {
+          "id": "1",
+          "metadata": {
+            "club": "porto"
+          }
+        }
+      ],
+      "expected": [
+        "layout"
+      ]
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": null,
+      "expected": ""
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": "",
+      "expected": ""
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": "   \n  ",
+      "expected": ""
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": "Palhinha ja e da casa • Zaidu com suspeita de lesao",
+      "expected": "The titles printed on this page, scraped from the newspaper's own site, in page order:\nPalhinha ja e da casa • Zaidu com suspeita de lesao\n\nThat is every title on the page, the small side-rail and teaser ones included, not only the dominant story's. Read it to get the Portuguese wording right; which club is named most often in it does not decide the answer.\n\n"
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": "Dragoes\n\npasseiam   na Beira",
+      "expected": "The titles printed on this page, scraped from the newspaper's own site, in page order:\nDragoes passeiam na Beira\n\nThat is every title on the page, the small side-rail and teaser ones included, not only the dominant story's. Read it to get the Portuguese wording right; which club is named most often in it does not decide the answer.\n\n"
+    },
+    {
+      "fn": "buildHeadlinesBlock",
+      "input": "cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho FIMDOTEXTO",
+      "expected": "The titles printed on this page, scraped from the newspaper's own site, in page order:\ncabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho cabecalho…\n\nThat is every title on the page, the small side-rail and teaser ones included, not only the dominant story's. Read it to get the Portuguese wording right; which club is named most often in it does not decide the answer.\n\n"
+    }
+  ]
+}

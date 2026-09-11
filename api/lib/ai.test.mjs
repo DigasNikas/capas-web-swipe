@@ -304,4 +304,19 @@ assert.deepEqual(ragSourcesFromMatches(undefined), []);
 // A match with no via predates the second index and is a layout match.
 assert.deepEqual(ragSourcesFromMatches([{ id: "1", metadata: { club: "porto" } }]), ["layout"]);
 
+// --- shared/classifier-cases.json ---
+//
+// The same cases run against scripts/rag_classify.py's copy of this logic.
+{
+  const { readFileSync } = await import("node:fs");
+  const { createHash } = await import("node:crypto");
+  const ai = await import("./ai.js");
+  const shared = JSON.parse(readFileSync(new URL("../../shared/classifier-cases.json", import.meta.url), "utf8"));
+  for (const [name, value] of Object.entries(shared.constants)) assert.deepEqual(ai[name], value, `constant ${name}`);
+  assert.equal(createHash("sha256").update(ai.PROMPT).digest("hex"), shared.prompt_sha256, "PROMPT changed: update the shared file and rag_classify.py");
+  for (const { fn, input, expected } of shared.cases) {
+    assert.deepEqual(ai[fn](input ?? undefined), expected, `${fn}(${JSON.stringify(input)?.slice(0, 60)})`);
+  }
+}
+
 console.log("ai.js self-check ok");

@@ -81,7 +81,7 @@ STATS = os.environ.get("CAPAS_STATS", "https://capas.digasnikas.com/api/stats")
 API_BASE = os.environ.get("CAPAS_API", "https://capas.digasnikas.com/api")
 HF_TOKEN = os.environ.get("HF_TOKEN")  # optional: higher HF Hub rate limits, faster weight downloads
 
-# Copied verbatim from api/lib/ai.js's PROMPT — keep in sync by hand.
+# Copied verbatim from api/lib/ai.js's PROMPT. shared/classifier-cases.json checks they match.
 PROMPT = (
     "You are looking at the front page of a Portuguese sports daily (Record, A Bola or O Jogo).\n"
     "Find the largest photo on the page — the one that takes up most of the visible space. "
