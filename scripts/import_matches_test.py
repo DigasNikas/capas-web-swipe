@@ -7,7 +7,7 @@ two-year-old season and silently changed nothing.
 """
 import datetime
 
-from import_matches import current_season, keep_competition
+from import_matches import current_season, keep_competition, uefa_pairs
 
 # A season is labelled by the year it starts in: 2026 means 2026-27.
 assert current_season(datetime.date(2026, 9, 12)) == "2026", "mid-season"
@@ -25,5 +25,32 @@ assert keep_competition("PPL", "CL") == "CL", "European night beats a league fix
 assert keep_competition("CL", "PPL") == "CL", "and does so whichever arrives first"
 assert keep_competition("TP", "TL") == "TP"
 assert keep_competition("PPL", "PPL") == "PPL"
+
+# UEFA's own match feed is where the Europa and Conference Leagues come from:
+# football-data.org's free tier serves neither. Same shape for both sides of a
+# tie, and the kick-off is UTC, like football-data's utcDate.
+PAYLOAD = [
+    {
+        "homeTeam": {"internationalName": "Benfica"},
+        "awayTeam": {"internationalName": "Real Betis"},
+        "kickOffTime": {"dateTime": "2026-09-16T19:00:00Z"},
+    },
+    {
+        "homeTeam": {"internationalName": "Feyenoord"},
+        "awayTeam": {"internationalName": "Porto"},
+        "kickOffTime": {"dateTime": "2026-10-22T17:45:00Z"},
+    },
+]
+assert uefa_pairs(PAYLOAD) == [
+    ("Benfica", "2026-09-16"), ("Real Betis", "2026-09-16"),
+    ("Feyenoord", "2026-10-22"), ("Porto", "2026-10-22"),
+]
+
+# A fixture with no kick-off time yet (drawn but unscheduled) has no date to
+# store, and must not crash the import or land as a match on a null day.
+assert uefa_pairs([{"homeTeam": {"internationalName": "Benfica"},
+                    "awayTeam": {"internationalName": "Porto"},
+                    "kickOffTime": None}]) == []
+assert uefa_pairs([]) == []
 
 print("import_matches.py self-check ok")

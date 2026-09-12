@@ -3,12 +3,16 @@
 import_matches.py — Fetch match dates for Sporting CP, SL Benfica, FC Porto
 across all competitions and insert into the D1 matches table via wrangler.
 
-Data sources (both free, no credit card):
-  football-data.org   →  PPL, Champions League, Europa League, Conference League
-                         (the competition code is stored with each date, so the
-                          dashboard's alert can name it)
+Data sources (all free, no credit card):
+  football-data.org   →  Primeira Liga, Champions League
+  match.uefa.com      →  Champions League, Europa League, Conference League,
+                         qualifying rounds included. No key. The free
+                         football-data tier serves neither EL nor UECL.
   api-sports.io       →  Taça de Portugal, Taça da Liga
                          (register at https://dashboard.api-football.com/register)
+
+The competition code is stored with each date, so the dashboard's alert can
+name it.
 
 Requirements:
   1. FOOTBALL_API_KEY  — https://www.football-data.org/client/register
@@ -48,13 +52,26 @@ def current_season(today=None):
 _args            = [a for a in sys.argv[1:] if a and not a.startswith("--")]
 SEASON           = _args[0] if _args else current_season()
 DB_NAME          = "capas-db"
+# match.uefa.com answers 403 to urllib's default User-Agent.
+UEFA_UA          = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) capas-import-matches/1.0"
 
 # ── football-data.org competitions (free tier) ─────────────────────────────
+# The Europa and Conference Leagues used to be listed here and answered 403
+# and 404: neither is on the free tier. They come from UEFA below instead.
 FOOTBALL_DATA_COMPETITIONS = [
     ("PPL",  "Primeira Liga"),
     ("CL",   "Champions League"),
-    ("EL",   "Europa League"),
-    ("UECL", "Conference League"),
+]
+
+# ── UEFA's own match feed ──────────────────────────────────────────────────
+# No key, no plan, and it includes the July/August qualifying rounds that the
+# competition feeds skip. Champions League is here too, redundantly with
+# football-data above, so one source going quiet doesn't lose a European night.
+# (competition id, code stored in D1, label)
+UEFA_COMPETITIONS = [
+    (1,    "CL",   "Champions League (UEFA)"),
+    (14,   "EL",   "Europa League"),
+    (2019, "UECL", "Conference League"),
 ]
 
 # ── api-sports.io competitions ─────────────────────────────────────────────
@@ -99,6 +116,44 @@ def fetch_football_data(competition):
     req = urllib.request.Request(url, headers={"X-Auth-Token": FOOTBALL_API_KEY})
     with urllib.request.urlopen(req, timeout=15) as resp:
         return json.loads(resp.read())["matches"]
+
+
+def uefa_pairs(matches):
+    """(team name, YYYY-MM-DD) for both sides of every scheduled match.
+
+    A drawn-but-unscheduled tie has no kickOffTime, and no date to store.
+    """
+    pairs = []
+    for m in matches:
+        kick = m.get("kickOffTime") or {}
+        date = (kick.get("dateTime") or "")[:10]
+        if not date:
+            continue
+        for side in ("homeTeam", "awayTeam"):
+            name = (m.get(side) or {}).get("internationalName")
+            if name:
+                pairs.append((name, date))
+    return pairs
+
+
+def fetch_uefa(competition_id):
+    """Every match of one UEFA competition in SEASON, paged.
+
+    seasonYear is the year the season *ends* in: 2026-27 is 2027.
+    """
+    out, offset, page = [], 0, 200
+    while True:
+        url = (
+            f"https://match.uefa.com/v5/matches?competitionId={competition_id}"
+            f"&seasonYear={int(SEASON) + 1}&limit={page}&offset={offset}"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": UEFA_UA})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            batch = json.loads(resp.read())
+        out.extend(batch)
+        if len(batch) < page:
+            return out
+        offset += page
 
 
 def fetch_apisports(league_id):
@@ -169,6 +224,22 @@ def main():
             print(f"    ↳ unrecognised team names (add to TEAM_MAP if needed):")
             for n in sorted(unknown):
                 print(f"       {n!r}")
+
+    # ── UEFA ───────────────────────────────────────────────────────────────
+    for comp_id, code, label in UEFA_COMPETITIONS:
+        print(f"  [{label}]", end=" ", flush=True)
+        try:
+            matches = fetch_uefa(comp_id)
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            print(f"skipped ({e})")
+            continue
+        before = len(rows)
+        for name, date in uefa_pairs(matches):
+            s = slug_for(name)
+            if s:
+                rows[(s, date)] = keep_competition(rows.get((s, date)), code)
+        added = len(rows) - before
+        print(f"{added} new rows  ({len(matches)} matches total)")
 
     # ── api-sports.io ──────────────────────────────────────────────────────
     if APISPORTS_KEY:
