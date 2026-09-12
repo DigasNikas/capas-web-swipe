@@ -1,12 +1,18 @@
 name: Import Match Dates
 
 on:
+  # Weekly, because fixtures keep arriving: the Champions League league-phase
+  # draw lands in late August and the knockout rounds are drawn from February.
+  # A one-off import goes stale, and a missing European fixture reads on the
+  # dashboard as a paper ignoring a club that played (see match-dates.md).
+  schedule:
+    - cron: "0 4 * * 1"
   workflow_dispatch:
     inputs:
       season:
-        description: "Season start year (e.g. 2024 for 2024-25)"
+        description: "Season start year (e.g. 2026 for 2026-27). Blank = the season happening now."
         required: false
-        default: "2024"
+        default: ""
       list_leagues:
         description: "List api-sports.io Portuguese league IDs instead of importing"
         type: boolean
@@ -29,9 +35,10 @@ jobs:
           APISPORTS_KEY: ${{ secrets.APISPORTS_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SEASON: ${{ inputs.season }}
         run: |
           if [ "${{ inputs.list_leagues }}" = "true" ]; then
             python3 scripts/import_matches.py --list-leagues
           else
-            python3 scripts/import_matches.py "${{ inputs.season }}"
+            python3 scripts/import_matches.py $SEASON
           fi

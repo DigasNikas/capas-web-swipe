@@ -14,13 +14,14 @@ Requirements:
   3. wrangler installed and authenticated
 
 Usage:
-  FOOTBALL_API_KEY=key python3 import_matches.py                  # 2024-25
+  FOOTBALL_API_KEY=key python3 import_matches.py                  # current season
   FOOTBALL_API_KEY=key APISPORTS_KEY=key2 python3 import_matches.py 2023
 
   # List all Portuguese league IDs from api-sports.io (to find correct IDs):
   APISPORTS_KEY=key2 python3 import_matches.py --list-leagues
 """
 
+import datetime
 import os
 import sys
 import json
@@ -30,7 +31,20 @@ import urllib.error
 
 FOOTBALL_API_KEY = os.environ.get("FOOTBALL_API_KEY", "")
 APISPORTS_KEY    = os.environ.get("APISPORTS_KEY", "")
-SEASON           = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != "--list-leagues" else "2024"
+
+
+def current_season(today=None):
+    """The year an Aug-Jun season starts in, which is how both APIs label it.
+
+    July counts as the new season: no matches yet, but the fixtures are out.
+    """
+    d = today or datetime.date.today()
+    return str(d.year if d.month >= 7 else d.year - 1)
+
+
+# No season argument means the one happening now. It used to mean 2024.
+_args            = [a for a in sys.argv[1:] if a and not a.startswith("--")]
+SEASON           = _args[0] if _args else current_season()
 DB_NAME          = "capas-db"
 
 # ── football-data.org competitions (free tier) ─────────────────────────────
