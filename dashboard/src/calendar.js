@@ -1,7 +1,8 @@
 // Calendar, barcode and "O suspeito": everything built from one época's days.
-import { CLUB_IDS, PAPER_NAMES } from '/src/domain.js';
+import { CLUB_IDS, COMPETITION_NAMES, PAPER_NAMES } from '/src/domain.js';
 import { CLUB_META, MONTHS, joinList } from '/src/common.js';
 import { openCoverModal } from '/src/cover-modal.js';
+import { pulseMessage } from '/src/pulse.js';
 
 // Local getters in, local getters out — mixing in toISOString() (UTC)
 // here silently shifted this back an extra day in any positive-UTC-offset
@@ -35,8 +36,9 @@ function dayStats(day) {
 // Neither is evidence anyone was hidden on purpose, so neither counts
 // against the paper that picked it.
 function snubInfoFor(day, matchesByDate) {
-  const prevMatches = matchesByDate.get(prevDateStr(day.date)) || [];
-  if (prevMatches.length === 0) return { prevMatches, offendersByClub: {} };
+  const played = matchesByDate.get(prevDateStr(day.date)) || [];
+  const prevMatches = played.map(m => m.club);
+  if (prevMatches.length === 0) return { played, prevMatches, offendersByClub: {} };
 
   const covered = new Set(Object.values(day.covers));
   const alsoPlayed = new Set(prevMatches);
@@ -58,12 +60,21 @@ function snubInfoFor(day, matchesByDate) {
     if (offenders.length) offendersByClub[club] = offenders;
   });
 
-  return { prevMatches, offendersByClub };
+  return { played, prevMatches, offendersByClub };
 }
 
+// What the 🚨 says, or null when there is nothing to complain about. A club
+// that was the only one playing is the unfair case worth naming — see
+// dashboard/src/pulse.js for the wording.
 function pulseFor(day, matchesByDate) {
-  const snubbed = Object.keys(snubInfoFor(day, matchesByDate).offendersByClub);
-  return snubbed.length ? snubbed : null;
+  const { played, offendersByClub } = snubInfoFor(day, matchesByDate);
+  const snubbed = Object.keys(offendersByClub);
+  if (!snubbed.length) return null;
+  return {
+    names: snubbed.map(c => CLUB_META[c].name),
+    onlyOne: played.length === 1,
+    competition: COMPETITION_NAMES[played[0]?.competition] ?? null,
+  };
 }
 
 export function computeSuspeito(days, matchesByDate) {
@@ -188,7 +199,7 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
         <div>
           <div class="d-day-title">${dateLabel}</div>
           <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
-          ${pulse ? `<div class="d-day-alert">🚨 ${joinList(pulse.map(m => CLUB_META[m].name))} jogou ontem e não foi mencionado por todos</div>` : ''}
+          ${pulse ? `<div class="d-day-alert">🚨 ${pulseMessage(pulse.names, pulse)}</div>` : ''}
         </div>
         <div class="d-day-papers">${papersHtml}</div>
       </div>

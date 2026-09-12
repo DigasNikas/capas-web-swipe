@@ -5,6 +5,8 @@ across all competitions and insert into the D1 matches table via wrangler.
 
 Data sources (both free, no credit card):
   football-data.org   →  PPL, Champions League, Europa League, Conference League
+                         (the competition code is stored with each date, so the
+                          dashboard's alert can name it)
   api-sports.io       →  Taça de Portugal, Taça da Liga
                          (register at https://dashboard.api-football.com/register)
 
@@ -56,11 +58,25 @@ FOOTBALL_DATA_COMPETITIONS = [
 ]
 
 # ── api-sports.io competitions ─────────────────────────────────────────────
+# (league id, competition code stored in D1, label)
 APISPORTS_COMPETITIONS = [
-    (94, "Primeira Liga"),
-    (96, "Taça de Portugal"),
-    (97, "Taça da Liga"),
+    (94, "PPL", "Primeira Liga"),
+    (96, "TP",  "Taça de Portugal"),
+    (97, "TL",  "Taça da Liga"),
 ]
+
+# Most worth naming in the dashboard's alert first. A club plays once a day,
+# but the same fixture arrives from both sources, so the winner can't be
+# whichever loop ran last.
+COMPETITION_PRIORITY = ["CL", "EL", "UECL", "TP", "TL", "PPL"]
+
+
+def keep_competition(existing, new):
+    """Which of two competition codes to store for one club on one day."""
+    if existing is None:
+        return new
+    rank = lambda c: COMPETITION_PRIORITY.index(c) if c in COMPETITION_PRIORITY else len(COMPETITION_PRIORITY)
+    return min(existing, new, key=rank)
 
 # ── Team name → slug mapping ────────────────────────────────────────────────
 TEAM_MAP = {
@@ -123,7 +139,7 @@ def main():
         print("  Register free at https://www.football-data.org/client/register")
         sys.exit(1)
 
-    rows = set()
+    rows = {}   # (club, date) -> competition code
 
     # ── football-data.org ──────────────────────────────────────────────────
     print(f"Season {SEASON}-{int(SEASON)+1}\n")
@@ -144,7 +160,7 @@ def main():
                     continue
                 s = slug_for(name)
                 if s:
-                    rows.add((s, date))
+                    rows[(s, date)] = keep_competition(rows.get((s, date)), code)
                 else:
                     unknown.add(name)
         added = len(rows) - before
@@ -156,7 +172,7 @@ def main():
 
     # ── api-sports.io ──────────────────────────────────────────────────────
     if APISPORTS_KEY:
-        for league_id, label in APISPORTS_COMPETITIONS:
+        for league_id, code, label in APISPORTS_COMPETITIONS:
             print(f"  [{label}]", end=" ", flush=True)
             try:
                 fixtures = fetch_apisports(league_id)
@@ -173,7 +189,7 @@ def main():
                         continue
                     s = slug_for(name)
                     if s:
-                        rows.add((s, date))
+                        rows[(s, date)] = keep_competition(rows.get((s, date)), code)
                     else:
                         unknown.add(name)
             added = len(rows) - before
@@ -191,9 +207,9 @@ def main():
         print("\nNo rows collected — nothing to insert.")
         sys.exit(1)
 
-    rows = sorted(rows, key=lambda r: (r[1], r[0]))
+    rows = sorted(rows.items(), key=lambda kv: (kv[0][1], kv[0][0]))
     by_club = {}
-    for s, d in rows:
+    for (s, d), c in rows:
         by_club.setdefault(s, 0)
         by_club[s] += 1
     print("\nRows per club:")
@@ -201,8 +217,13 @@ def main():
         print(f"  {club}: {cnt}")
     print(f"\nInserting {len(rows)} rows into D1 …")
 
-    values = ", ".join(f"('{s}', '{d}')" for s, d in rows)
-    sql    = f"INSERT OR IGNORE INTO matches (club, match_date) VALUES {values};\n"
+    # Upsert rather than INSERT OR IGNORE: a re-import backfills `competition`
+    # on rows inserted before that column existed.
+    values = ", ".join(f"('{s}', '{d}', '{c}')" for (s, d), c in rows)
+    sql    = (
+        f"INSERT INTO matches (club, match_date, competition) VALUES {values} "
+        f"ON CONFLICT (club, match_date) DO UPDATE SET competition = excluded.competition;\n"
+    )
 
     import tempfile, os
     with tempfile.NamedTemporaryFile(mode="w", suffix=".sql", delete=False) as f:
@@ -221,7 +242,7 @@ def main():
         print("wrangler error:\n" + result.stderr)
         sys.exit(1)
 
-    print(f"Done — {len(rows)} rows inserted (duplicates skipped).")
+    print(f"Done — {len(rows)} rows inserted or updated.")
 
 
 if __name__ == "__main__":

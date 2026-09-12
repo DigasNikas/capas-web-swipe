@@ -57,9 +57,10 @@ CREATE VIEW IF NOT EXISTS users AS
   GROUP BY user_email;
 
 CREATE TABLE IF NOT EXISTS matches (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  club       TEXT NOT NULL,            -- 'sporting', 'benfica', 'porto'
-  match_date TEXT NOT NULL,            -- 'YYYY-MM-DD'
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  club        TEXT NOT NULL,           -- 'sporting', 'benfica', 'porto'
+  match_date  TEXT NOT NULL,           -- 'YYYY-MM-DD'
+  competition TEXT,                    -- 'PPL', 'CL', 'EL', 'UECL', 'TP', 'TL'; NULL for rows imported before this column
   UNIQUE (club, match_date)
 );
 

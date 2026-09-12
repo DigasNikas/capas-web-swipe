@@ -26,10 +26,12 @@ async function init() {
   const stats = await statsRes.json();
   const matches = matchesRes.ok ? await matchesRes.json() : [];
 
+  // date -> [{ club, competition }]. The competition is what lets the
+  // calendar's 🚨 name it; it is null for rows imported before that column.
   const matchesByDate = new Map();
   matches.forEach(m => {
     if (!matchesByDate.has(m.match_date)) matchesByDate.set(m.match_date, []);
-    matchesByDate.get(m.match_date).push(m.club);
+    matchesByDate.get(m.match_date).push({ club: m.club, competition: m.competition ?? null });
   });
 
   const rows = stats.rows.map(r => ({ ...r, epoca: epocaLabelForDate(r.date) })).filter(r => r.epoca);
