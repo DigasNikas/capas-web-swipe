@@ -178,8 +178,8 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--d-yellow)';
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
-    // A European night is a different kind of front page, so the whole block
-    // of covers from the morning after carries that competition's banner.
+    // A European night is a different kind of front page, so the whole day
+    // panel from the morning after carries that competition's banner.
     const euro = euroCompetition(matchesByDate.get(prevDateStr(day.date)) || []);
 
     const papersHtml = Object.keys(PAPER_NAMES).map(id => {
@@ -200,14 +200,14 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
     const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 
     panelEl.innerHTML = `
-      <div class="d-day-body">
+      <div class="d-day-frame${euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : ''}">
+        ${euro ? `<i class="dp-banner">${COMPETITION_NAMES[euro]}</i>` : ''}
+        <div class="d-day-body">
         <div>
           <div class="d-day-title">${dateLabel}</div>
           <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
           ${pulse ? `<div class="d-day-alert">🚨 ${pulseMessage(pulse.names, pulse)}</div>` : ''}
         </div>
-        <div class="d-day-covers${euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : ''}">
-          ${euro ? `<i class="dp-banner">${COMPETITION_NAMES[euro]}</i>` : ''}
           <div class="d-day-papers">${papersHtml}</div>
         </div>
       </div>
