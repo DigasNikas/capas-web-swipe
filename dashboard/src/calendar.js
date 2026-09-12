@@ -1,8 +1,11 @@
 // Calendar, barcode and "O suspeito": everything built from one época's days.
-import { CLUB_IDS, COMPETITION_NAMES, PAPER_NAMES } from '/src/domain.js';
+import { CLUB_IDS, COMPETITION_NAMES, PAPER_NAMES, euroCompetition } from '/src/domain.js';
 import { CLUB_META, MONTHS, joinList } from '/src/common.js';
 import { openCoverModal } from '/src/cover-modal.js';
 import { pulseMessage } from '/src/pulse.js';
+
+// UEFA's own abbreviations, on the ribbon across the framed covers.
+const EURO_SHORT = { CL: 'UCL', EL: 'UEL', UECL: 'UECL' };
 
 // Local getters in, local getters out — mixing in toISOString() (UTC)
 // here silently shifted this back an extra day in any positive-UTC-offset
@@ -178,11 +181,18 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--d-yellow)';
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
+    // A European night is a different kind of front page, so the covers of
+    // the morning after are framed in that competition's colours.
+    const euro = euroCompetition(matchesByDate.get(prevDateStr(day.date)) || []);
 
     const papersHtml = Object.keys(PAPER_NAMES).map(id => {
       const club = day.covers[id];
       const u = day.urls[id];
-      const cover = club && u ? `<img src="${u.thumb}" data-full="${u.url}" alt="${PAPER_NAMES[id]}" loading="lazy" />` : `<div class="dp-empty">—</div>`;
+      const frame = euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : '';
+      const ribbon = euro ? `<i class="dp-ribbon">${EURO_SHORT[euro]}</i>` : '';
+      const cover = club && u
+        ? `<span class="dp-shot${frame}"><img src="${u.thumb}" data-full="${u.url}" alt="${PAPER_NAMES[id]}" loading="lazy" />${ribbon}</span>`
+        : `<div class="dp-empty">—</div>`;
       return `
         <div>
           ${cover}
