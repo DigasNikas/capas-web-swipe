@@ -8,7 +8,7 @@ FOOTBALL_API_KEY=<key> APISPORTS_KEY=<key> python3 scripts/import_matches.py
 
 Data sources: [football-data.org](https://www.football-data.org) (Primeira Liga + European cups) and [api-sports.io](https://dashboard.api-football.com) (Taça de Portugal + Taça da Liga). Both have free tiers.
 
-Each date is stored with its competition (`CL`, `PPL`, `EL`, `UECL`, `TP`, `TL`), which is what lets the calendar's alert say *Porto foi o único a jogar Champions League ontem e não foi manchete em todas as capas* instead of just naming the club. A club playing two competitions on one day can't happen, but the same fixture arrives from both sources, so the European code wins over the domestic one rather than whichever import ran last. Rows imported before this column read as `NULL` and drop the competition from the sentence until that season is re-imported.
+Each date is stored with its competition (`CL`, `PPL`, `EL`, `UECL`, `TP`, `TL`), which is what lets the calendar's alert say *Porto foi o único a jogar Champions League e não foi manchete em todas as capas* instead of just naming the club. A club playing two competitions on one day can't happen, but the same fixture arrives from both sources, so the European code wins over the domestic one rather than whichever import ran last. Rows imported before this column read as `NULL` and drop the competition from the sentence until that season is re-imported.
 
 With no season argument it imports the season happening now (August to June).
 

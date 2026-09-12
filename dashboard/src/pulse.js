@@ -25,9 +25,9 @@ export function pulseMessage(names, { onlyOne, competition }) {
   const who = joinNames(names);
   if (onlyOne) {
     const what = competition ? `jogar ${competition}` : 'jogar';
-    return `${who} foi o único a ${what} ontem e não foi manchete em todas as capas`;
+    return `${who} foi o único a ${what} e não foi manchete em todas as capas`;
   }
   return names.length === 1
-    ? `${who} jogou ontem e não foi manchete em nenhuma capa`
-    : `${who} jogaram ontem e não foram manchete em nenhuma capa`;
+    ? `${who} jogou e não foi manchete em nenhuma capa`
+    : `${who} jogaram e não foram manchete em nenhuma capa`;
 }
