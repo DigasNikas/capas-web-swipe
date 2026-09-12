@@ -9,21 +9,25 @@ function joinNames(names) {
   return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
 }
 
+// "manchete", never "mencionado": all three clubs appear on every front page,
+// in the side rails if nowhere else. What the vote records, and what this
+// complains about, is which club the page leads with.
+//
 // names: the ignored clubs, already as display names.
 // onlyOne: nobody else played that day, which is what makes it unfair — there
-//   the complaint is that some paper led with a club that stayed home, so
-//   "por todos" is the right bar.
+//   the complaint is that a paper led with a club that stayed home, so the bar
+//   is every cover.
 // competition: display name, or null for matches imported before the column.
 //
-// On a day several clubs played, snubInfoFor only flags a club no cover
-// mentioned at all, so those sentences say that instead.
+// On a day several clubs played, snubInfoFor only flags a club that led no
+// cover at all, so those sentences say that instead.
 export function pulseMessage(names, { onlyOne, competition }) {
   const who = joinNames(names);
   if (onlyOne) {
     const what = competition ? `jogar ${competition}` : 'jogar';
-    return `${who} foi o único a ${what} ontem e não foi mencionado por todos`;
+    return `${who} foi o único a ${what} ontem e não foi manchete em todas as capas`;
   }
   return names.length === 1
-    ? `${who} jogou ontem e não foi mencionado em nenhuma capa`
-    : `${who} jogaram ontem e não foram mencionados em nenhuma capa`;
+    ? `${who} jogou ontem e não foi manchete em nenhuma capa`
+    : `${who} jogaram ontem e não foram manchete em nenhuma capa`;
 }
