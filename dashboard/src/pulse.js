@@ -10,8 +10,13 @@ function joinNames(names) {
 }
 
 // names: the ignored clubs, already as display names.
-// onlyOne: nobody else played that day, which is what makes it unfair.
+// onlyOne: nobody else played that day, which is what makes it unfair — there
+//   the complaint is that some paper led with a club that stayed home, so
+//   "por todos" is the right bar.
 // competition: display name, or null for matches imported before the column.
+//
+// On a day several clubs played, snubInfoFor only flags a club no cover
+// mentioned at all, so those sentences say that instead.
 export function pulseMessage(names, { onlyOne, competition }) {
   const who = joinNames(names);
   if (onlyOne) {
@@ -19,6 +24,6 @@ export function pulseMessage(names, { onlyOne, competition }) {
     return `${who} foi o único a ${what} ontem e não foi mencionado por todos`;
   }
   return names.length === 1
-    ? `${who} jogou ontem e não foi mencionado por todos`
-    : `${who} jogaram ontem e não foram mencionados por todos`;
+    ? `${who} jogou ontem e não foi mencionado em nenhuma capa`
+    : `${who} jogaram ontem e não foram mencionados em nenhuma capa`;
 }

@@ -19,21 +19,23 @@ assert.equal(
   'Porto foi o único a jogar ontem e não foi mencionado por todos',
 );
 
-// More than one club played, so "o único" would be a lie.
+// More than one club played, so "o único" would be a lie. On those days a club
+// is only flagged when no cover mentioned it at all (see snubInfoFor), so the
+// sentence says that rather than "por todos".
 assert.equal(
   pulseMessage(['Benfica'], { onlyOne: false, competition: 'Primeira Liga' }),
-  'Benfica jogou ontem e não foi mencionado por todos',
+  'Benfica jogou ontem e não foi mencionado em nenhuma capa',
 );
 
 // Two clubs ignored on the same day: plural all the way through.
 assert.equal(
   pulseMessage(['Benfica', 'Porto'], { onlyOne: false, competition: null }),
-  'Benfica e Porto jogaram ontem e não foram mencionados por todos',
+  'Benfica e Porto jogaram ontem e não foram mencionados em nenhuma capa',
 );
 
 assert.equal(
   pulseMessage(['Benfica', 'Porto', 'Sporting'], { onlyOne: false, competition: null }),
-  'Benfica, Porto e Sporting jogaram ontem e não foram mencionados por todos',
+  'Benfica, Porto e Sporting jogaram ontem e não foram mencionados em nenhuma capa',
 );
 
 console.log('pulse: ok');
