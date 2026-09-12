@@ -4,9 +4,6 @@ import { CLUB_META, MONTHS, joinList } from '/src/common.js';
 import { openCoverModal } from '/src/cover-modal.js';
 import { pulseMessage } from '/src/pulse.js';
 
-// UEFA's own abbreviations, on the ribbon across the framed covers.
-const EURO_SHORT = { CL: 'UCL', EL: 'UEL', UECL: 'UECL' };
-
 // Local getters in, local getters out — mixing in toISOString() (UTC)
 // here silently shifted this back an extra day in any positive-UTC-offset
 // timezone (e.g. Europe/Lisbon in summer): local midnight on the 10th is
@@ -181,17 +178,15 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
     const color = (paperFilter || hasMajority) ? CLUB_META[focusClub].color : 'var(--d-yellow)';
     const winnerLabel = (paperFilter || hasMajority) ? CLUB_META[focusClub].name : 'Inconclusivo';
     const pulse = pulseFor(day, matchesByDate);
-    // A European night is a different kind of front page, so the covers of
-    // the morning after are framed in that competition's colours.
+    // A European night is a different kind of front page, so the whole block
+    // of covers from the morning after carries that competition's banner.
     const euro = euroCompetition(matchesByDate.get(prevDateStr(day.date)) || []);
 
     const papersHtml = Object.keys(PAPER_NAMES).map(id => {
       const club = day.covers[id];
       const u = day.urls[id];
-      const frame = euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : '';
-      const ribbon = euro ? `<i class="dp-ribbon">${EURO_SHORT[euro]}</i>` : '';
       const cover = club && u
-        ? `<span class="dp-shot${frame}"><img src="${u.thumb}" data-full="${u.url}" alt="${PAPER_NAMES[id]}" loading="lazy" />${ribbon}</span>`
+        ? `<img src="${u.thumb}" data-full="${u.url}" alt="${PAPER_NAMES[id]}" loading="lazy" />`
         : `<div class="dp-empty">—</div>`;
       return `
         <div>
@@ -211,7 +206,10 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
           <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
           ${pulse ? `<div class="d-day-alert">🚨 ${pulseMessage(pulse.names, pulse)}</div>` : ''}
         </div>
-        <div class="d-day-papers">${papersHtml}</div>
+        <div class="d-day-covers${euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : ''}">
+          ${euro ? `<i class="dp-banner">${COMPETITION_NAMES[euro]}</i>` : ''}
+          <div class="d-day-papers">${papersHtml}</div>
+        </div>
       </div>
     `;
 
