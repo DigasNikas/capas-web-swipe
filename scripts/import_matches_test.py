@@ -7,7 +7,7 @@ two-year-old season and silently changed nothing.
 """
 import datetime
 
-from import_matches import current_season, keep_competition, uefa_pairs
+from import_matches import current_season, keep_competition, liga_pairs, uefa_pairs
 
 # A season is labelled by the year it starts in: 2026 means 2026-27.
 assert current_season(datetime.date(2026, 9, 12)) == "2026", "mid-season"
@@ -52,5 +52,21 @@ assert uefa_pairs([{"homeTeam": {"internationalName": "Benfica"},
                     "awayTeam": {"internationalName": "Porto"},
                     "kickOffTime": None}]) == []
 assert uefa_pairs([]) == []
+
+# Liga Portugal's own API is the only free source for the Taça da Liga. Its
+# rounds are published as they are drawn, and an undrawn round answers with an
+# error object rather than a list.
+LIGA_ROUND = [
+    {"matchDate": "2026-10-28T20:30:00Z",
+     "homeTeam": {"name": "FC Porto"}, "awayTeam": {"name": "Académico"}},
+    {"matchDate": "2026-10-29T20:45:00Z",
+     "homeTeam": {"name": "SL Benfica"}, "awayTeam": {"name": "Gil Vicente FC"}},
+]
+assert liga_pairs(LIGA_ROUND) == [
+    ("FC Porto", "2026-10-28"), ("Académico", "2026-10-28"),
+    ("SL Benfica", "2026-10-29"), ("Gil Vicente FC", "2026-10-29"),
+]
+assert liga_pairs({"error": "not found"}) == [], "an undrawn round is not a crash"
+assert liga_pairs([]) == []
 
 print("import_matches.py self-check ok")

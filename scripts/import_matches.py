@@ -8,7 +8,9 @@ Data sources (all free, no credit card):
   match.uefa.com      →  Champions League, Europa League, Conference League,
                          qualifying rounds included. No key. The free
                          football-data tier serves neither EL nor UECL.
-  api-sports.io       →  Taça de Portugal, Taça da Liga
+  ligaportugal.pt     →  Taça da Liga (no key; the site's own API)
+  api-sports.io       →  Taça de Portugal, Taça da Liga, but only up to the
+                         2024-25 season on the free plan
                          (register at https://dashboard.api-football.com/register)
 
 The competition code is stored with each date, so the dashboard's alert can
@@ -72,6 +74,14 @@ UEFA_COMPETITIONS = [
     (1,    "CL",   "Champions League (UEFA)"),
     (14,   "EL",   "Europa League"),
     (2019, "UECL", "Conference League"),
+]
+
+# ── Liga Portugal's own API ────────────────────────────────────────────────
+# The Taça da Liga, which no free tier anywhere else covers for the current
+# season. Same API the ligaportugal.pt site calls, no key. Rounds appear as
+# they are drawn, so the round list is read first rather than guessed.
+LIGA_PT_COMPETITIONS = [
+    ("allianzcup", "TL", "Taça da Liga"),
 ]
 
 # ── api-sports.io competitions ─────────────────────────────────────────────
@@ -154,6 +164,45 @@ def fetch_uefa(competition_id):
         if len(batch) < page:
             return out
         offset += page
+
+
+def liga_pairs(matches):
+    """(team name, YYYY-MM-DD) for both sides of every match in one round.
+
+    A round that exists but hasn't been drawn answers with an error object
+    instead of a list.
+    """
+    if not isinstance(matches, list):
+        return []
+    pairs = []
+    for m in matches:
+        date = (m.get("matchDate") or "")[:10]
+        if not date:
+            continue
+        for side in ("homeTeam", "awayTeam"):
+            name = (m.get(side) or {}).get("name")
+            if name:
+                pairs.append((name, date))
+    return pairs
+
+
+def fetch_liga_pt(competition):
+    """Every drawn round of one Liga Portugal competition in SEASON."""
+    season = f"{SEASON}{int(SEASON) + 1}"
+    base = "https://www.ligaportugal.pt/api/v1/competition"
+
+    def get(url):
+        req = urllib.request.Request(url, headers={"User-Agent": UEFA_UA})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read())
+
+    rounds = get(f"{base}/season/rounds?competition={competition}&season={season}")
+    out = []
+    for r in rounds if isinstance(rounds, list) else []:
+        out.extend(liga_pairs(get(
+            f"{base}/matches?competition={competition}&season={season}&round={r['round_number']}"
+        )))
+    return out
 
 
 def fetch_apisports(league_id):
@@ -240,6 +289,22 @@ def main():
                 rows[(s, date)] = keep_competition(rows.get((s, date)), code)
         added = len(rows) - before
         print(f"{added} new rows  ({len(matches)} matches total)")
+
+    # ── Liga Portugal ──────────────────────────────────────────────────────
+    for competition, code, label in LIGA_PT_COMPETITIONS:
+        print(f"  [{label}]", end=" ", flush=True)
+        try:
+            pairs = fetch_liga_pt(competition)
+        except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError) as e:
+            print(f"skipped ({e})")
+            continue
+        before = len(rows)
+        for name, date in pairs:
+            s = slug_for(name)
+            if s:
+                rows[(s, date)] = keep_competition(rows.get((s, date)), code)
+        added = len(rows) - before
+        print(f"{added} new rows  ({len(pairs) // 2} matches total)")
 
     # ── api-sports.io ──────────────────────────────────────────────────────
     if APISPORTS_KEY:
