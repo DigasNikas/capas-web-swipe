@@ -24,11 +24,20 @@ export async function handleRagCandidates(request, env) {
   // Default 10, hard cap 50: this is the one endpoint whose size directly
   // decides how many Llama4 calls a run makes, and rag.md's Quota section is
   // the record of what an unbounded one costs.
-  const limit = parseLimit(new URL(request.url), 10, 50);
+  const url = new URL(request.url);
+  const limit = parseLimit(url, 10, 50);
   if (limit === null) return json({ error: "limit must be a positive integer" }, 400);
 
+  // needs=matches is the retrieval backlog rather than the classification one:
+  // covers with no neighbours recorded, whatever their label. That pass costs
+  // no Llama4 call, and it writes no label, so it needs a backlog that empties
+  // as it works.
+  const needs = url.searchParams.get("needs") ?? "label";
+  if (needs !== "label" && needs !== "matches") return json({ error: "needs must be label or matches" }, 400);
+  const pending = needs === "matches" ? "ai_rag_covers IS NULL" : "ai_club IS NULL";
+
   const { results } = await env.DB
-    .prepare("SELECT id, newspaper, date, r2_key, url, headlines FROM covers WHERE ai_club IS NULL ORDER BY date DESC, newspaper ASC LIMIT ?")
+    .prepare(`SELECT id, newspaper, date, r2_key, url, headlines FROM covers WHERE ${pending} ORDER BY date DESC, newspaper ASC LIMIT ?`)
     .bind(limit)
     .all();
 

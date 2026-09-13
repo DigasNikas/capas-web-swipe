@@ -17,7 +17,7 @@ function fakeEnv(rows) {
       const stmt = {
         bind: (...args) => ((DB.lastArgs = args), stmt),
         async all() {
-          if (sql.includes("ai_club IS NULL")) return { results: rows };
+          if (sql.includes("ai_club IS NULL") || sql.includes("ai_rag_covers IS NULL")) return { results: rows };
           throw new Error(`unexpected query: ${sql}`);
         },
       };
@@ -65,6 +65,27 @@ assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
   const res = await handleRagCandidates(req("s3cret", "?limit=-1"), env);
   assert.equal(res.status, 400);
   assert.equal(env.DB.lastArgs, null, "rejected before the query runs");
+}
+
+// needs=matches asks for a different backlog: covers with no retrieval
+// recorded, whatever their label. Retrieval is CLIP plus Vectorize, no Llama4
+// call, so it can run when the model quota is gone — and the classify backlog
+// (ai_club IS NULL) would never empty on a pass that writes no label.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?needs=matches"), env);
+  assert.match(env.DB.sql, /ai_rag_covers IS NULL/);
+  assert.doesNotMatch(env.DB.sql, /ai_club IS NULL/);
+}
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret"), env);
+  assert.match(env.DB.sql, /ai_club IS NULL/, "the default backlog is unchanged");
+}
+{
+  const env = fakeEnv([]);
+  const res = await handleRagCandidates(req("s3cret", "?needs=nonsense"), env);
+  assert.equal(res.status, 400);
 }
 
 console.log("ok");

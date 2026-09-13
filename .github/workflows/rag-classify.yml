@@ -17,6 +17,11 @@ on:
     types: [scrape-completed]
   workflow_dispatch:
     inputs:
+      matches_only:
+        description: "Retrieval only: store the neighbours, skip the model (no Workers AI quota)"
+        type: boolean
+        required: false
+        default: false
       limit:
         description: "How many recent covers to reclassify"
         required: false
@@ -45,4 +50,9 @@ jobs:
         # inputs.limit is only set on workflow_dispatch — repository_dispatch
         # (the daily scrape-completed trigger) has no `inputs` context, so
         # this falls back to the same default: 10.
-        run: python3 scripts/rag_classify.py --limit "${{ inputs.limit || '10' }}"
+        run: |
+          if [ "${{ inputs.matches_only }}" = "true" ]; then
+            python3 scripts/rag_classify.py --matches-only --limit "${{ inputs.limit || '10' }}"
+          else
+            python3 scripts/rag_classify.py --limit "${{ inputs.limit || '10' }}"
+          fi

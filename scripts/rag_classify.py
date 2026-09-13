@@ -21,6 +21,10 @@ the Worker.
 
 Two modes:
 
+  --matches-only — retrieval only: stores which covers Vectorize matched and
+  through which channel, and stops there. No Llama4 call, so it runs with the
+  daily neuron allowance spent; the covers stay in the classification backlog.
+
   Live (default) — pulls the most recent covers from /rag-candidates,
   reclassifies each, writes to D1 via /reclassify-rag:
 
@@ -442,6 +446,56 @@ def rag_classify_one(models, image_bytes, labels, headlines=None, cover_date=Non
     return result, few_shot
 
 
+def run_matches_only(models, limit):
+    """Retrieval without classification, for when the model quota is gone.
+
+    Everything here runs outside Workers AI: CLIP and MiniLM load locally and
+    the two Vectorize queries are their own product. Only the ids and channels
+    are stored (/rag-matches), so the Parecidas page fills up and the covers
+    stay in the classification backlog until a model call can read them.
+
+    Its own backlog, needs=matches: this pass writes no label, so the
+    classification backlog would hand back the same covers forever.
+    """
+    if not ADMIN_SECRET:
+        print("Set ADMIN_SECRET (the Worker's admin bearer token, not a Cloudflare token).", file=sys.stderr)
+        sys.exit(1)
+
+    labels = crowd_labels(json.loads(fetch(STATS))["rows"])
+    done = 0
+    while done < limit:
+        batch = json.loads(fetch(
+            f"{API_BASE}/rag-candidates?needs=matches&limit={min(50, limit - done)}",
+            headers={"Authorization": f"Bearer {ADMIN_SECRET}"},
+        ))
+        if not batch:
+            break
+
+        for c in batch:
+            try:
+                image_bytes = fetch(c["url"])
+                _, rag_cover_ids, matches = embed_and_retrieve(
+                    models, image_bytes, labels, c.get("headlines"), c.get("date"),
+                )
+            except Exception as e:
+                print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
+                continue
+
+            fetch(
+                f"{API_BASE}/rag-matches",
+                headers={"Authorization": f"Bearer {ADMIN_SECRET}", "Content-Type": "application/json"},
+                data=json.dumps({
+                    "cover_id": c["id"], "rag_cover_ids": rag_cover_ids,
+                    "rag_sources": rag_sources_from_matches(matches),
+                }).encode("utf-8"),
+                method="POST",
+            )
+            done += 1
+            print(f"  {c['newspaper']} {c['date']}: {len(rag_cover_ids)} matches")
+
+    print(f"\n{done} covers retrieved")
+
+
 def run_live(models, limit):
     if not ADMIN_SECRET:
         print("Set ADMIN_SECRET (the Worker's admin bearer token, not a Cloudflare token).", file=sys.stderr)
@@ -592,6 +646,8 @@ def main():
     ap.add_argument("--limit", type=int, default=10, help="live mode: how many recent covers to reclassify")
     ap.add_argument("--n", type=int, default=40, help="--eval mode: sample size")
     ap.add_argument("--all", action="store_true", help="--eval mode: score every labelled cover")
+    ap.add_argument("--matches-only", action="store_true",
+                    help="retrieve and store neighbours without classifying: no Workers AI call")
     args = ap.parse_args()
 
     clip, processor = load_clip()
@@ -601,6 +657,8 @@ def main():
 
     if args.eval:
         run_eval(models, args.n, args.all)
+    elif args.matches_only:
+        run_matches_only(models, args.limit)
     else:
         run_live(models, args.limit)
 

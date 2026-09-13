@@ -35,6 +35,7 @@ import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
 import { handleBackfillHeadlines, refreshTodayHeadlines } from "./handlers/backfill-headlines.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
+import { handleRagMatches } from "./handlers/rag-matches.js";
 import { handleLabelConsensus } from "./handlers/label-consensus.js";
 import { handleSimilarities } from "./handlers/similarities.js";
 import { handleVectorizeCandidates } from "./handlers/vectorize-candidates.js";
@@ -88,6 +89,7 @@ export default {
     if (method === "POST" && pathname === "/backfill-headlines") return handleBackfillHeadlines(request, env);
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
+    if (method === "POST" && pathname === "/rag-matches")      return handleRagMatches(request, env);
     if (method === "POST" && pathname === "/label-consensus")  return handleLabelConsensus(request, env);
     if (method === "GET"  && pathname === "/similarities")    return edgeCached(request, ctx, 60, () => handleSimilarities(env, url));
     if (method === "GET"  && pathname === "/vectorize-candidates") return handleVectorizeCandidates(request, env);
