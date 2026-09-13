@@ -15,6 +15,12 @@ name: Classify Covers
 on:
   repository_dispatch:
     types: [scrape-completed]
+  # TEMPORARY: draining the backfill after migration 0011 cleared every
+  # verdict. /rag-candidates is self-converging, so each run takes the next 50
+  # unclassified covers and an empty backlog costs one quick no-op run. Remove
+  # this schedule once the archive is labelled again.
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       limit:
