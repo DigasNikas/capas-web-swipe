@@ -16,7 +16,7 @@
  *
  * Delete once the question is settled.
  */
-import { MODEL, PROMPT, parseAnswer, toBase64 } from "../api/lib/ai.js";
+import { MODEL, PROMPT, buildHeadlinesBlock, parseAnswer, toBase64 } from "../api/lib/ai.js";
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -37,29 +37,6 @@ const OWNS = PROMPT.replace(
   "\nReply in exactly four lines:\nOWNS: <yes|no>",
 );
 
-// The opening instruction is "find the largest photo, name its club", which
-// forces a club before the question of ownership can arise. 6 September is
-// where that bites: A Bola splits Benfica top and Sporting bottom under one
-// headline, O Jogo puts a Benfica and a Sporting player in one montage. C5
-// rewrites that opening instead of appending to it.
-const OPEN = "Find the largest photo on the page — the one that takes up most of the visible space. " +
-  "Name the football club that photo is about, then read ONLY that photo's own headline, " +
-  "the text printed next to or under it.";
-const OPEN5 = "Look at the photos that fill the page and the results printed with them. If one club's " +
-  "photo and headline dominate, that club is the answer. If two of benfica, sporting and porto each " +
-  "get their own photo and their own result — side by side, top and bottom, or together in one " +
-  "montage — the page belongs to neither of them and the answer is others. Read the headline of " +
-  "whichever photo is largest either way.";
-const REFRAMED = PROMPT.replace(OPEN, OPEN5);
-const REFRAMED_OWNS = REFRAMED.replace(
-  "Reply in exactly three lines:",
-  "Reply in exactly four lines:\nOWNS: <the club that owns this page, or none>",
-);
-const REFRAMED_BIG = REFRAMED.replace(
-  "Reply in exactly three lines:",
-  "Reply in exactly four lines:\nBIG: <every club with a photo filling a large part of the page>",
-);
-
 async function classify(prompt, buffer) {
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`, {
     method: "POST",
@@ -76,7 +53,10 @@ async function classify(prompt, buffer) {
   return parseAnswer(body?.result?.response).club;
 }
 
-const stats = await get(`${API}/stats`);
+const [stats, headlineRows] = await Promise.all([get(`${API}/stats`), get(`${API}/headlines`)]);
+const headlines = new Map(headlineRows.map(r => [r.id, r.headlines]));
+const byPaperDate = new Map(stats.rows.map(r => [`${r.newspaper}|${r.date}`, r]));
+const nextDay = d => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0, 10); };
 
 const labelled = stats.rows.filter(r => r.club).sort((a, b) => b.date.localeCompare(a.date));
 const res = labelled.filter(r => r.club === "others").slice(0, 9);
@@ -87,11 +67,20 @@ console.log(`sample: ${res.length} RES + ${controls.length} controls\n`);
 const images = new Map();
 for (const r of sample) images.set(r.cover_id, await (await fetch(r.url)).arrayBuffer());
 
+// covers.headlines is off by one: the row for 6 September holds the titles of
+// the 5 September edition (capasjornais.pt's titles page still shows
+// yesterday's paper at 05:00 UTC, when the scrape runs). These two variants
+// are the same prompt with the stored text and with the correct text — the
+// next day's row — to size what that bug costs the classifier.
+const headlinesFor = (r, shift) => {
+  const row = shift ? byPaperDate.get(`${r.newspaper}|${nextDay(r.date)}`) : r;
+  return buildHeadlinesBlock(row ? headlines.get(row.cover_id) : null);
+};
+
 const variants = {
   "C owns": () => OWNS,
-  "C5 reframed": () => REFRAMED,
-  "C6 reframed+owns": () => REFRAMED_OWNS,
-  "C7 reframed+big": () => REFRAMED_BIG,
+  "C + stored text": r => headlinesFor(r, false) + OWNS,
+  "C + correct text": r => headlinesFor(r, true) + OWNS,
 };
 
 const results = {};
