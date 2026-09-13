@@ -167,9 +167,16 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
     return `${clubs}${noMajority}<span>🚨 Atenção</span>`;
   }
 
+  // The frame lives on #day-panel itself, so every write to the panel sets
+  // its classes too — a hint has no night behind it.
+  function framePanel(euro) {
+    panelEl.className = 'd-day-panel' + (euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : '');
+  }
+
   function showDay(day) {
     const focusClub = paperFilter ? day.covers[paperFilter] : day.winner;
     if (paperFilter && !focusClub) {
+      framePanel(null);
       const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
       panelEl.innerHTML = `<div class="d-day-hint">${PAPER_NAMES[paperFilter]} ainda não tem votos para ${dateLabel}</div>`;
       return;
@@ -199,17 +206,16 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
 
     const dateLabel = new Date(day.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 
+    framePanel(euro);
     panelEl.innerHTML = `
-      <div class="d-day-frame${euro ? ` dp-euro dp-euro-${euro.toLowerCase()}` : ''}">
-        ${euro ? `<i class="dp-banner">${COMPETITION_NAMES[euro]}</i>` : ''}
-        <div class="d-day-body">
+      ${euro ? `<i class="dp-banner">${COMPETITION_NAMES[euro]}</i>` : ''}
+      <div class="d-day-body">
         <div>
           <div class="d-day-title">${dateLabel}</div>
           <div class="d-day-winner" style="color:${color}">${winnerLabel}</div>
           ${pulse ? `<div class="d-day-alert">🚨 ${pulseMessage(pulse.names, pulse)}</div>` : ''}
         </div>
-          <div class="d-day-papers">${papersHtml}</div>
-        </div>
+        <div class="d-day-papers">${papersHtml}</div>
       </div>
     `;
 
@@ -231,6 +237,7 @@ export function renderCalendar(days, matchesByDate, epoca, highlightBarcodeDay, 
       btn.classList.toggle('active', ids[i] === paperFilter);
     });
     legendEl.innerHTML = legendMarkup();
+    framePanel(null);
     panelEl.innerHTML = '<div class="d-day-hint">toca num dia →</div>';
     filterBarcodeRows(paperFilter);
 

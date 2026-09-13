@@ -407,27 +407,28 @@ body {
    tie-sheet frame — a metal edge, brackets past two opposite corners, one
    palette per competition — under a banner naming it. On the covers of the
    day *after* the match, which is the edition that carries it. */
-.d-day-frame { width: 100%; }
-.d-day-frame.dp-euro {
+.d-day-panel.dp-euro {
+  display: block;
   position: relative;
   padding: 3px;
+  border-left: 0;
   background: linear-gradient(155deg, var(--euro-hi) 0%, var(--euro-mid) 38%, var(--euro-lo) 62%, var(--euro-hi) 100%);
   box-shadow: 0 0 0 1px rgba(0,0,0,0.8), 0 0 22px -6px var(--euro-mid);
 }
 /* The day keeps the panel's own background: the frame is an edge and a title
    bar, not a light box behind dark text. */
-.d-day-frame.dp-euro .d-day-body { background: var(--d-panel); padding: 12px 14px; }
-.d-day-frame.dp-euro::before,
-.d-day-frame.dp-euro::after {
+.d-day-panel.dp-euro .d-day-body { background: var(--d-panel); padding: 14px 18px; }
+.d-day-panel.dp-euro::before,
+.d-day-panel.dp-euro::after {
   content: '';
   position: absolute;
   width: 11px;
   height: 11px;
   border: 2px solid var(--euro-hi);
 }
-.d-day-frame.dp-euro::before { top: -4px; left: -4px; border-right: 0; border-bottom: 0; }
-.d-day-frame.dp-euro::after { right: -4px; bottom: -4px; border-left: 0; border-top: 0; }
-.d-day-frame .dp-banner {
+.d-day-panel.dp-euro::before { top: -4px; left: -4px; border-right: 0; border-bottom: 0; }
+.d-day-panel.dp-euro::after { right: -4px; bottom: -4px; border-left: 0; border-top: 0; }
+.d-day-panel .dp-banner {
   display: block;
   font-family: 'JetBrains Mono', monospace;
   font-style: normal;
@@ -440,9 +441,9 @@ body {
   color: #0a0a0f;
   background: linear-gradient(180deg, var(--euro-hi), var(--euro-mid));
 }
-.d-day-frame.dp-euro-cl   { --euro-hi: #e3ecff; --euro-mid: #6f8fd0; --euro-lo: #2b3f6b; }
-.d-day-frame.dp-euro-el   { --euro-hi: #ffe3b8; --euro-mid: #ff8a00; --euro-lo: #7a3b00; }
-.d-day-frame.dp-euro-uecl { --euro-hi: #c9ffe6; --euro-mid: #2ecc8f; --euro-lo: #0c5c3d; }
+.d-day-panel.dp-euro-cl   { --euro-hi: #e3ecff; --euro-mid: #6f8fd0; --euro-lo: #2b3f6b; }
+.d-day-panel.dp-euro-el   { --euro-hi: #ffe3b8; --euro-mid: #ff8a00; --euro-lo: #7a3b00; }
+.d-day-panel.dp-euro-uecl { --euro-hi: #c9ffe6; --euro-mid: #2ecc8f; --euro-lo: #0c5c3d; }
 
 .d-day-alert { margin-top: 6px; padding: 5px 7px; background: rgba(255,214,10,0.1); border-left: 2px solid var(--d-yellow); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--d-yellow); text-transform: uppercase; }
 
