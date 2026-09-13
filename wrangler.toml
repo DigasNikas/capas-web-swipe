@@ -2,6 +2,16 @@ name            = "capas-scraper"
 main            = "api/index.js"
 compatibility_date = "2024-01-01"
 
+# The zone routes below sit behind Bot Fight Mode, which challenges GitHub's
+# runners and cannot be given a per-path exception on this plan — the scrape
+# workflow has been answering 403 since August. workers.dev is not part of the
+# zone, so CI calls the Worker there instead. Every route is still guarded by
+# the same checks it has on the zone: app routes verify the Access JWT (see
+# api/lib/access.js), admin routes need ADMIN_SECRET, the rest are public.
+# Version preview URLs stay off: one extra hostname is enough.
+workers_dev  = true
+preview_urls = false
+
 [triggers]
 crons = ["0 5-8 * * *"]   # 05:00–08:00 UTC daily, hourly (06:00–09:00 Lisbon winter / 07:00–10:00 Lisbon summer)
 
