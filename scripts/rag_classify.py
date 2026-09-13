@@ -53,6 +53,7 @@ Worker's own classifyCover would given the same inputs.
 """
 import argparse
 import base64
+import datetime
 import io
 import json
 import os
@@ -75,6 +76,10 @@ HEADLINE_INDEX = "capas-headline-embeddings"
 MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 7
+# Over-fetch per channel. Was RAG_TOP_K + 3, enough to survive the self-match
+# and same-day filters; now also deep enough that the match-context bucket has
+# neighbours to choose from before it falls back to the rest.
+FETCH_K = RAG_TOP_K * 3
 CONSENSUS_MIN = 6
 HEADLINES_MAX_CHARS = 600
 STATS = os.environ.get("CAPAS_STATS", "https://capas.digasnikas.com/api/stats")
@@ -195,12 +200,43 @@ def usable_matches(matches, via, cover_date, labels):
     return kept
 
 
+def match_bucket(date, played_by_date):
+    """Where a cover sits relative to the fixture list, or None without a date.
+
+    Measured over the archive, the crowd's "others" rate moves with this and
+    nothing else in the pipeline sees it: 5.7% the morning after one club
+    played, 40.4% after two of them, 12.6% two days on, 21-26% through the
+    3-7 day gap, 24.5% past a week. The classifier reads neighbours, not
+    fixtures, so the bucket is used to pick which neighbours it reads.
+    """
+    if not date:
+        return None
+    day = datetime.date.fromisoformat(date)
+    played = played_by_date.get((day - datetime.timedelta(days=1)).isoformat(), ())
+    if len(played) >= 2:
+        return "multi"
+    if len(played) == 1:
+        return "solo"
+    for gap in range(2, 8):
+        if played_by_date.get((day - datetime.timedelta(days=gap)).isoformat()):
+            return "after" if gap == 2 else "midweek"
+    return "quiet"
+
+
+def match_days(matches):
+    """date -> the clubs that played, from /matches."""
+    days = {}
+    for m in matches:
+        days.setdefault(m["match_date"], set()).add(m["club"])
+    return days
+
+
 def crowd_labels(stats_rows):
     """cover_id -> current crowd winner, from /stats rows."""
     return {str(r["cover_id"]): r["club"] for r in stats_rows if r.get("club")}
 
 
-def merge_channels(headline_matches, image_matches, top_k=RAG_TOP_K):
+def merge_channels(headline_matches, image_matches, top_k=RAG_TOP_K, prefer=None):
     """Alternates between the two channels, headline first, until top_k.
 
     Headline first because it is the better prior: measured over the archive,
@@ -212,14 +248,28 @@ def merge_channels(headline_matches, image_matches, top_k=RAG_TOP_K):
 
     A cover found by both channels appears once, credited to the headline
     channel, since that is the stronger reason for it being there.
+
+    `prefer` marks the neighbours from the same match context (see
+    match_bucket): they are taken first, in the same alternating order, and
+    the rest still fill the block. A thin bucket must not cost the prompt its
+    seven neighbours — the point is to change which covers are compared, not
+    how many.
     """
     merged, seen = [], set()
-    for pair in zip_longest(headline_matches, image_matches):
-        for m in pair:
-            if m is None or m["id"] in seen or len(merged) >= top_k:
-                continue
-            seen.add(m["id"])
-            merged.append(m)
+
+    def take(passes):
+        for pair in zip_longest(headline_matches, image_matches):
+            for m in pair:
+                if m is None or m["id"] in seen or len(merged) >= top_k:
+                    continue
+                if not passes(m):
+                    continue
+                seen.add(m["id"])
+                merged.append(m)
+
+    if prefer:
+        take(prefer)
+    take(lambda m: True)
     return merged
 
 
@@ -385,7 +435,7 @@ def load_clip():
     return model, processor
 
 
-def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=None):
+def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=None, played_by_date=None):
     """Both channels for one cover: the image against capas-cover-embeddings,
     the lead headline against capas-headline-embeddings, merged into one
     ranked list. No Llama4 call — /reclassify-rag is the one place that
@@ -396,6 +446,12 @@ def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=N
     headlines.md) simply skips the text channel and gets image matches alone,
     which is what every cover got before this index existed.
 
+    Neighbours from the same match context come first (see match_bucket):
+    a cover from a two-match morning is judged against other two-match
+    mornings, where the crowd says "others" 40% of the time, rather than
+    against a day one club obviously owned. Each match carries same_bucket so
+    the consensus fast path can require it too.
+
     Returns (few_shot_text, cover_ids, matches) — the ids are what run_live
     sends on as rag_cover_ids, for provenance, and the matches are what the
     consensus check reads."""
@@ -403,31 +459,47 @@ def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=N
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image_matches = usable_matches(
-        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), RAG_TOP_K + 3), "layout", cover_date, labels,
+        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), FETCH_K), "layout", cover_date, labels,
     )
 
     headline_matches = []
     lead = lead_headline(headlines)
     if lead:
         headline_matches = usable_matches(
-            query_vectorize(HEADLINE_INDEX, embed_text(text_model, tokenizer, lead), RAG_TOP_K + 3),
+            query_vectorize(HEADLINE_INDEX, embed_text(text_model, tokenizer, lead), FETCH_K),
             "headline", cover_date, labels,
         )
 
-    merged = merge_channels(headline_matches, image_matches)
+    days = played_by_date or {}
+    want = match_bucket(cover_date, days) if days else None
+    in_bucket = lambda m: match_bucket((m.get("metadata") or {}).get("date"), days) == want
+
+    merged = merge_channels(headline_matches, image_matches, prefer=in_bucket if want else None)
+    if want:
+        merged = [{**m, "same_bucket": in_bucket(m)} for m in merged]
     return build_few_shot_block(merged), rag_cover_ids_from_matches(merged), merged
 
 
-def rag_classify_one(models, image_bytes, labels, headlines=None, cover_date=None):
+def same_bucket_only(matches):
+    """The neighbours the consensus fast path is allowed to count.
+
+    Six neighbours from the wrong match context agreeing is exactly how a
+    two-match morning gets auto-labelled with a club and never reaches the
+    model. Covers retrieved before this existed carry no flag and all count,
+    which is the old behaviour."""
+    return [m for m in matches if m.get("same_bucket", True)]
+
+
+def rag_classify_one(models, image_bytes, labels, headlines=None, cover_date=None, played_by_date=None):
     """Full pipeline for one cover: retrieve, build both prompt blocks,
     classify. Used by --eval only, which needs the result locally to score
     against the crowd label and never touches the Worker at all."""
-    few_shot, _, matches = embed_and_retrieve(models, image_bytes, labels, headlines, cover_date)
+    few_shot, _, matches = embed_and_retrieve(models, image_bytes, labels, headlines, cover_date, played_by_date)
 
     # --eval scores what production does, and production skips the model when
     # the neighbours agree strongly enough. Scoring the model on covers it
     # would never be asked about would measure a pipeline nobody runs.
-    agreed = consensus_club(matches)
+    agreed = consensus_club(same_bucket_only(matches))
     if agreed:
         return {"club": agreed["club"], "headline": None, "why": None, "consensus": agreed}, few_shot
 
@@ -446,12 +518,13 @@ def run_live(models, limit):
     ))
     print(f"{len(candidates)} candidates")
     labels = crowd_labels(json.loads(fetch(STATS))["rows"])
+    played_by_date = match_days(json.loads(fetch(f"{API_BASE}/matches")))
 
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
             few_shot, rag_cover_ids, matches = embed_and_retrieve(
-                models, image_bytes, labels, c.get("headlines"), c.get("date"),
+                models, image_bytes, labels, c.get("headlines"), c.get("date"), played_by_date,
             )
         except Exception as e:
             print(f"  skip {c['newspaper']} {c['date']}: {e}", file=sys.stderr)
@@ -462,7 +535,7 @@ def run_live(models, limit):
         # own 91.2% — so the label goes straight to D1 and the model is never
         # asked. That is a third of covers on the current archive, which is a
         # third of the daily neuron allowance left for the rest.
-        agreed = consensus_club(matches)
+        agreed = consensus_club(same_bucket_only(matches))
         if agreed:
             fetch(
                 f"{API_BASE}/label-consensus",
@@ -508,6 +581,7 @@ def run_eval(models, n, all_):
     # Scoring without the second one measures a prompt production never sends.
     headlines = {r["id"]: r["headlines"] for r in json.loads(fetch(f"{API_BASE}/headlines"))}
     labels = crowd_labels(rows)
+    played_by_date = match_days(json.loads(fetch(f"{API_BASE}/matches")))
     labelled = [r for r in rows if r.get("club")]
     size = len(labelled) if all_ else min(n, len(labelled))
     sample = [labelled[int(i * len(labelled) / size)] for i in range(size)]
@@ -519,7 +593,9 @@ def run_eval(models, n, all_):
     for i, row in enumerate(sample):
         try:
             image_bytes = fetch(row["url"])
-            result, _ = rag_classify_one(models, image_bytes, labels, headlines.get(row["cover_id"]), row.get("date"))
+            result, _ = rag_classify_one(
+                models, image_bytes, labels, headlines.get(row["cover_id"]), row.get("date"), played_by_date,
+            )
         except Exception as e:
             print(f"\nStopped at {i} of {len(sample)}: {e}", file=sys.stderr)
             break

@@ -10,6 +10,7 @@ the same as the JS ones.
 """
 from rag_classify import (
     CONSENSUS_MIN,
+    match_bucket,
     RAG_TOP_K,
     build_few_shot_block,
     build_headlines_block,
@@ -142,11 +143,43 @@ assert [m["id"] for m in usable_matches(MATCHES, "layout", None, {"4": "sporting
 
 assert crowd_labels([{"cover_id": 7, "club": "porto"}, {"cover_id": 8, "club": None}]) == {"7": "porto"}
 
+# --- match_bucket ---
+#
+# Measured over the archive, the crowd calls a cover "others" at very
+# different rates depending on where it sits relative to a match: 5.7% the
+# morning after one club played, 40.4% after two, and 21-26% in the 3-7 day
+# gap between matches. The classifier never sees a fixture list, so these
+# buckets are how that context reaches it — through which neighbours it is
+# compared against.
+PLAYED = {
+    "2026-09-04": {"porto"},
+    "2026-09-05": {"benfica", "sporting"},
+    "2026-09-12": {"porto"},
+    "2026-09-20": {"benfica", "porto", "sporting"},
+}
+
+assert match_bucket("2026-09-05", PLAYED) == "solo", "one club played last night"
+assert match_bucket("2026-09-06", PLAYED) == "multi", "two did"
+assert match_bucket("2026-09-21", PLAYED) == "multi", "three counts as multi"
+assert match_bucket("2026-09-07", PLAYED) == "after", "two days on, still the match's own coverage"
+assert match_bucket("2026-09-09", PLAYED) == "midweek", "four days out"
+assert match_bucket("2026-09-11", PLAYED) == "midweek", "six days out"
+assert match_bucket("2026-10-01", PLAYED) == "quiet", "past a week: off-season or an international break"
+assert match_bucket("2026-08-01", PLAYED) == "quiet", "nothing before it at all"
+assert match_bucket(None, PLAYED) is None, "a cover with no date has no bucket"
+
 # --- merge_channels ---
 
 h = [{"id": "h1"}, {"id": "h2"}, {"id": "h3"}]
 i = [{"id": "i1"}, {"id": "i2"}, {"id": "i3"}]
 assert [m["id"] for m in merge_channels(h, i)] == ["h1", "i1", "h2", "i2", "h3", "i3"], "alternates, headline first"
+
+# With a bucket to prefer, neighbours from the same match context go first and
+# the rest still fill the block: a thin bucket must not shrink the few-shot.
+PREFERRED = {"h2", "i3"}
+assert [m["id"] for m in merge_channels(h, i, top_k=4, prefer=lambda m: m["id"] in PREFERRED)] == ["h2", "i3", "h1", "i1"]
+assert [m["id"] for m in merge_channels(h, i, top_k=6, prefer=lambda m: False)] == ["h1", "i1", "h2", "i2", "h3", "i3"], "no match in the bucket: unchanged order"
+assert [m["id"] for m in merge_channels(h, i, top_k=6, prefer=lambda m: True)] == ["h1", "i1", "h2", "i2", "h3", "i3"], "all in the bucket: unchanged order"
 
 # The cap is RAG_TOP_K, and it cuts mid-alternation rather than truncating
 # one channel: with top_k=3 that is two headline matches and one image.

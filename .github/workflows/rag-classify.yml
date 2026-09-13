@@ -37,6 +37,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # workers.dev, not the zone: Bot Fight Mode challenges runners on
+          # capas.digasnikas.com (see scrape.yml), and this script POSTs its
+          # results back.
+          CAPAS_API: https://capas-scraper.digasnikas-digital.workers.dev
+          CAPAS_STATS: https://capas-scraper.digasnikas-digital.workers.dev/stats
         # inputs.limit is only set on workflow_dispatch — repository_dispatch
         # (the daily scrape-completed trigger) has no `inputs` context, so
         # this falls back to the same default: 10.
