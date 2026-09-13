@@ -36,7 +36,10 @@ export const PROMPT =
   "A page is dominated by whichever club's photo and headline together occupy the most space, " +
   "pushing everything else into smaller boxes, strips and corners. A headline can read as dramatic " +
   "or sit near the top of the page and still not be the dominant story — if it sits over a small " +
-  "photo or no photo at all, the large photo elsewhere on the page is what the cover is about.\n" +
+  "photo or no photo at all, the large photo elsewhere on the page is what the cover is about. " +
+  "Two clubs can also share a page: a photo and a result each, neither clearly bigger, often under " +
+  "one headline covering both — a pun, a shared trip, a shared scoreline. No club owns that page, " +
+  "so it is others, however large the two photos are and however plainly both clubs are named.\n" +
   "\n" +
   "Ignore these. They are on every edition and say nothing about the day:\n" +
   "- the newspaper's own masthead and its colour (Record and A Bola are red; that is branding, not Benfica)\n" +
@@ -48,9 +51,9 @@ export const PROMPT =
   "- benfica: Benfica, SLB, Aguias, Encarnados, da Luz\n" +
   "- sporting: Sporting, SCP, Leoes, Alvalade, verde-e-brancos\n" +
   "- porto: FC Porto, FCP, Dragoes, Dragao, azuis-e-brancos\n" +
-  "- others: the main story is none of those three — the Portugal national team, " +
+  "- others: no single one of those three owns the page — the Portugal national team, " +
   "Braga, Guimaraes or another club, another sport (cycling, futsal), " +
-  "or a transfer round-up with no single club on top\n" +
+  "a transfer round-up with no single club on top, or two of the three sharing the page evenly\n" +
   "\n" +
   "Reply in exactly three lines:\n" +
   "HEADLINE: <the headline belonging to the largest photo, copied>\n" +
