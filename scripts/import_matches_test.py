@@ -7,7 +7,7 @@ two-year-old season and silently changed nothing.
 """
 import datetime
 
-from import_matches import current_season, keep_competition, liga_pairs, uefa_pairs
+from import_matches import current_season, keep_competition, liga_pairs, stale_delete_sql, uefa_pairs
 
 # A season is labelled by the year it starts in: 2026 means 2026-27.
 assert current_season(datetime.date(2026, 9, 12)) == "2026", "mid-season"
@@ -68,5 +68,41 @@ assert liga_pairs(LIGA_ROUND) == [
 ]
 assert liga_pairs({"error": "not found"}) == [], "an undrawn round is not a crash"
 assert liga_pairs([]) == []
+
+# Fixtures move. The import used to only ever add, so a match rescheduled from
+# the 12th to the 13th left a row on both dates, and the dashboard read the
+# ghost as "everyone played that night".
+import sqlite3
+
+def survivors(sql, rows):
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE matches (club TEXT, match_date TEXT, competition TEXT, UNIQUE (club, match_date))")
+    db.executemany("INSERT INTO matches (club, match_date, competition) VALUES (?,?,?)", rows)
+    if sql:
+        db.executescript(sql)
+    return sorted(db.execute("SELECT club, match_date, competition FROM matches").fetchall())
+
+STORED = [
+    ("porto", "2026-09-12", "PPL"),      # still on the list
+    ("benfica", "2026-09-12", None),     # moved to the 13th, imported before the column existed
+    ("sporting", "2026-09-12", "PPL"),   # moved to the 13th
+    ("benfica", "2026-09-13", "PPL"),
+    ("porto", "2026-05-17", "PPL"),      # last season: outside this import's window
+    ("benfica", "2026-11-20", "TP"),     # a competition this run could not fetch
+]
+KEYS = {("porto", "2026-09-12"), ("benfica", "2026-09-13")}
+
+sql = stale_delete_sql("2026", {"PPL", "CL"}, KEYS)
+assert survivors(sql, STORED) == [
+    ("benfica", "2026-09-13", "PPL"),
+    ("benfica", "2026-11-20", "TP"),
+    ("porto", "2026-05-17", "PPL"),
+    ("porto", "2026-09-12", "PPL"),
+], "drops only the ghosts inside the season, in competitions this run refreshed"
+
+# A run where the league fetch failed must not delete anything: it has no idea
+# which fixtures are current.
+assert stale_delete_sql("2026", {"CL"}, KEYS) is None
+assert stale_delete_sql("2026", set(), set()) is None
 
 print("import_matches.py self-check ok")

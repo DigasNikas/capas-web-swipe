@@ -98,6 +98,33 @@ APISPORTS_COMPETITIONS = [
 COMPETITION_PRIORITY = ["CL", "EL", "UECL", "TP", "TL", "PPL"]
 
 
+def stale_delete_sql(season, fetched_codes, keys):
+    """SQL removing fixtures this import no longer sees, or None to skip.
+
+    Fixtures get moved — a league game slides from Saturday to Sunday for TV —
+    and an import that only ever adds leaves the old date behind for good. The
+    dashboard then reads the ghost as a club having played that night.
+
+    Only rows inside the season, and only in competitions this run actually
+    fetched, are deleted; a competition whose source failed keeps everything it
+    has. Rows with no competition are legacy (they predate that column) and go
+    the same way, since every source that could have written them has just been
+    re-read. If the league itself failed to fetch, nothing is deleted at all:
+    the run has no idea what the current fixture list looks like.
+    """
+    if "PPL" not in fetched_codes:
+        return None
+
+    start, end = f"{season}-07-01", f"{int(season) + 1}-06-30"
+    codes = ", ".join(f"'{c}'" for c in sorted(fetched_codes))
+    kept = ", ".join(sorted(f"'{club}|{date}'" for club, date in keys)) or "''"
+    return (
+        f"DELETE FROM matches WHERE match_date BETWEEN '{start}' AND '{end}' "
+        f"AND (competition IN ({codes}) OR competition IS NULL) "
+        f"AND club || '|' || match_date NOT IN ({kept});\n"
+    )
+
+
 def keep_competition(existing, new):
     """Which of two competition codes to store for one club on one day."""
     if existing is None:
@@ -244,6 +271,7 @@ def main():
         sys.exit(1)
 
     rows = {}   # (club, date) -> competition code
+    fetched = set()   # competition codes whose source answered this run
 
     # ── football-data.org ──────────────────────────────────────────────────
     print(f"Season {SEASON}-{int(SEASON)+1}\n")
@@ -267,6 +295,7 @@ def main():
                     rows[(s, date)] = keep_competition(rows.get((s, date)), code)
                 else:
                     unknown.add(name)
+        fetched.add(code)
         added = len(rows) - before
         print(f"{added} new rows  ({len(matches)} matches total)")
         if unknown:
@@ -282,6 +311,7 @@ def main():
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
             print(f"skipped ({e})")
             continue
+        fetched.add(code)
         before = len(rows)
         for name, date in uefa_pairs(matches):
             s = slug_for(name)
@@ -298,6 +328,7 @@ def main():
         except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError) as e:
             print(f"skipped ({e})")
             continue
+        fetched.add(code)
         before = len(rows)
         for name, date in pairs:
             s = slug_for(name)
@@ -328,6 +359,7 @@ def main():
                         rows[(s, date)] = keep_competition(rows.get((s, date)), code)
                     else:
                         unknown.add(name)
+            fetched.add(code)
             added = len(rows) - before
             print(f"{added} new rows  ({len(fixtures)} fixtures total)")
             if unknown:
@@ -360,6 +392,10 @@ def main():
         f"INSERT INTO matches (club, match_date, competition) VALUES {values} "
         f"ON CONFLICT (club, match_date) DO UPDATE SET competition = excluded.competition;\n"
     )
+    stale = stale_delete_sql(SEASON, fetched, {k for k, _ in rows})
+    if stale:
+        sql += stale
+        print("Removing fixtures that moved or were cancelled since the last import.")
 
     import tempfile, os
     with tempfile.NamedTemporaryFile(mode="w", suffix=".sql", delete=False) as f:
