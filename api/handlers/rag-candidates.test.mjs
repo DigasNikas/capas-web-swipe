@@ -88,4 +88,22 @@ assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
   assert.equal(res.status, 400);
 }
 
+// The classification cap stays at 50; retrieval, which makes no model call,
+// goes to 500.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?limit=500"), env);
+  assert.deepEqual(env.DB.lastArgs, [50], "the classification backlog is still capped at 50");
+}
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?needs=matches&limit=500"), env);
+  assert.deepEqual(env.DB.lastArgs, [500]);
+}
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?needs=matches&limit=5000"), env);
+  assert.deepEqual(env.DB.lastArgs, [500], "and capped there");
+}
+
 console.log("ok");

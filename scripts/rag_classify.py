@@ -465,7 +465,7 @@ def run_matches_only(models, limit):
     done = 0
     while done < limit:
         batch = json.loads(fetch(
-            f"{API_BASE}/rag-candidates?needs=matches&limit={min(50, limit - done)}",
+            f"{API_BASE}/rag-candidates?needs=matches&limit={min(500, limit - done)}",
             headers={"Authorization": f"Bearer {ADMIN_SECRET}"},
         ))
         if not batch:
