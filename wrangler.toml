@@ -13,7 +13,12 @@ workers_dev  = true
 preview_urls = false
 
 [triggers]
-crons = ["0 5-8 * * *"]   # 05:00–08:00 UTC daily, hourly (06:00–09:00 Lisbon winter / 07:00–10:00 Lisbon summer)
+# 05:00-08:00 UTC hourly: the covers themselves, as soon as they are up.
+# 10:00 and 13:00: headlines only. capasjornais.pt's titles page carries no
+# date parameter and is still showing yesterday's edition during the scrape
+# window, which is how every cover in the archive ended up filed with the
+# previous day's text (see api/lib/scraper.js).
+crons = ["0 5-8 * * *", "0 10,13 * * *"]
 
 [[routes]]
 pattern   = "capas.digasnikas.com/api/*"

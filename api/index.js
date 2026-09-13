@@ -32,7 +32,7 @@ import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
-import { handleBackfillHeadlines } from "./handlers/backfill-headlines.js";
+import { handleBackfillHeadlines, refreshTodayHeadlines } from "./handlers/backfill-headlines.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
 import { handleLabelConsensus } from "./handlers/label-consensus.js";
@@ -47,6 +47,13 @@ import { handleGetComments, handlePostComment, handleDeleteComment } from "./han
 
 export default {
   async scheduled(event, env, ctx) {
+    // The later crons exist only to pick up the day's headlines once
+    // capasjornais.pt turns over; the covers are already saved by then.
+    if (new Date(event.scheduledTime).getUTCHours() >= 9) {
+      ctx.waitUntil(refreshTodayHeadlines(env));
+      return;
+    }
+
     const today = new Date();
     // Independent catches, same as the old per-newspaper waitUntil: one
     // newspaper's failure must not stop the others, or the dispatch below.

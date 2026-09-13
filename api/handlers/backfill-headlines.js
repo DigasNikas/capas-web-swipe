@@ -1,12 +1,17 @@
 import { json, requireAdmin } from "../lib/http.js";
 import { NEWSPAPERS, fetchHeadlines } from "../lib/scraper.js";
 
-// One-off: fills in `headlines` for covers scraped earlier today, before
-// this feature was deployed (see scraper.js — scrapeNewspaper only sets
-// headlines at insert time, so a row that already existed is never
-// touched). Today-only, not a general historical backfill: capasjornais.pt
-// has no per-date page for headlines, only "today's edition", so a cover
-// from a past date has no source to backfill from here.
+// Refreshes `headlines` for today's covers from capasjornais.pt.
+//
+// The scrape cron runs at 05:00 UTC, before that page turns over to the new
+// edition, so scrapeNewspaper's own attempt usually finds yesterday's paper
+// and now stores nothing (see scraper.js's headlinesIfFresh). This is the
+// second pass that picks the text up once the page catches up, and it
+// rewrites rows that already have text rather than only filling nulls: the
+// archive is full of covers holding the previous edition's headlines.
+//
+// Today-only: capasjornais.pt has no per-date page, so a past cover has no
+// source to read from here.
 //
 //   curl -X POST -H "Authorization: Bearer <ADMIN_SECRET>" \
 //     https://capas.digasnikas.com/api/backfill-headlines
@@ -14,16 +19,21 @@ export async function handleBackfillHeadlines(request, env) {
   const denied = requireAdmin(request, env);
   if (denied) return denied;
 
+  return json(await refreshTodayHeadlines(env));
+}
+
+// Same work, callable from the cron in index.js.
+export async function refreshTodayHeadlines(env) {
   const today = new Date().toISOString().slice(0, 10);
   const { results: rows } = await env.DB
-    .prepare("SELECT id, newspaper FROM covers WHERE headlines IS NULL AND date = ?")
+    .prepare("SELECT id, newspaper FROM covers WHERE date = ?")
     .bind(today)
     .all();
 
   let done = 0;
   for (const row of rows) {
     const newspaper = NEWSPAPERS.find(n => n.slug === row.newspaper);
-    const headlines = newspaper && await fetchHeadlines(newspaper);
+    const headlines = newspaper && await fetchHeadlines(newspaper, today);
     if (!headlines) continue;
 
     await env.DB
@@ -33,5 +43,6 @@ export async function handleBackfillHeadlines(request, env) {
     done++;
   }
 
-  return json({ ok: true, done, checked: rows.length });
+  console.log(`Headlines refreshed for ${done} of ${rows.length} covers dated ${today}`);
+  return { ok: true, done, checked: rows.length };
 }

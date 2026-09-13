@@ -4,7 +4,7 @@
 //
 //   node api/lib/scraper.test.mjs
 import assert from 'node:assert';
-import { NEWSPAPERS, capasjornaisUrl, extractHeadlinesFromHtml } from './scraper.js';
+import { NEWSPAPERS, capasjornaisUrl, extractHeadlinesFromHtml, headlinesIfFresh } from './scraper.js';
 
 // sapo.pt writes the date YYYYMMDD, capasjornais.pt writes it DDMMYYYY under a
 // YYYYMM folder. Verified live on 2026-08-24 (200, 257 KB, 962x1232).
@@ -40,9 +40,12 @@ const HEADLINES_FIXTURE = `
   <a href="..." class="btn btn-success">Ver Comentários</a>
 `;
 
-assert.strictEqual(
+assert.deepStrictEqual(
   extractHeadlinesFromHtml(HEADLINES_FIXTURE),
-  'Palhinha já é da casa • Empréstimo pode ser solução para Ríos e Trubin • Zaidu com suspeita de lesão grave',
+  {
+    date: '2026-08-30',
+    text: 'Palhinha já é da casa • Empréstimo pode ser solução para Ríos e Trubin • Zaidu com suspeita de lesão grave',
+  },
 );
 
 assert.strictEqual(
@@ -51,4 +54,24 @@ assert.strictEqual(
   'missing BottomNews marker should yield null, not throw',
 );
 
-console.log('ok — headline extraction reads the BottomNews block, null when absent');
+// The page has no date parameter: it serves whichever edition it has at the
+// moment. At 05:00 UTC, when the scrape cron runs, that is still yesterday's
+// paper — which is how every cover in the archive ended up filed with the
+// previous day's headlines. The heading says which edition it is, so the text
+// is only taken when that matches the cover being saved.
+assert.strictEqual(
+  headlinesIfFresh(HEADLINES_FIXTURE, '2026-08-30'),
+  'Palhinha já é da casa • Empréstimo pode ser solução para Ríos e Trubin • Zaidu com suspeita de lesão grave',
+);
+assert.strictEqual(headlinesIfFresh(HEADLINES_FIXTURE, '2026-08-31'), null, 'yesterday\'s edition is not this cover');
+assert.strictEqual(headlinesIfFresh(HEADLINES_FIXTURE, '2026-08-29'), null, 'nor tomorrow\'s');
+assert.strictEqual(headlinesIfFresh('<html>nothing</html>', '2026-08-30'), null);
+
+// Every month name the heading can carry, and the zero padding.
+const heading = (d, m, y) => `<h2 class="BottomNews">Títulos da Capa Jornal Record de sexta, ${d} de ${m} ${y}</h2><ul><li><span>x</span></li></ul>`;
+assert.strictEqual(extractHeadlinesFromHtml(heading(1, 'janeiro', 2027)).date, '2027-01-01');
+assert.strictEqual(extractHeadlinesFromHtml(heading(9, 'março', 2027)).date, '2027-03-09');
+assert.strictEqual(extractHeadlinesFromHtml(heading(31, 'dezembro', 2026)).date, '2026-12-31');
+assert.strictEqual(extractHeadlinesFromHtml(heading(5, 'brumário', 2026)).date, null, 'an unreadable date is not a date');
+
+console.log('ok — headline extraction reads the BottomNews block and its edition date');

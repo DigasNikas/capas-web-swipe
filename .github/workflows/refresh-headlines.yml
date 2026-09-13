@@ -1,0 +1,21 @@
+# The cron in wrangler.toml does this at 10:00 and 13:00 UTC; this is the
+# by-hand version, for when today's text needs picking up right now.
+name: Refresh Headlines
+
+on:
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      # workers.dev, off the zone: Bot Fight Mode challenges runners on
+      # capas.digasnikas.com (see scrape.yml).
+      - name: Refresh today's headlines
+        run: |
+          code=$(curl -sS -X POST -o response.txt -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+            "https://capas-scraper.digasnikas-digital.workers.dev/backfill-headlines")
+          echo "HTTP $code"
+          cat response.txt
+          test "$code" = "200"

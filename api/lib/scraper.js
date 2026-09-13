@@ -48,20 +48,47 @@ export function capasjornaisUrl(newspaper, dateStr) {
   return `https://capasjornais.pt/img/FrontPages/${y}${m}/${newspaper.capasjornais}_${d}${m}${y}.jpg`;
 }
 
+const MONTHS_PT = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
 // Pulls the "Títulos da Capa" block out of a capasjornais.pt page: one
 // <li><span> under <h2 class="BottomNews">, already "•"-joined into a
-// single string. Plain string parsing rather than HTMLRewriter (used for
-// the cover image above) so this stays testable with plain node, no
-// Workers runtime needed — see scraper.test.mjs.
+// single string, plus the edition it belongs to — the heading reads
+// "Títulos da Capa Jornal Record de domingo, 13 de setembro 2026". Plain
+// string parsing rather than HTMLRewriter (used for the cover image above)
+// so this stays testable with plain node, no Workers runtime needed — see
+// scraper.test.mjs.
 export function extractHeadlinesFromHtml(html) {
   const marker = html.indexOf("BottomNews");
   if (marker === -1) return null;
 
-  const match = html.slice(marker).match(/<li[^>]*>\s*<span[^>]*>([\s\S]*?)<\/span>\s*<\/li>/);
+  const block = html.slice(marker);
+  const match = block.match(/<li[^>]*>\s*<span[^>]*>([\s\S]*?)<\/span>\s*<\/li>/);
   if (!match) return null;
 
   const text = match[1].replace(/\s+/g, " ").trim();
-  return text || null;
+  if (!text) return null;
+
+  const when = block.slice(0, block.indexOf("</h2>")).match(/(\d{1,2}) de (\p{L}+)\s+(\d{4})/u);
+  const month = when && MONTHS_PT.indexOf(when[2].toLowerCase());
+  const date = when && month >= 0
+    ? `${when[3]}-${String(month + 1).padStart(2, "0")}-${when[1].padStart(2, "0")}`
+    : null;
+
+  return { date, text };
+}
+
+// The headlines to store for a cover, or null when the page is showing a
+// different edition. The page takes no date parameter — it serves whatever
+// is current — and at 05:00 UTC, when the scrape cron runs, that is still
+// yesterday's paper. Storing it anyway is how every cover in the archive came
+// to hold the previous day's headlines, and how the classifier came to read
+// a match preview on a page reporting the result.
+export function headlinesIfFresh(html, dateLabel) {
+  const found = extractHeadlinesFromHtml(html);
+  return found && found.date === dateLabel ? found.text : null;
 }
 
 // null rather than a throw: a dead source is the normal case here, not an error.
@@ -75,18 +102,20 @@ async function tryFetch(url) {
   }
 }
 
-// capasjornais.pt's per-newspaper page always shows *today's* edition, no
-// date parameter. Fetching it for anything but today's scrape would
-// mislabel today's headlines onto a past cover, so this is only ever
-// called when the target date is actually today — scrapeNewspaper checks
-// that below, handlers/backfill-headlines.js checks it before calling this
-// directly for covers scraped earlier the same day. Same non-fatal spirit
-// as fetchCover: any failure (403, timeout, markup drift) returns null and
-// never blocks the cover image save.
-export async function fetchHeadlines(newspaper) {
+// capasjornais.pt's per-newspaper page has no date parameter: it shows
+// whichever edition it currently has, which early in the morning is still
+// yesterday's. The heading says which one, so the caller's date is checked
+// against it and a mismatch returns null — see headlinesIfFresh. Only worth
+// calling for today's date at all; a past cover has no source here. Same
+// non-fatal spirit as fetchCover: any failure (403, timeout, markup drift)
+// returns null and never blocks the cover image save.
+export async function fetchHeadlines(newspaper, dateLabel) {
   const res = await tryFetch(`https://capasjornais.pt/${newspaper.capasjornaisPage}.html`);
   if (!res) return null;
-  return extractHeadlinesFromHtml(await res.text());
+
+  const fresh = headlinesIfFresh(await res.text(), dateLabel);
+  if (!fresh) console.log(`No ${dateLabel} headlines for ${newspaper.slug} yet — the page is still on another edition`);
+  return fresh;
 }
 
 // The cover image itself, from whichever source still has it.
@@ -136,7 +165,7 @@ export async function scrapeNewspaper(newspaper, date, env) {
   const [, , headlines] = await Promise.all([
     env.COVERS_BUCKET.put(r2Key, fullBody, { httpMetadata: { contentType } }),
     generateThumbnail(env, thumbSource, thumbKey),
-    isToday ? fetchHeadlines(newspaper) : Promise.resolve(null),
+    isToday ? fetchHeadlines(newspaper, dateLabel) : Promise.resolve(null),
   ]);
 
   await env.DB
