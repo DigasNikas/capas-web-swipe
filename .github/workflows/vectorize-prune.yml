@@ -1,0 +1,32 @@
+# Delete vectors by cover id — see scripts/vectorize_prune.py. Needed when a
+# cover's text turns out to belong to another day: nothing is left to re-embed
+# it from, so the stale vector has to go.
+name: Prune Vectors
+
+on:
+  workflow_dispatch:
+    inputs:
+      index:
+        description: "Which index"
+        type: choice
+        options: [headline, image]
+        default: headline
+      ids:
+        description: "Cover ids, space separated"
+        required: true
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Delete the vectors
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          INDEX: ${{ inputs.index }}
+          IDS: ${{ inputs.ids }}
+        run: python3 scripts/vectorize_prune.py --index "$INDEX" $IDS

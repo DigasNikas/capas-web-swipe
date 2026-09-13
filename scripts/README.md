@@ -9,6 +9,7 @@ Local tooling, not deployed. Most scripts have a matching one-click GitHub Actio
 | `scrape_month.sh` | Trigger the `/scrape` API for a full calendar month, chunked into 7-day windows | Scrape Newspaper Covers (`mode: month`) |
 | `eval-ai.mjs` | Score the AI prompt against the crowd labels, without deploying anything | — (local-only: Bot Fight Mode makes a runner unreliable for this, no gain over running it locally) |
 | `avg_cover.py` | Pixel-wise mean of every cover → `dashboard/avg/` (numpy + pillow) | Regenerate A Capa Média |
+| `vectorize_prune.py` | Delete vectors by cover id from either index, for covers that can no longer be re-embedded (see [Headline embeddings]) | Prune Vectors (manual) |
 | `import_matches.py` | Import match dates into D1 (football-data.org + match.uefa.com + ligaportugal.pt + api-sports.io). No season argument means the season happening now | Import Match Dates (weekly, Mondays 04:00 UTC + manual) |
 | `import_matches_test.py` | Self-check for the season default. Run `python3 scripts/import_matches_test.py` |
 | `train_classic_classifier.py` | Classic-ML exercise: flatten covers to pixel vectors, fit 6 classic scikit-learn models + one from-scratch PyTorch MLP on the crowd's own labels, `--split chronological/stratified`, `--per-newspaper` and `--residual` toggles, report accuracy/precision/recall per model. Not a production model, no GitHub Action | — |
