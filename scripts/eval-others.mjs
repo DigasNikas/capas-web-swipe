@@ -29,42 +29,35 @@ const get = async url => {
   return res.json();
 };
 
-// C: make the ownership judgement explicit, and bind the answer to it.
+// C: the ownership judgement as its own field, the best of the first round.
 const OWNS = PROMPT.replace(
   "Reply in exactly three lines:",
   "Decide first whether ONE club owns this page. If two clubs share it with " +
   "neither clearly bigger, no club owns it and the answer is others.\n" +
   "\nReply in exactly four lines:\nOWNS: <yes|no>",
 );
-// C2: the same, plus the shape those pages actually take — two clubs, two
-// results, one headline over both (6 September: A Bola split top and bottom,
-// Record side by side, O Jogo one montage of a Benfica and a Sporting player).
-const TWO_RESULTS = PROMPT.replace(
+
+// The opening instruction is "find the largest photo, name its club", which
+// forces a club before the question of ownership can arise. 6 September is
+// where that bites: A Bola splits Benfica top and Sporting bottom under one
+// headline, O Jogo puts a Benfica and a Sporting player in one montage. C5
+// rewrites that opening instead of appending to it.
+const OPEN = "Find the largest photo on the page — the one that takes up most of the visible space. " +
+  "Name the football club that photo is about, then read ONLY that photo's own headline, " +
+  "the text printed next to or under it.";
+const OPEN5 = "Look at the photos that fill the page and the results printed with them. If one club's " +
+  "photo and headline dominate, that club is the answer. If two of benfica, sporting and porto each " +
+  "get their own photo and their own result — side by side, top and bottom, or together in one " +
+  "montage — the page belongs to neither of them and the answer is others. Read the headline of " +
+  "whichever photo is largest either way.";
+const REFRAMED = PROMPT.replace(OPEN, OPEN5);
+const REFRAMED_OWNS = REFRAMED.replace(
   "Reply in exactly three lines:",
-  "Decide first whether ONE club owns this page. If two of benfica, sporting " +
-  "and porto each appear in the page's own photos with their own result " +
-  "printed, neither owns it — that is one edition covering two matches, and " +
-  "the answer is others however big either photo is.\n" +
-  "\nReply in exactly four lines:\nOWNS: <yes|no>",
+  "Reply in exactly four lines:\nOWNS: <the club that owns this page, or none>",
 );
-// C3: same rule, but make it list the results before judging.
-const SCORES = PROMPT.replace(
+const REFRAMED_BIG = REFRAMED.replace(
   "Reply in exactly three lines:",
-  "Two of benfica, sporting and porto each appearing in the page's own photos " +
-  "with their own result printed means one edition covering two matches: " +
-  "nobody owns it, and the answer is others however big either photo is.\n" +
-  "\nReply in exactly five lines:\n" +
-  "SCORES: <every match result printed on this page, or none>\n" +
-  "OWNS: <the club whose photo and headline own the page, or none>",
-);
-// C4: the listing without the ownership line, to see which field does the work.
-const SCORES_ONLY = PROMPT.replace(
-  "Reply in exactly three lines:",
-  "Two of benfica, sporting and porto each appearing in the page's own photos " +
-  "with their own result printed means one edition covering two matches: " +
-  "nobody owns it, and the answer is others however big either photo is.\n" +
-  "\nReply in exactly four lines:\n" +
-  "SCORES: <every match result printed on this page, or none>",
+  "Reply in exactly four lines:\nBIG: <every club with a photo filling a large part of the page>",
 );
 
 async function classify(prompt, buffer) {
@@ -96,9 +89,9 @@ for (const r of sample) images.set(r.cover_id, await (await fetch(r.url)).arrayB
 
 const variants = {
   "C owns": () => OWNS,
-  "C2 two results": () => TWO_RESULTS,
-  "C3 scores+owns": () => SCORES,
-  "C4 scores only": () => SCORES_ONLY,
+  "C5 reframed": () => REFRAMED,
+  "C6 reframed+owns": () => REFRAMED_OWNS,
+  "C7 reframed+big": () => REFRAMED_BIG,
 };
 
 const results = {};
