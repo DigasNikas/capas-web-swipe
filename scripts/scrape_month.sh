@@ -6,7 +6,9 @@
 set -euo pipefail
 
 SECRET="${ADMIN_SECRET:-}"
-URL="https://capas.digasnikas.com/api"
+# workers.dev rather than the zone: Bot Fight Mode challenges datacenter IPs
+# (GitHub Actions runs this too) and cannot be given an exception on this plan.
+URL="${CAPAS_API:-https://capas-scraper.digasnikas-digital.workers.dev}"
 YEAR="${1:-$(date +%Y)}"
 MONTH="${2:-$(date +%m)}"
 
@@ -22,7 +24,6 @@ echo ""
 while IFS=' ' read -r START END; do
   echo -n "  $START → $END ... "
   RESPONSE=$(curl -s -X POST -o - -w "\n%{http_code}" \
-    -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
     -H "Authorization: Bearer $SECRET" \
     "$URL/scrape?start=$START&end=$END")
   HTTP_CODE=$(echo "$RESPONSE" | tail -1)

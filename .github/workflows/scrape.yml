@@ -31,19 +31,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cloudflare Bot Fight Mode challenges GitHub's runners — they come from
-      # Microsoft/Azure IPs, which it treats as datacenter bot traffic. On the
-      # Free plan there is no per-path exemption, so this is a coin flip on the
-      # UA heuristic. -f is gone on purpose: it hides the response body, which
-      # is the only way to tell a Cloudflare challenge page (403, ~5 KB of
-      # HTML) from the Worker rejecting the token (401, 12 bytes of text).
+      # workers.dev, not capas.digasnikas.com: Bot Fight Mode challenges
+      # GitHub's runners on the zone and has no per-path exemption on this
+      # plan, so every run answered 403 from August on. This hostname is off
+      # the zone; the Worker's own ADMIN_SECRET check is unchanged. -f is gone
+      # on purpose: it hides the response body, which is how you tell a
+      # Cloudflare challenge page from the Worker rejecting the token.
       - name: Scrape by days
         if: inputs.mode == 'days'
         run: |
           code=$(curl -sS -X POST -o response.txt -w '%{http_code}' \
-            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
-            "https://capas.digasnikas.com/api/scrape?days=${{ inputs.days }}")
+            "https://capas-scraper.digasnikas-digital.workers.dev/scrape?days=${{ inputs.days }}")
           echo "HTTP $code"
           head -c 2000 response.txt
           test "$code" = "202"
@@ -52,9 +51,8 @@ jobs:
         if: inputs.mode == 'range'
         run: |
           code=$(curl -sS -X POST -o response.txt -w '%{http_code}' \
-            -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
-            "https://capas.digasnikas.com/api/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}")
+            "https://capas-scraper.digasnikas-digital.workers.dev/scrape?start=${{ inputs.start }}&end=${{ inputs.end }}")
           echo "HTTP $code"
           head -c 2000 response.txt
           test "$code" = "202"
