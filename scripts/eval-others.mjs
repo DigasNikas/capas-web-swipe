@@ -29,11 +29,6 @@ const get = async url => {
   return res.json();
 };
 
-// B: make it enumerate the large photos before it answers.
-const DESCRIBE = PROMPT.replace(
-  "Reply in exactly three lines:",
-  "Reply in exactly four lines:\nPHOTOS: <every club with a large photo on this page, comma separated>",
-);
 // C: make the ownership judgement explicit, and bind the answer to it.
 const OWNS = PROMPT.replace(
   "Reply in exactly three lines:",
@@ -41,10 +36,36 @@ const OWNS = PROMPT.replace(
   "neither clearly bigger, no club owns it and the answer is others.\n" +
   "\nReply in exactly four lines:\nOWNS: <yes|no>",
 );
-// D: hand it last night's fixtures, the context a Madeira pun needs.
-const withFixtures = clubs => (clubs.length
-  ? `Yesterday these clubs played: ${clubs.join(", ")}. A page can be about one of them, or about all of them at once.\n\n${PROMPT}`
-  : `No club played yesterday.\n\n${PROMPT}`);
+// C2: the same, plus the shape those pages actually take — two clubs, two
+// results, one headline over both (6 September: A Bola split top and bottom,
+// Record side by side, O Jogo one montage of a Benfica and a Sporting player).
+const TWO_RESULTS = PROMPT.replace(
+  "Reply in exactly three lines:",
+  "Decide first whether ONE club owns this page. If two of benfica, sporting " +
+  "and porto each appear in the page's own photos with their own result " +
+  "printed, neither owns it — that is one edition covering two matches, and " +
+  "the answer is others however big either photo is.\n" +
+  "\nReply in exactly four lines:\nOWNS: <yes|no>",
+);
+// C3: same rule, but make it list the results before judging.
+const SCORES = PROMPT.replace(
+  "Reply in exactly three lines:",
+  "Two of benfica, sporting and porto each appearing in the page's own photos " +
+  "with their own result printed means one edition covering two matches: " +
+  "nobody owns it, and the answer is others however big either photo is.\n" +
+  "\nReply in exactly five lines:\n" +
+  "SCORES: <every match result printed on this page, or none>\n" +
+  "OWNS: <the club whose photo and headline own the page, or none>",
+);
+// C4: the listing without the ownership line, to see which field does the work.
+const SCORES_ONLY = PROMPT.replace(
+  "Reply in exactly three lines:",
+  "Two of benfica, sporting and porto each appearing in the page's own photos " +
+  "with their own result printed means one edition covering two matches: " +
+  "nobody owns it, and the answer is others however big either photo is.\n" +
+  "\nReply in exactly four lines:\n" +
+  "SCORES: <every match result printed on this page, or none>",
+);
 
 async function classify(prompt, buffer) {
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`, {
@@ -62,11 +83,7 @@ async function classify(prompt, buffer) {
   return parseAnswer(body?.result?.response).club;
 }
 
-const prevDay = d => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() - 1); return x.toISOString().slice(0, 10); };
-
-const [stats, matches] = await Promise.all([get(`${API}/stats`), get(`${API}/matches`)]);
-const played = new Map();
-for (const m of matches) played.set(m.match_date, [...(played.get(m.match_date) ?? []), m.club]);
+const stats = await get(`${API}/stats`);
 
 const labelled = stats.rows.filter(r => r.club).sort((a, b) => b.date.localeCompare(a.date));
 const res = labelled.filter(r => r.club === "others").slice(0, 9);
@@ -78,10 +95,10 @@ const images = new Map();
 for (const r of sample) images.set(r.cover_id, await (await fetch(r.url)).arrayBuffer());
 
 const variants = {
-  "A baseline": () => PROMPT,
-  "B photos": () => DESCRIBE,
   "C owns": () => OWNS,
-  "D fixtures": r => withFixtures(played.get(prevDay(r.date)) ?? []),
+  "C2 two results": () => TWO_RESULTS,
+  "C3 scores+owns": () => SCORES,
+  "C4 scores only": () => SCORES_ONLY,
 };
 
 const results = {};
