@@ -1,0 +1,21 @@
+# One-off experiment behind scripts/eval-others.mjs: four prompts over the same
+# sample, to find out whether the `others` class is reachable by prompt at all.
+# Delete both once that is answered.
+name: Eval Others
+
+on:
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Score the prompt variants
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/eval-others.mjs
