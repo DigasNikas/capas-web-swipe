@@ -50,7 +50,11 @@ async function classify(prompt, buffer) {
     }),
   });
   const body = await res.json();
-  return parseAnswer(body?.result?.response).club;
+  if (!res.ok || !body?.result?.response) {
+    console.error(`  AI call failed: ${res.status} ${JSON.stringify(body?.errors ?? body).slice(0, 200)}`);
+    return null;
+  }
+  return parseAnswer(body.result.response).club;
 }
 
 const [stats, headlineRows] = await Promise.all([get(`${API}/stats`), get(`${API}/headlines`)]);
