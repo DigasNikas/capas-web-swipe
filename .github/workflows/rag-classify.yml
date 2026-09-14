@@ -23,9 +23,9 @@ on:
         required: false
         default: false
       limit:
-        description: "How many recent covers to reclassify"
+        description: "How many recent covers to reclassify (each is a Llama4 call; the free allowance is worth 30-40 a day)"
         required: false
-        default: "10"
+        default: "3"
 
 jobs:
   reclassify:
@@ -48,11 +48,18 @@ jobs:
           CAPAS_API: https://capas-scraper.digasnikas-digital.workers.dev
           CAPAS_STATS: https://capas-scraper.digasnikas-digital.workers.dev/stats
         # inputs.limit is only set on workflow_dispatch — repository_dispatch
-        # (the daily scrape-completed trigger) has no `inputs` context, so
-        # this falls back to the same default: 10.
+        # (the daily scrape-completed trigger) has no `inputs` context, so it
+        # falls back to 3, the number of covers a day actually brings.
+        #
+        # It was 10, which is harmless when the archive is labelled and the
+        # only candidates are today's covers. With a backlog it is not: the
+        # scrape fires this once an hour from 05:00 to 08:00, so four runs of
+        # ten took ~32 Llama4 calls and the free allowance is worth 30-40 a
+        # day. The morning crons ate the budget before anyone chose how to
+        # spend it. Backfilling is a deliberate act now: pass a limit.
         run: |
           if [ "${{ inputs.matches_only }}" = "true" ]; then
-            python3 scripts/rag_classify.py --matches-only --limit "${{ inputs.limit || '10' }}"
+            python3 scripts/rag_classify.py --matches-only --limit "${{ inputs.limit || '3' }}"
           else
-            python3 scripts/rag_classify.py --limit "${{ inputs.limit || '10' }}"
+            python3 scripts/rag_classify.py --limit "${{ inputs.limit || '3' }}"
           fi
