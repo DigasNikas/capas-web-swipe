@@ -22,6 +22,9 @@ on:
         type: boolean
         required: false
         default: false
+      date:
+        description: "Classify one cover day (YYYY-MM-DD) instead of the newest backlog"
+        required: false
       limit:
         description: "How many recent covers to reclassify (each is a Llama4 call; the free allowance is worth 30-40 a day)"
         required: false
@@ -71,5 +74,5 @@ jobs:
           if [ "${{ inputs.matches_only }}" = "true" ]; then
             python3 scripts/rag_classify.py --matches-only --limit "${{ inputs.limit || '3' }}"
           else
-            python3 scripts/rag_classify.py --limit "${{ inputs.limit || '3' }}"
+            python3 scripts/rag_classify.py --limit "${{ inputs.limit || '3' }}" ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
           fi
