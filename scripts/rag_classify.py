@@ -117,7 +117,8 @@ PROMPT = (
     "Decide first whether ONE club owns this page. If two clubs share it with "
     "neither clearly bigger, no club owns it and the answer is others.\n"
     "\n"
-    "Reply in exactly four lines:\n"
+    "Reply in exactly five lines:\n"
+    "PHOTOS: <every club with a large photo on this page, comma separated>\n"
     "OWNS: <yes|no>\n"
     "HEADLINE: <the headline belonging to the largest photo, copied>\n"
     "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo or its headline>\n"
@@ -498,13 +499,13 @@ def run_matches_only(models, limit):
     print(f"\n{done} covers retrieved")
 
 
-def run_live(models, limit):
+def run_live(models, limit, on_date=None):
     if not ADMIN_SECRET:
         print("Set ADMIN_SECRET (the Worker's admin bearer token, not a Cloudflare token).", file=sys.stderr)
         sys.exit(1)
 
     candidates = json.loads(fetch(
-        f"{API_BASE}/rag-candidates?limit={limit}",
+        f"{API_BASE}/rag-candidates?limit={limit}{f'&date={on_date}' if on_date else ''}",
         headers={"Authorization": f"Bearer {ADMIN_SECRET}"},
     ))
     print(f"{len(candidates)} candidates")
@@ -648,6 +649,7 @@ def main():
     ap.add_argument("--limit", type=int, default=10, help="live mode: how many recent covers to reclassify")
     ap.add_argument("--n", type=int, default=40, help="--eval mode: sample size")
     ap.add_argument("--all", action="store_true", help="--eval mode: score every labelled cover")
+    ap.add_argument("--date", help="live mode: classify one cover day (YYYY-MM-DD) instead of the newest backlog")
     ap.add_argument("--matches-only", action="store_true",
                     help="retrieve and store neighbours without classifying: no Workers AI call")
     args = ap.parse_args()
@@ -662,7 +664,7 @@ def main():
     elif args.matches_only:
         run_matches_only(models, args.limit)
     else:
-        run_live(models, args.limit)
+        run_live(models, args.limit, args.date)
 
 
 if __name__ == "__main__":

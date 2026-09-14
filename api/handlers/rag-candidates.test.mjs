@@ -106,4 +106,23 @@ assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
   assert.deepEqual(env.DB.lastArgs, [500], "and capped there");
 }
 
+// date= narrows to one cover day, so a backfill does not have to walk down to
+// it from the newest cover.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?date=2026-09-06&limit=5"), env);
+  assert.match(env.DB.sql, /date = \?2/);
+  assert.deepEqual(env.DB.lastArgs, [5, "2026-09-06"]);
+}
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?limit=5"), env);
+  assert.doesNotMatch(env.DB.sql, /date = \?2/);
+  assert.deepEqual(env.DB.lastArgs, [5]);
+}
+{
+  const env = fakeEnv([]);
+  assert.equal((await handleRagCandidates(req("s3cret", "?date=6-9-2026"), env)).status, 400);
+}
+
 console.log("ok");

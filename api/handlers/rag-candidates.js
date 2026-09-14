@@ -34,6 +34,13 @@ export async function handleRagCandidates(request, env) {
   if (needs !== "label" && needs !== "matches") return json({ error: "needs must be label or matches" }, 400);
   const pending = needs === "matches" ? "ai_rag_covers IS NULL" : "ai_club IS NULL";
 
+  // date= narrows to one cover day. Without it the backlog is newest-first,
+  // so reaching a day a week back means classifying everything above it —
+  // 27 Llama4 calls to look at 3 covers.
+  const date = url.searchParams.get("date");
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "date must be YYYY-MM-DD" }, 400);
+  const onDay = date ? "AND date = ?2" : "";
+
   // The cap on the classification backlog is what stands between a run and
   // the quota incident in rag.md, because every cover it returns is a Llama4
   // call. Retrieval makes none, so that backlog can be drained in far fewer
@@ -42,8 +49,8 @@ export async function handleRagCandidates(request, env) {
   if (limit === null) return json({ error: "limit must be a positive integer" }, 400);
 
   const { results } = await env.DB
-    .prepare(`SELECT id, newspaper, date, r2_key, url, headlines FROM covers WHERE ${pending} ORDER BY date DESC, newspaper ASC LIMIT ?`)
-    .bind(limit)
+    .prepare(`SELECT id, newspaper, date, r2_key, url, headlines FROM covers WHERE ${pending} ${onDay} ORDER BY date DESC, newspaper ASC LIMIT ?1`)
+    .bind(...(date ? [limit, date] : [limit]))
     .all();
 
   return json(results);
