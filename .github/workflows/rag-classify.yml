@@ -35,7 +35,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -c scripts/requirements.txt numpy pillow torch transformers
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - name: Install Python dependencies
+        # torch from PyTorch's CPU index, not PyPI: the default Linux wheel is
+        # the CUDA build, which drags in cuDNN and thirty nvidia_* packages —
+        # 1.5 GB of GPU runtime that a GitHub runner has no GPU to use. It made
+        # this step take nine minutes for twenty-five seconds of work. The CPU
+        # wheel is 192 MB and needs none of them.
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0
+          pip install -c scripts/requirements.txt numpy pillow transformers
       - name: Reclassify recent covers with RAG few-shot context
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

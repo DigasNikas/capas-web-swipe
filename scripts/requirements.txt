@@ -1,4 +1,7 @@
 # Versions for every Python workflow, used as a constraints file (pip install -c):
+# torch is installed separately in CI from https://download.pytorch.org/whl/cpu —
+# PyPI's Linux wheel is the CUDA build and pulls 1.5 GB of GPU runtime a runner
+# cannot use. '==2.13.0' matches the '2.13.0+cpu' wheel (PEP 440 local version).
 # each workflow still names only the packages it needs. Frozen from a working
 # Python 3.12 env.
 annotated-doc==0.0.5
