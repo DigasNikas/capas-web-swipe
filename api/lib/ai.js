@@ -85,7 +85,7 @@ export function parseAnswer(text) {
   const raw = String(text ?? "");
   const lower = raw.toLowerCase();
   const marker = lower.lastIndexOf("answer:");
-  if (marker === -1) return { club: null, headline: null, why: null };
+  if (marker === -1) return { club: null, headline: null, why: null, owns: null };
 
   const tail = lower.slice(marker + "answer:".length);
   let club = null;
@@ -101,10 +101,16 @@ export function parseAnswer(text) {
   const before = raw.slice(0, marker);
   const head = before.match(/headline:\s*(.+)/i);
   const why = before.match(/why:\s*(.+)/i);
+  // OWNS: is the ownership judgement the prompt asks for before the answer.
+  // Kept as evidence, not used: the label is still the ANSWER: line, so a
+  // reply that says no club owns the page and then names one stays visible as
+  // the contradiction it is.
+  const owns = before.match(/owns:\s*(yes|no)\b/i);
   return {
     club,
     headline: head ? head[1].trim().slice(0, 200) : null,
     why: why ? why[1].trim().slice(0, 200) : null,
+    owns: owns ? owns[1].toLowerCase() : null,
   };
 }
 
@@ -341,18 +347,18 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCov
       .bind(coverId)
       .first();
 
-    const { club, headline, why } = await classifyCover(
+    const { club, headline, why, owns } = await classifyCover(
       env, await obj.arrayBuffer(), obj.httpMetadata?.contentType, fewShot, row?.headlines,
     );
     if (!club) return null;
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = 'model' WHERE id = ?")
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_owns = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = 'model' WHERE id = ?")
       // Empty string, not null: ai_headline/ai_why being NULL is what marks a
       // cover as classified by an older prompt and puts it back in the
       // backfill queue. ai_rag_covers carries no such meaning, "[]" for no
       // RAG context is just as valid a stored value as a populated array.
-      .bind(club, headline ?? "", why ?? "", JSON.stringify(ragCoverIds ?? []), JSON.stringify(ragSources ?? []), coverId)
+      .bind(club, headline ?? "", why ?? "", owns, JSON.stringify(ragCoverIds ?? []), JSON.stringify(ragSources ?? []), coverId)
       .run();
     return club;
   } catch (err) {

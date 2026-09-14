@@ -1,0 +1,12 @@
+-- The model's answer to "does ONE club own this page", which the prompt asks
+-- for before it names anything (the OWNS: line, see api/lib/ai.js's PROMPT).
+--
+-- Recorded, not acted on. The label is still whatever the ANSWER: line says,
+-- so a reply that says no club owns the page and then names one stays visible
+-- as the contradiction it is — which is the measurement worth having before
+-- deciding whether to enforce it. The classifier's whole error budget sits in
+-- that class: covers the crowd calls Restantes, answered with a club.
+--
+-- NULL for covers labelled by the consensus fast path, which never asks a
+-- model anything, and for anything classified before this column existed.
+ALTER TABLE covers ADD COLUMN ai_owns TEXT;

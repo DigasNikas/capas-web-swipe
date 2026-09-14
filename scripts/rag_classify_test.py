@@ -25,17 +25,25 @@ from rag_classify import (
 # --- parse_answer ---
 
 assert parse_answer("HEADLINE: MEIO BILHETE\nANSWER: benfica") == {
-    "club": "benfica", "headline": "MEIO BILHETE", "why": None,
+    "club": "benfica", "headline": "MEIO BILHETE", "why": None, "owns": None,
 }
 
 assert parse_answer("HEADLINE: MEIO BILHETE\nWHY: Benfica named in the headline\nANSWER: benfica") == {
-    "club": "benfica", "headline": "MEIO BILHETE", "why": "Benfica named in the headline",
+    "club": "benfica", "headline": "MEIO BILHETE", "why": "Benfica named in the headline", "owns": None,
 }
+
+# OWNS: is the ownership judgement the prompt asks for before the label. Read
+# and stored, never acted on — a reply that says nobody owns the page and then
+# names a club stays visible as the contradiction it is.
+assert parse_answer("OWNS: no\nHEADLINE: BAILINHO\nWHY: duas equipas\nANSWER: others")["owns"] == "no"
+assert parse_answer("OWNS: yes\nANSWER: porto")["owns"] == "yes"
+assert parse_answer("Owns: YES\nANSWER: porto")["owns"] == "yes"
+assert parse_answer("OWNS: maybe\nANSWER: porto")["owns"] is None
 
 assert parse_answer("HEADLINE: X\nAnswer: **Sporting**")["club"] == "sporting"
 
 assert parse_answer("The page is dominated by a Sporting win over Porto.") == {
-    "club": None, "headline": None, "why": None,
+    "club": None, "headline": None, "why": None, "owns": None,
 }
 
 assert parse_answer("HEADLINE: LEAO RUGE EM ALVALADE E O BENFICA")["club"] is None
@@ -47,7 +55,7 @@ assert parse_answer("HEADLINE: BENFICA HUMILHADO\nANSWER: others")["club"] == "o
 
 assert parse_answer("ANSWER: <benfica|sporting|porto|others>\nHEADLINE: DRAGAO VOA\nANSWER: porto")["club"] == "porto"
 
-assert parse_answer(None) == {"club": None, "headline": None, "why": None}
+assert parse_answer(None) == {"club": None, "headline": None, "why": None, "owns": None}
 assert parse_answer("ANSWER: liverpool")["club"] is None
 
 # --- build_few_shot_block ---

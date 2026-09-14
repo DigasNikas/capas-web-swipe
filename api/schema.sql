@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS covers (
   ai_club    TEXT,                    -- RAG-classified model guess, filled in after scrape by rag-classify.yml (nullable): ALTER TABLE covers ADD COLUMN ai_club TEXT
   ai_headline TEXT,                   -- headline the model quoted back, so a wrong guess is debuggable: ALTER TABLE covers ADD COLUMN ai_headline TEXT
   ai_why     TEXT,                    -- one-line reason the model gave for the club (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_why TEXT
+  ai_owns    TEXT,                    -- 'yes'/'no': the model's answer to whether one club owns the page, asked before the label (nullable): ALTER TABLE covers ADD COLUMN ai_owns TEXT
   ai_rag_covers TEXT,                 -- JSON array of cover_ids the RAG few-shot block was built from, "[]" if none (nullable, backfilled): ALTER TABLE covers ADD COLUMN ai_rag_covers TEXT
   ai_rag_source TEXT,                 -- JSON array of "headline"/"layout", same order as ai_rag_covers: which channel retrieved each one (nullable): ALTER TABLE covers ADD COLUMN ai_rag_source TEXT
   ai_source  TEXT,                    -- 'model' (a Llama4 call) or 'consensus' (the RAG neighbours agreed strongly enough to skip it), nullable alongside ai_club: ALTER TABLE covers ADD COLUMN ai_source TEXT

@@ -15,13 +15,27 @@ import {
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
 assert.deepEqual(
   parseAnswer("HEADLINE: MEIO BILHETE\nANSWER: benfica"),
-  { club: "benfica", headline: "MEIO BILHETE", why: null },
+  { club: "benfica", headline: "MEIO BILHETE", why: null, owns: null },
 );
+
+// OWNS: is the model's own answer to "does one club own this page", asked
+// before it names anything. Stored, never acted on: the label is still
+// whatever ANSWER: says, so a contradiction stays visible instead of being
+// silently resolved.
+assert.deepEqual(
+  parseAnswer("OWNS: no\nHEADLINE: BAILINHO\nWHY: duas equipas\nANSWER: others"),
+  { club: "others", headline: "BAILINHO", why: "duas equipas", owns: "no" },
+);
+assert.equal(parseAnswer("OWNS: yes\nHEADLINE: X\nANSWER: porto").owns, "yes");
+assert.equal(parseAnswer("Owns: YES\nANSWER: porto").owns, "yes", "case and spacing are the model's to choose");
+assert.equal(parseAnswer("OWNS: no, two clubs share it\nANSWER: benfica").owns, "no", "a sentence still starts with the verdict");
+assert.equal(parseAnswer("OWNS: maybe\nANSWER: porto").owns, null, "anything else is not a verdict");
+assert.equal(parseAnswer("HEADLINE: X\nANSWER: porto").owns, null, "a reply from the old prompt has none");
 
 // Happy path, current three-line shape.
 assert.deepEqual(
   parseAnswer("HEADLINE: MEIO BILHETE\nWHY: Benfica named in the headline\nANSWER: benfica"),
-  { club: "benfica", headline: "MEIO BILHETE", why: "Benfica named in the headline" },
+  { club: "benfica", headline: "MEIO BILHETE", why: "Benfica named in the headline", owns: null },
 );
 
 // Case and stray punctuation around the club word.
@@ -31,7 +45,7 @@ assert.equal(parseAnswer("HEADLINE: X\nAnswer: **Sporting**").club, "sporting");
 // answered benfica here, because benfica is first in CLUBS.
 assert.deepEqual(
   parseAnswer("The page is dominated by a Sporting win over Porto."),
-  { club: null, headline: null, why: null },
+  { club: null, headline: null, why: null, owns: null },
 );
 
 // Truncated before the marker — max_tokens ran out. Same rule: no label.
@@ -51,8 +65,8 @@ assert.equal(
 );
 
 // Junk in, null out — never throw, rag-classify.yml's daily run depends on it.
-assert.deepEqual(parseAnswer(null), { club: null, headline: null, why: null });
-assert.deepEqual(parseAnswer(undefined), { club: null, headline: null, why: null });
+assert.deepEqual(parseAnswer(null), { club: null, headline: null, why: null, owns: null });
+assert.deepEqual(parseAnswer(undefined), { club: null, headline: null, why: null, owns: null });
 assert.equal(parseAnswer("ANSWER: liverpool").club, null);
 
 // No matches: no few-shot block, prompt stays exactly the zero-shot baseline.

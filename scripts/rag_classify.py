@@ -340,7 +340,7 @@ def parse_answer(text):
     lower = raw.lower()
     marker = lower.rfind("answer:")
     if marker == -1:
-        return {"club": None, "headline": None, "why": None}
+        return {"club": None, "headline": None, "why": None, "owns": None}
 
     tail = lower[marker + len("answer:"):]
     club, at = None, len(tail) + 1
@@ -352,10 +352,12 @@ def parse_answer(text):
     before = raw[:marker]
     head = re.search(r"headline:\s*(.+)", before, re.IGNORECASE)
     why = re.search(r"why:\s*(.+)", before, re.IGNORECASE)
+    owns = re.search(r"owns:\s*(yes|no)\b", before, re.IGNORECASE)
     return {
         "club": club,
         "headline": head.group(1).strip()[:200] if head else None,
         "why": why.group(1).strip()[:200] if why else None,
+        "owns": owns.group(1).lower() if owns else None,
     }
 
 
