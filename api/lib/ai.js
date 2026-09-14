@@ -58,8 +58,7 @@ export const PROMPT =
   "Decide first whether ONE club owns this page. If two clubs share it with " +
   "neither clearly bigger, no club owns it and the answer is others.\n" +
   "\n" +
-  "Reply in exactly five lines:\n" +
-  "PHOTOS: <every club with a large photo on this page, comma separated>\n" +
+  "Reply in exactly four lines:\n" +
   "OWNS: <yes|no>\n" +
   "HEADLINE: <the headline belonging to the largest photo, copied>\n" +
   "WHY: <the one detail that decided it — a name, nickname or kit colour word from that photo or its headline>\n" +

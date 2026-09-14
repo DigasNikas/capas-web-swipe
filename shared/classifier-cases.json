@@ -12,7 +12,7 @@
     "HEADLINES_MAX_CHARS": 600,
     "MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct"
   },
-  "prompt_sha256": "9c8182f0ef6bcd042ec4ffb008e7fd61230aa8e79df0bee7d2ae268add5a5867",
+  "prompt_sha256": "c23f0f5d79270c7bfa05adf5cb783cdc4bcc45287accf91d351abee39c0a6e07",
   "cases": [
     {
       "fn": "parseAnswer",
