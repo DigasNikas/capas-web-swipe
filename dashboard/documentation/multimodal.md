@@ -1,57 +1,113 @@
 # Multimodal
 
-Powers the dashboard's **AI Detector** card ("E a máquina, que diz?"): the second verdict card, same layout and arithmetic as "Hoje é dia de quem?", over the same three covers, except the club comes from a vision model reading the front page instead of from votes. This page documents the model and the prompt; [AI Detector](#ai-detector) covers where the call actually happens and [RAG](#rag) covers the context it's fed.
-
-The model is shown the cover and asked which club the page is about, zero-shot, no training on this archive. `scripts/eval-ai.mjs` still runs it exactly that way, bare, as a benchmark. Live classification doesn't: every real call goes through `scripts/rag_classify.py` and gets a few-shot block from [RAG](#rag) prepended first, empty only when the archive has nothing similar yet. Same model, same prompt, same parser either way; RAG only adds a paragraph in front of it.
-
-## Model
-
-`@cf/meta/llama-4-scout-17b-16e-instruct`, full-res image. Two things decided that.
-
-Covers are called by the largest photo on the page and that photo's own headline, not kit colours: at 220px the Portuguese headline is unreadable, so the classifier fetches the full-res original from R2 instead of the thumbnail the rest of the site uses. The prompt asks the model to find that photo first, name its club, then read only its headline — a smaller headline strip near the top of the page used to out-rank a much larger photo lower down, so a cover playing up one club's league position in three words at the top while giving the rest of the page to another club's transfer story got called for the strip instead of the story the page actually leads with. The reply asks for four lines: `OWNS:`, then the headline, then the reason, then the answer. A fifth line, `PHOTOS:`, listing every club with a large photo, was tried and reverted: it lifted `others` recall to 9 of 11 but cost seven covers a club genuinely owned, dropping agreement from 72% to 63% over 30 model-classified covers. All three clubs appear somewhere on almost every front page, so listing them first reads as evidence that nobody owns the page. `OWNS:` is there because the classifier's whole error budget sits in one class — covers the crowd calls Restantes, which it answered with a club 8 times out of 9. A page shared by two clubs has no owner, and asking that as its own field before naming anything took recall on that class from 2 of 9 to 5 of 9 over a fixed sample, with the club classes untouched at 12 of 12. Saying the same thing in prose in the middle of the prompt had barely moved it. The parser stores `OWNS:` as `ai_owns` and takes the label from the `ANSWER:` line regardless, so a reply saying no club owns the page and then naming one stays visible as the contradiction it is — the measurement worth having before deciding whether to enforce it. No `ANSWER:` line still means no label, because it never guesses.
-
-The prompt also asks for a third line, `WHY: <the one detail that decided it>`, stored as `ai_why` and shown next to the model's call on the dashboard card.
-
-> Agreement is agreement *with the crowd*, not correctness. Some disagreements are covers the model read right and the vote read wrong. Most covers carry a single vote, so the crowd side is thin too.
-
-## Results
-
-`scripts/eval-ai.mjs` scores the current prompt against the crowd labels, without deploying anything: public `/api/stats` for the labels, public R2 URLs for the images, a Workers AI · Read token for the calls.
-
-```bash
-CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/eval-ai.mjs --n 80
-```
-
-Latest run, 80 covers evenly spaced across the archive:
+The vision model behind the **AI Detector** card ("E a máquina, que diz?"). It reads each cover and names the club the page is about. [AI Detector](#ai-detector) covers the pipeline around the call, [RAG](#rag) the context fed into it.
 
 | | |
 |---|---|
-| Agreement | **78.8%** (63/80) |
-| benfica recall | 85% (23/27) |
-| sporting recall | 91% (20/22) |
-| porto recall | 82% (14/17) |
-| others recall | 43% (6/14) |
+| Model | `@cf/meta/llama-4-scout-17b-16e-instruct` (Workers AI) |
+| Input | Full-resolution cover from R2, after the few-shot block and the page's scraped titles (see [AI Detector](#ai-detector)) |
+| Settings | `temperature: 0.2`, `max_tokens: 300` |
+| Reply | Four lines: `OWNS`, `HEADLINE`, `WHY`, `ANSWER` |
+| Stored | `ai_club`, `ai_owns`, `ai_headline`, `ai_why`, `ai_source = 'model'` |
+| Code | `api/lib/ai.js`: `PROMPT`, `parseAnswer`, `classifyAndStore` |
 
-`others` is the weak class: no consistent visual signature across four different kinds of front page (Seleção, Braga/Guimarães, another sport, a transfer round-up). Run this before *and* after any `PROMPT` change: the number moves, sometimes the wrong way. It also prints a confusion matrix and every miss with the headline the model quoted, which is what says whether a wrong call misread a rail box or hit a genuinely ambiguous page.
+## Model choice
 
-A prompt change only reaches covers that get classified again. `ai_club`/`ai_headline`/`ai_why` are always written together by `classifyAndStore`, so `ai_club IS NULL` alone marks a cover as never classified, or reset (see [RAG](#rag)'s Quota section for `/rag-candidates`, which selects on exactly that and is self-converging across repeated runs). A prompt change on an already-classified archive still needs those three columns wiped by hand first, a manual D1 query; nothing detects "classified, but by an older prompt" automatically.
+30 randomly sampled crowd-labelled covers, same prompt:
 
-`node api/lib/ai.test.mjs` covers the parser, the part that turns a bad reply into a wrong label.
+| Model | Image | Agreement |
+|---|---|---|
+| **Llama 4 Scout 17B** | full resolution | **87%** |
+| Llama 3.2 11B Vision | full resolution | 67% |
+| Llama 3.2 11B Vision | 220px thumbnail | 53% |
+
+Covers are called by their Portuguese text, which is unreadable at thumbnail size. The classifier always fetches the original from R2.
+
+## Prompt
+
+`PROMPT` tells the model to:
+
+1. Find the largest photo on the page, name its club, and read only that photo's headline.
+2. Treat a page shared by two clubs, neither clearly bigger, as `others`.
+3. Ignore the masthead and its colour, the SPORTING / FC PORTO / BENFICA side rails, teasers, adverts, results bars, and small headline strips.
+4. Map names and nicknames to clubs (Águias → benfica, Leões → sporting, Dragões → porto). `others` covers the national team, other clubs, other sports, and transfer round-ups with no single club on top.
+5. Decide whether one club owns the page before naming it.
+
+## Reply and parser
+
+| Line | Column | Content |
+|---|---|---|
+| `OWNS: yes\|no` | `ai_owns` | Whether one club owns the page |
+| `HEADLINE:` | `ai_headline` | The largest photo's headline, copied |
+| `WHY:` | `ai_why` | The detail that decided it |
+| `ANSWER:` | `ai_club` | `benfica`, `sporting`, `porto` or `others` |
+
+`parseAnswer` is strict. No `ANSWER:` line means no label, and the cover is retried on the next run. The label always comes from `ANSWER:`, even when `OWNS: no` contradicts it. `node api/lib/ai.test.mjs` covers the parser.
+
+## Prompt experiments
+
+| Change | Sample | Effect | Status |
+|---|---|---|---|
+| Ownership rule in prose only | fixed sample | `others` recall barely moved | Replaced by `OWNS` |
+| `OWNS:` asked before the answer | 21 covers | `others` recall 2/9 → 5/9; club classes 12/12 → 12/12 | Kept |
+| `PHOTOS:` line listing every club with a large photo | 30 covers | `others` recall 9/11, agreement 72% → 63% | Reverted |
+
+## Results
+
+Live data, covers from 2026-06-13 to 2026-09-15, against crowd labels.
+
+**Model calls (117 covers).** "Shown" is the label the card displays after the `others` gate at threshold 0.65 (see [AI Detector](#ai-detector)).
+
+| Crowd label | Covers | Model | Shown |
+|---|---|---|---|
+| benfica | 32 | 29 (91%) | 28 (88%) |
+| sporting | 28 | 26 (93%) | 25 (89%) |
+| porto | 28 | 27 (96%) | 26 (93%) |
+| others | 29 | 12 (41%) | 25 (86%) |
+| **Total** | **117** | **94 (80.3%)** | **104 (88.9%)** |
+
+**All classified covers (239).** 122 were labelled by the consensus path with no model call, 120 of them (98.4%) matching the crowd. Overall shown agreement: **93.7%**.
+
+**`OWNS`.** When the model named a club, `OWNS` was `yes` on 102 of 102 covers. When it answered `others`, `OWNS` was `yes` on 7 and `no` on 8.
+
+**First prompt, for reference.** 77% agreement (447/579), `others` recall 39%.
+
+> Agreement is with the crowd, not with ground truth. Most covers carry one vote.
+
+## Evaluating a prompt change
+
+`scripts/eval-ai.mjs` runs the current `PROMPT` against crowd labels without deploying. It uses public `/api/stats` and R2 URLs, plus a **Workers AI · Read** token. It sends the image and `PROMPT` only, without the few-shot block or the scraped titles, so its numbers aren't comparable with live results.
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… node scripts/eval-ai.mjs --n 80   # evenly spaced sample
+... node scripts/eval-ai.mjs --all                                               # every labelled cover
+```
+
+It prints agreement, recall per class, a confusion matrix, and every miss with the headline the model quoted. Run it before and after any `PROMPT` change.
+
+A prompt change only reaches covers classified again. `/rag-candidates` selects `ai_club IS NULL`, so re-classifying the archive means clearing the `ai_*` columns by hand first.
 
 ## Where it runs
 
-Not in the scrape. `scrapeNewspaper` stores the cover and stops; `ai_club` stays `NULL` until `.github/workflows/rag-classify.yml` runs, which the Worker fires itself right after the day's scrape finishes (see [AI Detector](#ai-detector)). `classifyAndStore` swallows its own errors either way: a model hiccup must never take down that workflow run. An unclassified cover (the model didn't answer, or the workflow hasn't run yet) is simply absent from the AI section until the next run retries it.
+In `.github/workflows/rag-classify.yml`, which the Worker dispatches after each day's scrape. Not in the scrape itself. `classifyAndStore` never throws: a failed call leaves `ai_club` `NULL` and the cover is retried on the next run.
 
-`/api/detector` returns the model's side: every classified cover and the latest day's verdict, separate from `/api/stats`, which carries the crowd's. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latest` is `null` and the section stays hidden. Expect this for a while after a fresh day's covers land, until the automatic reclassify run catches up.
+`/api/detector` serves the results: every classified cover, the label to show, the model's own answer, the crowd's label, and the latest day's verdict. Covers not yet classified are left out of the day's verdict. If none of the day's covers are classified, `latest` is `null` and the card stays hidden.
 
 ## Where they disagree
 
-Under the card, a button opens every cover the model and the crowd read differently. It navigates like the app's Histórico: a month picker, then that month's covers as portrait cards carrying both verdicts as colour blocks. No extra request: `/api/detector` carries both labels per cover, so it's a filter over rows the card already loaded.
+A button under the card opens every cover where the shown label and the crowd differ. A month picker, then that month's covers with both labels as colour blocks. Built from the `/api/detector` response already loaded, no extra request.
 
 ## Cost
 
-~$0.0006 per cover ($0.27/M input + $0.85/M output tokens). Three covers a day is roughly €0.65/year; classifying the entire archive is a one-off €0.75.
+| | |
+|---|---|
+| Per model call | ~65 neurons (measured) |
+| Free allowance | 10,000 neurons/day, ~150 model calls |
+| Beyond it | $0.011 per 1,000 neurons (Workers Paid) |
+| Daily run | 3 covers, ~195 neurons: inside the free allowance |
+| Consensus covers | 0 neurons |
+| Whole archive, 1,869 covers | ~121,000 neurons: ~12 days of free allowance, or ~$1.33 |
 
-## For comparison: classic classifiers
+## For comparison
 
-`scripts/train_classic_classifier.py` runs the same crowd-voted covers through seven classic ML models, on raw pixels and on the stored embeddings. See [Classic Classifiers](#classic-classifiers).
+[Classic Classifiers](#classic-classifiers) runs seven classic models on the same crowd labels, over raw pixels and over the stored embeddings.
