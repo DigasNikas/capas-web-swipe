@@ -1,3 +1,4 @@
+import { applyGate, gateThreshold } from "./gate.js";
 // Zero-shot cover classification. No training, no fine-tuning — the model is
 // asked to read the front page and name the club it is about.
 //
@@ -337,7 +338,12 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
 // provenance — nothing reads ai_rag_covers back to build a prompt, it exists
 // so a bad classification can be traced to the covers that biased it instead
 // of re-deriving them by hand.
-export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCoverIds = [], ragSources = []) {
+// lr: {benfica, porto, sporting, others, asof} from scripts/rag_classify.py,
+// which applies models/others_lr.json to the two vectors it already computed
+// for retrieval. Null for a cover with no headline vector. Always recorded,
+// acted on only when LR_GATE_THRESHOLD is set -- so the columns keep measuring
+// what the gate would do even while it is switched off.
+export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCoverIds = [], ragSources = [], lr = null) {
   try {
     const obj = await env.COVERS_BUCKET.get(r2Key);
     if (!obj) return null;
@@ -347,18 +353,22 @@ export async function classifyAndStore(env, coverId, r2Key, fewShot = "", ragCov
       .bind(coverId)
       .first();
 
-    const { club, headline, why, owns } = await classifyCover(
+    const answered = await classifyCover(
       env, await obj.arrayBuffer(), obj.httpMetadata?.contentType, fewShot, row?.headlines,
     );
-    if (!club) return null;
+    const { headline, why, owns } = answered;
+    if (!answered.club) return null;
+
+    const { club, source } = applyGate(answered, lr, gateThreshold(env));
 
     await env.DB
-      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_owns = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = 'model' WHERE id = ?")
+      .prepare("UPDATE covers SET ai_club = ?, ai_headline = ?, ai_why = ?, ai_owns = ?, ai_rag_covers = ?, ai_rag_source = ?, ai_source = ?, ai_lr_benfica = ?, ai_lr_porto = ?, ai_lr_sporting = ?, ai_lr_others = ?, ai_lr_asof = ? WHERE id = ?")
       // Empty string, not null: ai_headline/ai_why being NULL is what marks a
       // cover as classified by an older prompt and puts it back in the
       // backfill queue. ai_rag_covers carries no such meaning, "[]" for no
       // RAG context is just as valid a stored value as a populated array.
-      .bind(club, headline ?? "", why ?? "", owns, JSON.stringify(ragCoverIds ?? []), JSON.stringify(ragSources ?? []), coverId)
+      .bind(club, headline ?? "", why ?? "", owns, JSON.stringify(ragCoverIds ?? []), JSON.stringify(ragSources ?? []), source,
+            lr?.benfica ?? null, lr?.porto ?? null, lr?.sporting ?? null, lr?.others ?? null, lr?.asof ?? null, coverId)
       .run();
     return club;
   } catch (err) {

@@ -50,6 +50,9 @@ def main():
     ap.add_argument("--out-dir", default=".", help="where to write the output files")
     ap.add_argument("--features", choices=["image", "headline", "both"], default="both",
                     help="which stored embeddings to fit on")
+    ap.add_argument("--export", metavar="PATH",
+                    help="also fit one model on every labelled cover and write its weights there, "
+                         "for scripts/rag_classify.py to score new covers with at classify time")
     ap.add_argument("--no-sql", action="store_true",
                     help="emit only probabilities.json -- for comparing feature sets without "
                          "touching the ai_lr_* columns, which hold the 'both' run")
@@ -132,6 +135,30 @@ def main():
         with open(path, "w") as f:
             f.write("\n".join(updates[i:i + STATEMENTS_PER_FILE]) + "\n")
         files.append(path)
+
+    if args.export:
+        # Trained on everything, unlike the folds above: this one scores covers
+        # that do not exist yet, so there is nothing for it to leak. asof is the
+        # day it was fitted -- a cover scored by it carries that date, and a
+        # cover dated before it must never be re-scored with it.
+        X = np.stack([k[3] for k in kept])
+        y = np.array([k[2] for k in kept])
+        sc = StandardScaler().fit(X)
+        clf = LogisticRegression(max_iter=1000).fit(sc.transform(X), y)
+        asof = max(k[1] for k in kept)
+        os.makedirs(os.path.dirname(args.export) or ".", exist_ok=True)
+        with open(args.export, "w") as f:
+            json.dump({
+                "features": wanted,
+                "classes": list(clf.classes_),
+                "mean": sc.mean_.tolist(),
+                "scale": sc.scale_.tolist(),
+                "coef": clf.coef_.tolist(),
+                "intercept": clf.intercept_.tolist(),
+                "trained_on": len(kept),
+                "asof": asof,
+            }, f)
+        print(f"exported a model fitted on all {len(kept)} covers to {args.export} (asof {asof})")
 
     total = sum(t for _, _, t, _ in per_month)
     weighted = sum(acc * t for _, _, t, acc in per_month) / total

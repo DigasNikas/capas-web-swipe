@@ -71,11 +71,16 @@ from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
 from headline_embeddings import embed_text, lead_headline, load_text_model
+from lr_gate import load_model, score
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) capas-rag-classify/1.0"
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 IMAGE_INDEX = "capas-cover-embeddings"
 HEADLINE_INDEX = "capas-headline-embeddings"
+# Weights for the `others` gate, committed to the repo so a classify run needs
+# no extra fetch. Absent means every cover is sent with lr: null and the
+# Worker keeps the model's own answer -- see api/lib/gate.js.
+GATE_MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "others_lr.json")
 MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 7
@@ -409,33 +414,39 @@ def embed_and_retrieve(models, image_bytes, labels, headlines=None, cover_date=N
     headlines.md) simply skips the text channel and gets image matches alone,
     which is what every cover got before this index existed.
 
-    Returns (few_shot_text, cover_ids, matches) — the ids are what run_live
-    sends on as rag_cover_ids, for provenance, and the matches are what the
-    consensus check reads."""
+    Returns (few_shot_text, cover_ids, matches, vectors) — the ids are what
+    run_live sends on as rag_cover_ids, for provenance, the matches are what
+    the consensus check reads, and vectors carries the two query embeddings so
+    the `others` gate can score the cover without recomputing them (headline
+    is None when the page had no scraped text)."""
     clip, processor, text_model, tokenizer = models
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image_vector = embed(clip, processor, image)
     image_matches = usable_matches(
-        query_vectorize(IMAGE_INDEX, embed(clip, processor, image), RAG_TOP_K + 3), "layout", cover_date, labels,
+        query_vectorize(IMAGE_INDEX, image_vector, RAG_TOP_K + 3), "layout", cover_date, labels,
     )
 
     headline_matches = []
+    headline_vector = None
     lead = lead_headline(headlines)
     if lead:
+        headline_vector = embed_text(text_model, tokenizer, lead)
         headline_matches = usable_matches(
-            query_vectorize(HEADLINE_INDEX, embed_text(text_model, tokenizer, lead), RAG_TOP_K + 3),
+            query_vectorize(HEADLINE_INDEX, headline_vector, RAG_TOP_K + 3),
             "headline", cover_date, labels,
         )
 
     merged = merge_channels(headline_matches, image_matches)
-    return build_few_shot_block(merged), rag_cover_ids_from_matches(merged), merged
+    vectors = {"image": image_vector, "headline": headline_vector}
+    return build_few_shot_block(merged), rag_cover_ids_from_matches(merged), merged, vectors
 
 
 def rag_classify_one(models, image_bytes, labels, headlines=None, cover_date=None):
     """Full pipeline for one cover: retrieve, build both prompt blocks,
     classify. Used by --eval only, which needs the result locally to score
     against the crowd label and never touches the Worker at all."""
-    few_shot, _, matches = embed_and_retrieve(models, image_bytes, labels, headlines, cover_date)
+    few_shot, _, matches, _ = embed_and_retrieve(models, image_bytes, labels, headlines, cover_date)
 
     # --eval scores what production does, and production skips the model when
     # the neighbours agree strongly enough. Scoring the model on covers it
@@ -476,7 +487,7 @@ def run_matches_only(models, limit):
         for c in batch:
             try:
                 image_bytes = fetch(c["url"])
-                _, rag_cover_ids, matches = embed_and_retrieve(
+                _, rag_cover_ids, matches, _ = embed_and_retrieve(
                     models, image_bytes, labels, c.get("headlines"), c.get("date"),
                 )
             except Exception as e:
@@ -509,11 +520,14 @@ def run_live(models, limit, on_date=None):
     ))
     print(f"{len(candidates)} candidates")
     labels = crowd_labels(json.loads(fetch(STATS))["rows"])
+    gate_model = load_model(GATE_MODEL)
+    print(f"others gate: weights fitted on {gate_model['trained_on']} covers (asof {gate_model['asof']})"
+          if gate_model else "others gate: no weights file, sending lr: null")
 
     for c in candidates:
         try:
             image_bytes = fetch(c["url"])
-            few_shot, rag_cover_ids, matches = embed_and_retrieve(
+            few_shot, rag_cover_ids, matches, vectors = embed_and_retrieve(
                 models, image_bytes, labels, c.get("headlines"), c.get("date"),
             )
         except Exception as e:
@@ -552,6 +566,10 @@ def run_live(models, limit, on_date=None):
             data=json.dumps({
                 "cover_id": c["id"], "r2_key": c["r2_key"], "few_shot": few_shot,
                 "rag_cover_ids": rag_cover_ids, "rag_sources": rag_sources_from_matches(matches),
+                # Always sent, acted on only when the Worker's LR_GATE_THRESHOLD
+                # is set: the columns keep measuring what the gate would do even
+                # while it is switched off. None for a cover with no headline.
+                "lr": score(gate_model, vectors["image"], vectors["headline"]),
             }).encode("utf-8"),
             method="POST",
         ))

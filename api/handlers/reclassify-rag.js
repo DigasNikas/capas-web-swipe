@@ -3,7 +3,8 @@ import { classifyAndStore } from "../lib/ai.js";
 
 // POST /reclassify-rag (admin, bearer-protected). Body: {cover_id, r2_key,
 // few_shot, rag_cover_ids, rag_sources}. Classifies one cover with an externally-computed
-// RAG few-shot block — the embedding and Vectorize retrieval that produced
+// RAG few-shot block, plus `lr` (the `others` gate's per-class probabilities,
+// computed from the same vectors) — the embedding and Vectorize retrieval that produced
 // fewShot (and ragCoverIds, the cover_ids that retrieval matched) already
 // happened in scripts/rag_classify.py, outside the Worker, because Workers
 // AI has no CLIP model and no live embedding service is available (see
@@ -17,11 +18,11 @@ export async function handleReclassifyRag(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  const { cover_id, r2_key, few_shot, rag_cover_ids, rag_sources } = body;
+  const { cover_id, r2_key, few_shot, rag_cover_ids, rag_sources, lr } = body;
   if (!cover_id || !r2_key) {
     return json({ error: "cover_id and r2_key required" }, 400);
   }
 
-  const club = await classifyAndStore(env, cover_id, r2_key, few_shot ?? "", rag_cover_ids ?? [], rag_sources ?? []);
+  const club = await classifyAndStore(env, cover_id, r2_key, few_shot ?? "", rag_cover_ids ?? [], rag_sources ?? [], lr ?? null);
   return json({ ok: true, cover_id, club });
 }
