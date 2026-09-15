@@ -160,6 +160,24 @@ def main():
             }, f)
         print(f"exported a model fitted on all {len(kept)} covers to {args.export} (asof {asof})")
 
+        # The exported weights are re-implemented by hand in scripts/lr_gate.py
+        # (numpy only, no sklearn, so the classify run stays light). Check the
+        # reimplementation against sklearn itself before trusting it in
+        # production: a softmax that disagrees here would mislabel covers
+        # silently, with probabilities that still look plausible.
+        if args.features == "both":
+            from lr_gate import load_model, score
+            check = load_model(args.export)
+            ref = clf.predict_proba(sc.transform(X[:25]))
+            worst = 0.0
+            for row, expected in zip(X[:25], ref):
+                got = score(check, row[:512], row[512:])
+                worst = max(worst, max(abs(got[c] - e) for c, e in zip(clf.classes_, expected)))
+            if worst > 1e-9:
+                print(f"lr_gate.score disagrees with sklearn by {worst:.2e}", file=sys.stderr)
+                sys.exit(1)
+            print(f"lr_gate.score matches sklearn to {worst:.2e} over 25 covers")
+
     total = sum(t for _, _, t, _ in per_month)
     weighted = sum(acc * t for _, _, t, acc in per_month) / total
     print(f"\nout-of-fold accuracy over {total} covers: {weighted:.1%}")
