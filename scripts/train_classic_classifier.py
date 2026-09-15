@@ -20,6 +20,7 @@ import io
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -104,12 +105,20 @@ def load_vectors(ids, index):
             headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "User-Agent": UA},
             method="POST",
         )
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                found = json.loads(r.read())["result"]
-        except urllib.error.HTTPError as e:
-            print(f"Vectorize refused a batch: {e.code} {e.read().decode('utf-8', 'replace')[:200]}", file=sys.stderr)
-            sys.exit(1)
+        # 90-odd batches per index, and the odd one comes back 504 "upstream
+        # service unavailable" — retry rather than lose the whole run.
+        for attempt in range(4):
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    found = json.loads(r.read())["result"]
+                break
+            except (urllib.error.HTTPError, urllib.error.URLError) as e:
+                code = getattr(e, "code", None)
+                if attempt == 3 or (code and code < 500 and code != 429):
+                    body = e.read().decode("utf-8", "replace")[:200] if hasattr(e, "read") else str(e)
+                    print(f"Vectorize refused a batch: {code} {body}", file=sys.stderr)
+                    sys.exit(1)
+                time.sleep(2 ** attempt)
         for v in (found if isinstance(found, list) else found.get("vectors", [])):
             if v.get("values") and len(v["values"]) == dims:
                 out[int(v["id"])] = np.asarray(v["values"], dtype=np.float32)
