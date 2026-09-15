@@ -1,131 +1,87 @@
 # Headline Embeddings
 
-`capas-headline-embeddings` is the second Vectorize index: one 768-dim
-vector per crowd-labelled cover, embedded from that cover's **lead
-headline** rather than its image. It answers "which past covers were about
-this story", where [Image Embeddings](#image-embeddings) answers "which
-past covers looked like this page". Both feed the same few-shot block at
-classify time (see [RAG](#rag)).
+One vector per crowd-labelled cover, embedded from the cover's lead headline. Answers "which past covers were about this story". Its sibling, [Image Embeddings](#image-embeddings), answers "which past covers looked like this page".
 
-## Why a second index
+| | |
+|---|---|
+| Index | `capas-headline-embeddings`, 768 dimensions, cosine |
+| Model | `intfloat/multilingual-e5-base` |
+| Input | The lead headline from `covers.headlines` |
+| Eligible covers | Every cover with a crowd vote and scraped `headlines` |
+| Metadata | `club` (crowd vote at embed time), `newspaper`, `date` |
+| Vectors | **1,672** (2026-09-15) |
+| Progress column | `covers.headline_vectorized_at` |
+| Builder | `scripts/build_headline_index.py` |
+| Workflow | `.github/workflows/vectorize-headlines.yml` |
 
-Image similarity tracks newspaper layout as much as subject — that finding
-is [Image Embeddings](#image-embeddings)' own, and it is why the few-shot
-block has to disclaim itself in the prompt. Headline text has no such
-problem: two covers whose lead stories share wording are about the same
-thing.
+## Input
 
-It also plays to what the classifier is already doing. The benchmark at the
-top of `api/lib/ai.js` shows full-resolution images beating thumbnails by 14
-points, because these covers get called by their Portuguese text rather
-than by kit colours.
+`lead_headline` (`scripts/headline_embeddings.py`) takes the first non-empty `•` segment of `covers.headlines`, strips markup, and caps it at 240 characters on a word boundary. The full string is every title on the page, rails and teasers included, which buries the lead story.
 
-## What gets embedded
+918 of 1,672 covers use the `•` separator. The other 754 came from the archive backfill as one unseparated run of titles, where the 240-character cap is the only cut.
 
-The lead story's title only, not the whole `headlines` string.
-`covers.headlines` is every title on the page, side rails and teasers
-included — the things [AI Detector](#ai-detector)'s prompt spends four lines
-telling the model to ignore. Embedding all of it buries the day's subject.
+On covers with a separator, the first segment is the headline the vision model reads off the largest photo 95% of the time. The crowd's club appears there 88% of the time it appears anywhere on the page.
 
-`lead_headline` (`scripts/headline_embeddings.py`) takes the first `•`
-segment, strips the stray markup the archive backfill left behind, and caps
-the result at 240 characters. The cap exists because only 790 of the 1451
-covers with headlines use the `•` separator at all; the other 661 came
-through the historical archive backfill as one unseparated run of titles,
-where a character budget is the only cut available.
+## Model
 
-Taking the first segment is measured, not assumed. On the covers that have
-a separator, the first segment is the headline the vision model reads off
-the largest photo 95% of the time, and the crowd-labelled club appears
-there 88% of the time it appears anywhere.
+multilingual-e5-base, run locally through `transformers`: mean pooling, L2-normalised, `"query: "` prefix on both sides, max 128 tokens.
 
-## The model
+Chosen on 1,446 covers when the index was built, by the same nearest-neighbour test as below:
 
-`intfloat/multilingual-e5-base`, run locally through plain `transformers`
-(mean pooling, L2 normalize) — no `sentence-transformers` dependency, since
-torch and transformers are already installed for CLIP. e5 wants a prefix on
-its input; `"query: "` on both sides is the symmetric usage, headline
-against headline rather than query against document.
-
-Picked by measurement. Over the 1446 covers with both a lead headline and a
-crowd label, asking each candidate model for the nearest *other* cover
-(same date excluded) and reading that neighbour's crowd label:
-
-| | nearest neighbour | top-5 majority |
+| Model | Nearest neighbour | Top-5 majority |
 |---|---|---|
-| always guess the most common club | 33.2% | — |
 | `paraphrase-multilingual-MiniLM-L12-v2` | 58.8% | 61.0% |
 | `paraphrase-multilingual-mpnet-base-v2` | 60.4% | 63.0% |
-| `intfloat/multilingual-e5-base` | 65.6% | 69.8% |
+| **`intfloat/multilingual-e5-base`** | **65.6%** | **69.8%** |
+| Majority class | 33.2% | |
 
-Read the ceiling as much as the ranking: a text neighbour agrees with the
-crowd about two thirds of the time. That is a weak prior, which is what the
-few-shot block calls it.
+None of the three map nicknames to clubs (Águias → Benfica). A headline naming a club only by nickname retrieves poorly.
 
-None of these models know that Águias means Benfica, so a cover headlined
-purely by nickname retrieves badly. 94% of covers name the club outright,
-which is why this works at all.
+## Retrieval quality
+
+Each cover's nearest other cover by cosine similarity, excluding covers from the same date. Accuracy is the share whose neighbour carries the same crowd label.
+
+| Index | Covers | Nearest neighbour | Top-5 majority | `others` (nearest neighbour) | Neighbour from the same newspaper |
+|---|---|---|---|---|---|
+| Image | 1,866 | 65.3% | 68.0% | 36% | 84.5% |
+| **Headline** | 1,672 | **66.9%** | **73.5%** | **54%** | **50.7%** |
+| Always benfica / random newspaper | | 32.9% | | | 33.3% |
+
+Per class, nearest neighbour: sporting 70%, benfica 71%, porto 68%, others 54%. Same-date exclusion matters here: the three papers print the same story on the same day in near-identical words.
 
 ## Filling the index
 
-`scripts/build_headline_index.py`, the same shape as
-`build_vectorize_index.py`: `GET /vectorize-candidates?index=headline`
-returns crowd-labelled covers with `headlines IS NOT NULL` and
-`headline_vectorized_at IS NULL`, the script embeds and upserts them, then
-`POST /vectorize-mark {index: "headline"}` marks each batch — only after the
-upsert succeeds, so a failed batch stays in the backlog instead of being
-marked done and dropped.
+1. A cover's first crowd vote fires a `cover-first-vote` dispatch (`handleSwipe`).
+2. The workflow runs `build_headline_index.py --limit 500`.
+3. `GET /vectorize-candidates?index=headline` returns voted covers with `headlines IS NOT NULL` and `headline_vectorized_at IS NULL`.
+4. The script embeds them and upserts in batches of 500.
+5. `POST /vectorize-mark {index: "headline"}` sets `headline_vectorized_at`, only after the upsert succeeds.
 
-Both indexes share those two routes, keyed by `index=image` (the default,
-so the older caller needs no change) or `index=headline`. The two progress
-columns are separate (`vectorized_at`, `headline_vectorized_at`,
-migration 0005) because the indexes fill independently: a cover is
-embeddable as an image the moment it has a vote, but needs scraped text too
-to enter this one.
+The run takes the whole backlog, not the cover named in the dispatch. A burst of votes does the work once; later runs find an empty backlog. A missed dispatch is picked up by the next run. Upserts overwrite by id, so re-runs are safe.
 
-Roughly a fifth of the archive will never enter this index, and that is not
-a backlog. Past-date scrapes never set `headlines` (see
-[Headlines](#headlines)), so those covers get image retrieval alone, which
-is what every cover had before this existed.
-
-`.github/workflows/vectorize-headlines.yml` runs it on the same
-`cover-first-vote` dispatch as the image index, plus a manual trigger.
-
-## Querying it
-
-`scripts/rag_classify.py` embeds the cover being classified the same way and
-queries both indexes, then merges. Two rules matter:
-
-**Same-date matches are dropped.** Record, A Bola and O Jogo print the same
-story on the same day in near-identical words, so an unfiltered text query
-returns today's siblings and the prior collapses into copying the
-neighbouring paper's crowd vote. The filter runs client-side on the
-returned metadata, over-fetching a few, rather than as a Vectorize metadata
-filter — that would need a metadata index created up front for no gain at
-this size.
-
-**The channels alternate, headline first**, up to `RAG_TOP_K` (7) total.
-Headline first because it is the better prior; alternating rather than
-filling from one channel keeps a cover with a thin headline index from
-losing its image context. A cover both channels return appears once,
-credited to the headline channel.
-
-`ai_rag_source` records the channel per match, alongside the ids in
-`ai_rag_covers`. That is what lets `/similarities` (linked as "Parecidas")
-show one channel at a time — the fastest way to see the difference the
-recall numbers above describe, which is that the text channel finds the
-`others` covers the image channel walks past. It shows one or the other and
-never both at once: a combined view would be the merged set that reached the
-prompt, which is a third thing again and reads as "everything retrieval
-found" when it is not.
-
-The block then says which channel found what, so the model can weigh a
-story match above a layout match:
-
+```bash
+.venv/bin/pip install numpy torch transformers
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… ADMIN_SECRET=… \
+  .venv/bin/python scripts/build_headline_index.py --limit 500   # backlog
 ```
-Reference: 5 past front pages from this archive were crowd-labelled:
-2 benfica, 1 sporting, 1 porto, 1 others (3 matched by headline wording,
-2 by page layout). A headline match is about the same story; a layout
-match tracks newspaper design as much as subject. Treat this only as a
-weak prior, not a verdict.
-```
+
+| Credential | Needed for |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` with **Vectorize · Write** | Upserts |
+| `ADMIN_SECRET` | `/vectorize-candidates`, `/vectorize-mark` |
+| `HF_TOKEN` (optional) | Faster weight download |
+
+`.github/workflows/vectorize-prune.yml` deletes vectors by cover id (`index: headline`). Use it when a cover's `headlines` turn out to belong to another edition.
+
+## Coverage
+
+197 voted covers have no headline vector. 165 are from September and October 2025, editions for which capasjornais.pt publishes no headline block. The other 32 are scattered days with no headline block for that edition. These covers get image retrieval only, and no `others` gate score.
+
+## Used by
+
+- [RAG](#rag): the headline channel of the few-shot block, and the consensus check.
+- The `others` gate: e5 vector, last 768 of its 1,280 features, computed at classify time. See [AI Detector](#ai-detector).
+- [Classic Classifiers](#classic-classifiers), Experiment 2.
+- `/similarities` ("Parecidas"): `ai_rag_source` records which channel found each neighbour, so the page can show one channel at a time.
+
+The stored `club` is not read back. Retrieval takes each neighbour's current label from `/api/stats`, so a later vote that flips the winner needs no re-embed.

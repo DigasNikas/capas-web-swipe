@@ -1,46 +1,71 @@
 # Image Embeddings
 
-A Vectorize index of cover images, so "covers that looked like this one" is a query instead of something a human has to eyeball. Not part of the AI Detector card and doesn't touch `ai_club`; a separate building block for similarity search over the archive.
+One vector per crowd-labelled cover, embedded from the cover image. Answers "which past covers looked like this page". Its sibling, [Headline Embeddings](#headline-embeddings), answers "which past covers were about this story".
 
-The text sibling of this index is [Headline Embeddings](#headline-embeddings), which embeds each cover's lead headline instead of its pixels. Both feed the same few-shot block; this one is the channel with the layout bias described below.
+| | |
+|---|---|
+| Index | `capas-cover-embeddings`, 512 dimensions, cosine |
+| Model | `openai/clip-vit-base-patch32` |
+| Input | The full-resolution cover image |
+| Eligible covers | Every cover with a crowd vote |
+| Metadata | `club` (crowd vote at embed time), `newspaper`, `date`, `url` |
+| Vectors | **1,866** (2026-09-15) |
+| Progress column | `covers.vectorized_at` |
+| Builder | `scripts/build_vectorize_index.py` |
+| Workflow | `.github/workflows/vectorize-covers.yml` |
 
-## What's embedded
+## Input
 
-Every crowd-labelled cover, same filter as `avg_cover.py` and `train_classic_classifier.py`: a vote in `analytics_covers`. An unvoted cover has no trustworthy label, so there's nothing useful to attach to it.
+The cover image from R2, as scraped. No crop or resize before CLIP's own preprocessing.
 
 ## Model
 
-CLIP (`openai/clip-vit-base-patch32`), run locally via `transformers`, not through a hosted API. HuggingFace's shared serverless Inference API has no clean REST route for raw image embeddings: HF staff confirmed on their own forums that CLIP's default pipeline there is zero-shot-image-classification, not feature-extraction. Local is the reliable option here, not a fallback: no external API, no token, no rate limit. The model is a public download (~600MB), no HF account needed.
+CLIP ViT-B/32, run locally through `transformers`. No hosted API: HuggingFace's serverless Inference API serves CLIP as zero-shot classification, not feature extraction. The weights are a public ~600MB download.
 
-One implementation snag worth knowing about: `get_image_features()` in this transformers version returns a full output object, not a bare tensor. The projected 512-dim embedding is `.pooler_output`; indexing the object directly lands on `last_hidden_state`, the pre-projection per-patch encoder output, shaped `(1, 50, 768)`, not what you want.
+The embedding is `get_image_features(...).pooler_output`, the 512-dim projection. Indexing the output object directly returns `last_hidden_state`, shaped `(1, 50, 768)`, which is the wrong tensor.
 
-## Index
+## Retrieval quality
 
-Vectorize index `capas-cover-embeddings`: 512 dimensions (matches CLIP's `projection_dim`), cosine metric. Dimensions and metric are fixed at creation and can't change later.
+Each cover's nearest other cover by cosine similarity, excluding covers from the same date. Accuracy is the share whose neighbour carries the same crowd label.
 
-Metadata per vector: `club` (the crowd's vote), `newspaper`, `date`, `url`. Deliberately excludes `ai_club`: as of 2026-08-26 only 56 of 1,765 covers reflected the current prompt, the rest stale (an older prompt's leftover) or missing entirely, not a signal worth freezing into the index yet. Revisit once the backfill has actually caught the archive up.
+| Index | Covers | Nearest neighbour | Top-5 majority | `others` (nearest neighbour) | Neighbour from the same newspaper |
+|---|---|---|---|---|---|
+| **Image** | 1,866 | **65.3%** | **68.0%** | **36%** | **84.5%** |
+| Headline | 1,672 | 66.9% | 73.5% | 54% | 50.7% |
+| Always benfica / random newspaper | | 32.9% | | | 33.3% |
 
-## Running it
+Per class, nearest neighbour: sporting 72%, benfica 74%, porto 69%, others 36%. 84.5% of nearest neighbours come from the same newspaper: the index tracks layout and masthead as much as subject.
 
-A cover's first vote is what makes it eligible, but the actual embedding run is batched rather than one-per-vote. `handleSwipe` fires a `cover-first-vote` dispatch the moment a cover gets its first crowd vote, not on later votes, and `.github/workflows/vectorize-covers.yml` runs `build_vectorize_index.py --candidates`, which pulls the *whole* backlog from `/vectorize-candidates` (every voted cover with `vectorized_at IS NULL`, self-converging the same way `/rag-candidates` is) and embeds it in one CLIP model load. A burst of votes still fires a burst of dispatches, but only the first run to actually start finds candidates; the rest see an empty backlog and exit before even loading CLIP. See [AI Detector](#ai-detector) for the trigger side.
+## Filling the index
 
-`vectorized_at` is a real column now, not inferred from whether `analytics_covers` has a row (that only tells you a cover has a vote, not that it's actually in Vectorize; those two used to be conflated, which is exactly what let a burst of first-vote dispatches redundantly re-embed covers before this). It gets set once a batch upserts successfully, via `/vectorize-mark`, called from the script right after `upsert_batch` returns. A cover whose dispatch never arrived (`GH_DISPATCH_TOKEN` unset, a GitHub API hiccup) waits for the next one, which takes the whole backlog. A later vote that flips the winner doesn't matter here: `rag_classify.py` reads each neighbour's club live from `/stats`, so the `club` metadata is only the label at embed time.
+1. A cover's first crowd vote fires a `cover-first-vote` dispatch (`handleSwipe`).
+2. The workflow runs `build_vectorize_index.py --candidates 500`.
+3. `GET /vectorize-candidates?index=image` returns voted covers with `vectorized_at IS NULL`.
+4. The script embeds them and upserts in batches of 500.
+5. `POST /vectorize-mark {index: "image"}` sets `vectorized_at`, only after the upsert succeeds.
 
-To run by hand:
+The run takes the whole backlog, not the cover named in the dispatch. A burst of votes does the work once; later runs find an empty backlog. A missed dispatch is picked up by the next run. Upserts overwrite by id, so re-runs are safe.
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install numpy pillow torch transformers
-CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… .venv/bin/python scripts/build_vectorize_index.py
-... scripts/build_vectorize_index.py --cover-id 1234                    # one cover only
-... ADMIN_SECRET=… scripts/build_vectorize_index.py --candidates 500    # the whole backlog
+.venv/bin/pip install numpy pillow torch transformers
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… ADMIN_SECRET=… \
+  .venv/bin/python scripts/build_vectorize_index.py --candidates 500   # backlog
+... scripts/build_vectorize_index.py --cover-id 1234                   # one cover
+... scripts/build_vectorize_index.py --limit 50                        # newest 50 voted covers
 ```
 
-Needs a Cloudflare API token with **Vectorize · Write**, a separate permission from the **Workers AI · Read** scope `eval-ai.mjs` needs. `--candidates` additionally needs `ADMIN_SECRET` (the Worker's own bearer token, not a Cloudflare token), for `/vectorize-candidates` and `/vectorize-mark`. First run downloads CLIP's weights; after that it's CPU-bound and makes no external calls beyond fetching each cover from R2.
+| Credential | Needed for |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` with **Vectorize · Write** | Upserts |
+| `ADMIN_SECRET` | `/vectorize-candidates`, `/vectorize-mark` |
+| `HF_TOKEN` (optional) | Faster weight download |
 
-## Status
+`.github/workflows/vectorize-prune.yml` deletes vectors by cover id (`index: image`).
 
-Populated: **1,564 vectors**, confirmed against the live index (`vectorCount: 1564`, `dimensions: 512`). A query using a cover's own embedding returns itself first (`score 0.9999988`), then mostly same-newspaper covers, with some cross-club and cross-newspaper matches mixed in: consistent with what the classic-classifier experiments already showed about what raw visual similarity picks up on (layout and masthead more than headline content).
+## Used by
 
-[RAG](#rag) now reads from this index, not the Worker itself but
-`scripts/rag_classify.py`, run outside the Worker via GitHub Actions. See
-that chapter for the retrieval side and why.
+- [RAG](#rag): the layout channel of the few-shot block, and the consensus check.
+- The `others` gate: CLIP vector, first 512 of its 1,280 features, computed at classify time. See [AI Detector](#ai-detector).
+- [Classic Classifiers](#classic-classifiers), Experiment 2.
+
+The stored `club` is not read back. Retrieval takes each neighbour's current label from `/api/stats`, so a later vote that flips the winner needs no re-embed.
