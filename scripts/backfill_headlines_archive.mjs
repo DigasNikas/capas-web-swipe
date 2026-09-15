@@ -24,7 +24,7 @@
  * and /update-headline. No Cloudflare API token needed — everything else is
  * a plain fetch against capasjornais.pt.
  */
-import { NEWSPAPERS, extractHeadlinesFromHtml } from "../api/lib/scraper.js";
+import { NEWSPAPERS, headlinesIfFresh } from "../api/lib/scraper.js";
 
 const API_BASE = process.env.CAPAS_API ?? "https://capas.digasnikas.com/api";
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -126,11 +126,16 @@ async function main() {
       continue;
     }
 
+    // headlinesIfFresh, not extractHeadlinesFromHtml: the latter returns
+    // {date, text} and D1 cannot bind an object, so passing it straight to
+    // /update-headline answered 500 on every row. The date check is worth
+    // having anyway — a dated permalink that renders another edition is
+    // exactly the off-by-one this column already suffered once.
     const html = await fetchText(permalink);
-    const headlines = html && extractHeadlinesFromHtml(html);
+    const headlines = html && headlinesIfFresh(html, cover.date);
     await sleep(DELAY_MS);
     if (!headlines) {
-      console.log(`  [${i + 1}/${candidates.length}] ${cover.date} ${cover.newspaper}: no headline block, skip`);
+      console.log(`  [${i + 1}/${candidates.length}] ${cover.date} ${cover.newspaper}: no headline block for that date, skip`);
       skipped++;
       continue;
     }
