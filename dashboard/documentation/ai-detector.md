@@ -1,134 +1,114 @@
 # AI Detector
 
-The "E a máquina, que diz?" card runs one classifier, and it always runs
-with the same context pipeline behind it, never bare. `ai_club`,
-`ai_headline` and `ai_why` on the `covers` row hold the result.
-[Multimodal](#multimodal), [RAG](#rag) and
-[Image Embeddings](#image-embeddings) cover the mechanics; this page
-covers how they connect.
+The "E a máquina, que diz?" card. Every classified cover gets a label from one of two paths, consensus or a model call. The `others` gate can then override a model label when the card is read. This page covers how the parts connect; [Multimodal](#multimodal), [RAG](#rag), [Image Embeddings](#image-embeddings) and [Headline Embeddings](#headline-embeddings) cover each part.
 
-## One pass, run after the scrape
+| | |
+|---|---|
+| Paths | Consensus (no model call) or Llama 4 Scout |
+| Gate | Logistic regression over both embeddings, applied on read, `LR_GATE_THRESHOLD = 0.65` |
+| Served by | `GET /api/detector` |
+| Agreement shown | **93.7%** of 239 classified covers (2026-09-15) |
 
-A cover gets no opinion at scrape time. `scrapeNewspaper` stores it in D1
-and stops. `ai_club` stays `NULL` until `scripts/rag_classify.py` picks it
-up: embeds it twice, pulls the nearest labelled covers from both Vectorize
-indexes, and calls Llama4 with that context folded into the prompt (see
-[RAG](#rag)).
+## Pipeline
 
-Two things can end that pass, and `ai_source` says which one did. Usually
-it is the model. But when six or more of the seven retrieved neighbours
-already carry the same crowd label, that label is written directly and the
-model is never asked — the neighbours are right 95% of the time in that
-band, better than the classifier itself, so the call is not worth its
-neurons (see [RAG](#rag)'s "When the neighbours decide it themselves").
+1. **Scrape.** The Worker cron runs hourly 05:00–08:00 UTC. `scrapeNewspaper` stores each cover; no label yet. After each run it fires a `scrape-completed` dispatch.
+2. **Candidates.** `rag-classify.yml` runs `rag_classify.py --limit 3`, which reads covers with `ai_club IS NULL`, newest first, from `/rag-candidates`.
+3. **Retrieval.** The script embeds the image and the lead headline and pulls the 7 nearest labelled covers from both indexes ([RAG](#rag)).
+4. **Consensus.** If 6 or more neighbours share a label, it is written through `/label-consensus`. Done, no model call.
+5. **Gate score.** Otherwise the script scores the two vectors with `models/others_lr.json` (`scripts/lr_gate.py`).
+6. **Model call.** `POST /reclassify-rag` sends the few-shot block, neighbour ids and gate scores. `classifyAndStore` reads the cover's titles from D1, builds the prompt, calls the model, and writes `ai_*` and `lr_*`.
+7. **Read.** `/api/detector` applies the gate to model labels and returns what the card shows.
 
-There used to be a separate zero-shot call at scrape time, with RAG only
-touching what that call missed. That call is gone. Every cover goes
-through the RAG pass now. If the archive has nothing visually similar
-yet, the few-shot block comes back empty and the model answers without a
-reference, but the call still happens, on the same schedule as everything
-else.
+**Headline refresh.** The 10:00 and 13:00 UTC crons only refresh today's `headlines`, once capasjornais.pt shows the new edition. They fire no dispatch.
 
-## What the prompt carries
+## Prompt context
 
-Two context blocks sit in front of the instructions, in this order: the
-few-shot block built from Vectorize matches ([RAG](#rag)), then the
-cover's own scraped front-page text, then `PROMPT` itself. The
-instructions stay last so the reply-format spec sits next to the image
-rather than behind a wall of Portuguese.
+`classifyCover` sends, in order:
 
-The second block is `covers.headlines` (see [Headlines](#headlines)),
-the real titles from that day's page, read straight off capasjornais.pt
-at scrape time. The benchmark at the top of `api/lib/ai.js` is what
-argues for it: full-resolution images beat thumbnails by 14 points
-because most covers are called by the Portuguese text, not by kit
-colours. Making the model re-read text already stored one column over
-was work it didn't need to do.
+| Block | Source | Built in |
+|---|---|---|
+| Few-shot block | Neighbour labels from both indexes | `rag_classify.py` |
+| Page titles | `covers.headlines`, capped at 600 characters | Worker (`buildHeadlinesBlock`) |
+| `PROMPT` | Instructions and reply format | `api/lib/ai.js` |
+| Image | Full-resolution cover from R2 | Worker |
 
-`buildHeadlinesBlock` caps the text at 600 characters and collapses
-whitespace, so a busy page can't reshape the prompt's layout or crowd
-out the instructions. The dominant story's headline is at the top of
-the "Títulos da Capa" list, so what a cap drops is tail-end rail
-teasers.
+The instructions come last, next to the image. The titles block carries a guard sentence: it lists every title on the page, side rails included, and must not be read as a count of club mentions. A cover with `headlines IS NULL` gets no titles block.
 
-The block carries a guard sentence, and it's load-bearing: `headlines`
-is *every* title on the page, including the small SPORTING / FC PORTO
-rails the prompt spends four lines telling the model to ignore.
-Over-calling those rails is this classifier's documented failure mode
-(`others` recall 39%). Without the guard, the block reads as an
-invitation to count club mentions and makes that worse.
+## The `others` gate
 
-Unlike the few-shot block, this one is assembled in the Worker.
-`classifyAndStore` reads `headlines` from D1 on the row it is about to
-update, one query, no round trip through `rag_classify.py`, and no way
-for the script to send text that disagrees with what's stored. A cover
-with `headlines IS NULL` gets `""` and is classified on the image
-alone, which is the archive's normal case rather than a failure: 383 of
-1821 covers were never reached by either backfill, and every past-date
-scrape leaves the column empty.
+The model names a club on most pages the crowd calls `others`: 12 of 29 right on model-classified covers. The gate corrects that one error, on read, without changing the stored label.
 
-## What triggers what
+**Rule** (`api/lib/gate.js`). The shown label becomes `others` when all of these hold:
 
-Scraping happens in the Worker's daily `scheduled()` cron. Once every
-newspaper's scrape for the day settles, that same handler calls
-`dispatchGithubEvent` (`api/lib/github.js`) with a `scrape-completed`
-event. GitHub Actions picks it up and runs
-`.github/workflows/rag-classify.yml`, which calls
-`scripts/rag_classify.py` against `/reclassify-rag` for whatever's still
-missing a label.
+- the label came from a model call, not consensus;
+- the model named a club;
+- `OWNS` is `yes`;
+- `lr_others ≥ LR_GATE_THRESHOLD`.
 
-The dispatch exists because the Worker can't build RAG context itself. It
-has no CLIP model (see [RAG](#rag)'s "Why outside the Worker" section), so
-classification has to run elsewhere, and `repository_dispatch` is what
-tells GitHub Actions to run now instead of on the next cron tick.
-`/rag-candidates` capping each call and staying self-converging (each
-successful `/reclassify-rag` call removes that cover from the next call's
-set) is what keeps a daily automatic trigger from repeating the quota
-incident in [RAG](#rag)'s Quota section.
+Otherwise the shown label is `ai_club`. The gate never turns `others` into a club, and never swaps one club for another. Covers without gate scores are never gated.
 
-Both dispatches are best-effort. `dispatchGithubEvent` swallows its own
-errors and logs them instead of throwing, so a GitHub API hiccup can't
-fail the cron or the request that triggered it. Without `GH_DISPATCH_TOKEN`
-set (`wrangler secret put GH_DISPATCH_TOKEN`, a classic PAT with `repo`
-scope), both dispatches get skipped silently, and nothing gets classified
-until someone runs `rag-classify.yml` by hand. That token carries more
-weight than it used to: there's no fallback path behind it anymore.
+**Model.** Multinomial logistic regression over the CLIP vector (512) concatenated with the e5 headline vector (768), standardised. Walk-forward out-of-fold accuracy over 1,402 covers: 81.2%. Image alone: 70.0%. Headline alone: 66.0%.
 
-## Getting into the embeddings index
+**Threshold sweep**, 239 classified covers, via `/api/detector?threshold=`:
 
-RAG's few-shot context comes from `capas-cover-embeddings`
-([Image Embeddings](#image-embeddings)), and that index only holds covers
-with a crowd vote. An unvoted cover has no trustworthy label to attach to
-its embedding.
+| Threshold | Gated | Right | Wrong | Agreement shown | Disagreements |
+|---|---|---|---|---|---|
+| no gate | 0 | | | 89.5% | 25 |
+| 0.50 | 18 | 13 | 5 | 92.9% | 17 |
+| 0.60–0.70 | 16 | 13 | 3 | **93.7%** | **15** |
+| 0.75 | 15 | 12 | 3 | 93.3% | 16 |
+| 0.80 | 13 | 11 | 2 | 93.3% | 16 |
+| 0.85–0.90 | 10 | 9 | 1 | 92.9% | 17 |
+| 0.95 | 8 | 8 | 0 | 92.9% | 17 |
+| 0.99 | 6 | 6 | 0 | 92.1% | 19 |
 
-A cover gets in on its first vote, and only its first vote. `handleSwipe`
-(`api/handlers/swipes.js`) writes the swipe, refreshes `analytics_covers`,
-and checks whether that was the cover's first row there. If it was, it
-fires a `cover-first-vote` dispatch carrying the `cover_id`.
-`.github/workflows/vectorize-covers.yml` picks that up, but it doesn't
-just embed the one cover named in the dispatch: it runs
-`scripts/build_vectorize_index.py --candidates`, which pulls the whole
-backlog of voted-but-unembedded covers from `/vectorize-candidates` (see
-[Image Embeddings](#image-embeddings)) and embeds it in one CLIP model
-load. A burst of votes still fires a burst of dispatches, but only the
-first run to actually start finds work; the rest see an empty backlog and
-exit before paying for a CLIP download at all.
+**`OWNS` condition.** On these covers `OWNS` was `yes` on every cover where the model named a club, so it changes no result at any threshold. It stays as a safeguard: a missing `OWNS` never fires the gate.
 
-That's the only automatic path in. There's no scheduled rebuild behind it
-anymore. A dispatch that never lands leaves that cover out of the index
-until the next dispatch, which picks up the whole backlog.
+**Operation.**
 
-A later vote that flips a cover's winner doesn't re-embed it, and nothing
-needs to: `rag_classify.py` takes each neighbour's club from `/stats` at
-retrieval time, not from the vector's `club` metadata. That metadata is the
-label at embed time and nothing reads it as current.
+| | |
+|---|---|
+| Threshold | Worker secret `LR_GATE_THRESHOLD`. Unset means no gate. Takes effect on the next request, including for past covers |
+| Change it | `printf '0.8' \| npx wrangler secret put LR_GATE_THRESHOLD` |
+| Try one without changing it | `/api/detector?threshold=0.8` |
+| Weights | `models/others_lr.json`, fitted on every labelled cover with both vectors |
+| Refit | `.github/workflows/refit-lr.yml`, monthly and on demand. Commits the weights; fails if the Python scorer disagrees with sklearn |
+| Scores on past covers | `lr_*` backfilled out-of-fold by `scripts/backfill_lr_probabilities.py`; `lr_asof` is the fold's training cutoff |
 
-## Reading the card
+**No gate score.** Consensus covers (no model answer to override), covers without a headline vector, and covers classified before their titles exist.
 
-`/api/detector` returns the model's verdicts; `/api/stats` returns the
-crowd's. Same verdict math on each side, so the two readouts compare
-directly. A paper the model hasn't classified yet is left out of that
-day's verdict rather than counted as a miss, so `/api/detector`'s
-`latest` can come back `null` or thin for a while after a fresh day's
-covers land, until the automatic reclassify run catches up. [Multimodal](#multimodal) has the card layout and the "where
-they disagree" browser underneath it.
+## Timing
+
+Classification runs after the 05:00–08:00 scrapes. Today's titles usually arrive with the 10:00 refresh, when capasjornais.pt turns over. A cover classified before then gets:
+
+- no titles block in the prompt;
+- image-only retrieval;
+- no gate score, so the gate never applies to it.
+
+On 2026-09-15 all three covers were classified at 05:00 UTC; their headline vectors only appeared at 09:51.
+
+## Dispatches
+
+| Event | Fired by | Runs | Needs |
+|---|---|---|---|
+| `scrape-completed` | Worker cron, after each 05:00–08:00 scrape | `rag-classify.yml` | `GH_DISPATCH_TOKEN` |
+| `cover-first-vote` | `handleSwipe`, on a cover's first crowd vote | `vectorize-covers.yml`, `vectorize-headlines.yml` | `GH_DISPATCH_TOKEN` |
+
+`GH_DISPATCH_TOKEN` is a Worker secret: a classic PAT with `repo` scope. Without it dispatches are skipped and nothing is classified or embedded until a workflow is run by hand. `dispatchGithubEvent` never throws. Every workflow reads its whole backlog, so a missed dispatch is picked up by the next run.
+
+## Columns
+
+| Column | Written by | Content |
+|---|---|---|
+| `ai_club` | `/reclassify-rag`, `/label-consensus` | Model answer or consensus label. Never changed by the gate |
+| `ai_source` | same | `model` or `consensus` |
+| `ai_owns` | `/reclassify-rag` | `yes` / `no` |
+| `ai_headline` | same | Headline the model quoted; `""` on consensus |
+| `ai_why` | both | Model's reason, or the consensus margin |
+| `ai_rag_covers`, `ai_rag_source` | both, `/rag-matches` | Neighbour ids and their channels |
+| `lr_benfica`, `lr_porto`, `lr_sporting`, `lr_others` | `/reclassify-rag`, backfill | Gate probabilities |
+| `lr_asof` | same | Newest cover date in the weights' training data (live), or the fold's training cutoff (backfill) |
+
+## `/api/detector`
+
+Every classified cover with `club` (shown), `model_club` (`ai_club`), `source` (`model`, `consensus` or `gate`), `human_club`, `headline`, `why`, `owns` and `lr`. Top level: `threshold`, `labelled`, `agreement`, `gated`, and `latest`, the newest day's verdict over its classified covers. Not edge-cached. `?threshold=` overrides the secret for that response only.
