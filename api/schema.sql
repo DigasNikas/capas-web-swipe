@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS covers (
   vectorized_at TEXT,                 -- set once this cover is embedded into capas-cover-embeddings (nullable, backfilled): ALTER TABLE covers ADD COLUMN vectorized_at TEXT
   headlines  TEXT,                    -- real scraped "Títulos da Capa" text from capasjornais.pt, forward-only from the scrape date it ran on (nullable): ALTER TABLE covers ADD COLUMN headlines TEXT
   headline_vectorized_at TEXT,        -- set once this cover's lead headline is embedded into capas-headline-embeddings (nullable, backfilled): ALTER TABLE covers ADD COLUMN headline_vectorized_at TEXT
+  ai_lr_benfica REAL,                 -- out-of-fold P(benfica) from the logistic regression over both embeddings (nullable): ALTER TABLE covers ADD COLUMN ai_lr_benfica REAL
+  ai_lr_porto REAL,                   -- out-of-fold P(porto), same model: ALTER TABLE covers ADD COLUMN ai_lr_porto REAL
+  ai_lr_sporting REAL,                -- out-of-fold P(sporting), same model: ALTER TABLE covers ADD COLUMN ai_lr_sporting REAL
+  ai_lr_others REAL,                  -- out-of-fold P(others), the class the gate would act on: ALTER TABLE covers ADD COLUMN ai_lr_others REAL
+  ai_lr_asof TEXT,                    -- training cutoff of the walk-forward fold that produced the four above, so in-sample numbers can't masquerade as honest ones: ALTER TABLE covers ADD COLUMN ai_lr_asof TEXT
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE (newspaper, date)
 );
