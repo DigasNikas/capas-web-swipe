@@ -30,6 +30,10 @@ zone_name = "digasnikas.com"
 
 # Access app on app.capas.digasnikas.com. api/lib/access.js checks its JWTs
 # against these. The AUD tag is in Zero Trust > Access > Applications.
+# LR_GATE_THRESHOLD is deliberately NOT here. It is set as a secret
+# (`wrangler secret put LR_GATE_THRESHOLD`) so it can be changed without a
+# deploy, and so a deploy never silently resets it. Unset means the `others`
+# gate is off and the model's own answer is stored -- see api/lib/gate.js.
 [vars]
 ACCESS_TEAM_DOMAIN = "digasnikas-digital.cloudflareaccess.com"
 ACCESS_AUD         = "fcf7c786d5c3e993e0f0c5a72c0e04d01226390233c71f32059efb697e23f407"
