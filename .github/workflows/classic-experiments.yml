@@ -16,6 +16,10 @@ on:
         description: "others vs a club, instead of four classes"
         type: boolean
         default: true
+      scale:
+        description: "Standardise features before fitting"
+        type: boolean
+        default: false
       split:
         description: "Split"
         type: choice
@@ -44,4 +48,5 @@ jobs:
           python3 scripts/train_classic_classifier.py \
             --features "${{ inputs.features }}" \
             --split "${{ inputs.split }}" \
-            ${{ inputs.binary && '--binary' || '' }}
+            ${{ inputs.binary && '--binary' || '' }} \
+            ${{ inputs.scale && '--scale' || '' }}

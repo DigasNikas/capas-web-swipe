@@ -32,6 +32,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
@@ -220,13 +221,20 @@ def apply_residual(X_train, papers_train, X_test, papers_test):
     return Xtr, Xte
 
 
-def run_experiment(title, X, y, papers, split_mode, residual):
+def run_experiment(title, X, y, papers, split_mode, residual, scale=False):
     """Split, fit every model, evaluate. Shared by the pooled run and each
     per-newspaper run — same models, same split logic, different rows."""
     X_train, X_test, y_train, y_test, papers_train, papers_test = split_data(X, y, papers, split_mode)
     if residual:
         X_train, X_test = apply_residual(X_train, papers_train, X_test, papers_test)
-    tag = f"split={split_mode}" + (" residual" if residual else "")
+    if scale:
+        # Embedding dimensions sit around 0.03; every model here uses its
+        # sklearn default C, so that scale decides how much the L2 penalty
+        # bites. Standardising says whether a model lost on the maths or on
+        # the features.
+        sc = StandardScaler().fit(X_train)
+        X_train, X_test = sc.transform(X_train), sc.transform(X_test)
+    tag = f"split={split_mode}" + (" residual" if residual else "") + (" scaled" if scale else "")
     print(f"\n### {title} — {tag}  train={len(X_train)}  test={len(X_test)}")
 
     results = []
@@ -273,6 +281,8 @@ def main():
                           "newspapers together. Controls for each paper's own masthead/layout: pooled "
                           "training can let a model shortcut on 'which paper is this' (which correlates "
                           "with club) rather than actually reading the cover")
+    ap.add_argument("--scale", action="store_true",
+                    help="standardise features before fitting")
     ap.add_argument("--residual", action="store_true",
                      help="subtract each newspaper's own average cover (mean of the training rows only) "
                           "from every vector before fitting — isolates whatever varies day to day from the "
@@ -317,7 +327,7 @@ def main():
         X = np.stack([v for v, _, _ in kept])
         y = np.array([c for _, c, _ in kept])
         papers = np.array([p for _, _, p in kept])
-        run_experiment("Pooled (all newspapers)", X, y, papers, args.split, args.residual)
+        run_experiment("Pooled (all newspapers)", X, y, papers, args.split, args.residual, args.scale)
         return
 
     newspapers = sorted({p for _, _, p in kept})
@@ -327,7 +337,7 @@ def main():
         X = np.stack([v for v, _ in subset])
         y = np.array([c for _, c in subset])
         papers = np.full(len(X), paper)
-        per_paper_results[paper] = run_experiment(paper, X, y, papers, args.split, args.residual)
+        per_paper_results[paper] = run_experiment(paper, X, y, papers, args.split, args.residual, args.scale)
 
     model_names = list(per_paper_results[newspapers[0]].keys())
     print("\n=== accuracy by model x newspaper ===")
