@@ -1,7 +1,7 @@
-# TEMPORARY: scripts/train_classic_classifier.py over the Vectorize embeddings
-# instead of 32x32 pixels, to find out whether the `others` class is separable
-# in the space retrieval already uses. Needs Vectorize · Read, no Workers AI.
-# Delete once the question is answered.
+# Runs scripts/train_classic_classifier.py and uploads report.json, the
+# source of every table in dashboard/documentation/classic-classifiers.md.
+# features=pixels needs nothing; the embedding feature sets read Vectorize
+# (Vectorize · Read). No Workers AI.
 name: Classic Experiments
 run-name: "classic ${{ inputs.features }} ${{ inputs.split }} scale=${{ inputs.scale }} binary=${{ inputs.binary }} per_newspaper=${{ inputs.per_newspaper }}"
 

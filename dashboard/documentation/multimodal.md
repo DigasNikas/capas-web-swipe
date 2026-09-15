@@ -54,4 +54,4 @@ Under the card, a button opens every cover the model and the crowd read differen
 
 ## For comparison: classic classifiers
 
-`scripts/train_classic_classifier.py` runs the same crowd-voted covers through seven classic ML models (raw pixels, no OCR, no pretraining) as a deliberately old-school comparison. It has its own page: see [Classic Classifiers](#classic-classifiers).
+`scripts/train_classic_classifier.py` runs the same crowd-voted covers through seven classic ML models, on raw pixels and on the stored embeddings. See [Classic Classifiers](#classic-classifiers).
