@@ -38,7 +38,8 @@ Node-only helpers for the self-checks. Nothing here is imported by `index.js`.
 |---|---|
 | `covers.js` | `GET /covers` |
 | `matches.js` | `GET /matches` |
-| `stats.js` | `GET /stats` (public; reads `analytics_covers` only, never swipes) |
+| `stats.js` | `GET /stats` (public) — the crowd's verdicts; reads `analytics_covers`, never swipes |
+| `detector.js` | `GET /detector` (public) — the model's verdicts, with the `others` gate applied at read time |
 | `swipes.js` | `GET` + `POST /swipes` (`POST` also refreshes `analytics_covers`) |
 | `comments.js` | `GET` + `POST /comments`, `DELETE /comments/:id` (ephemeral, Google sign-in) |
 | `leaderboard.js` | `GET /leaderboard` |

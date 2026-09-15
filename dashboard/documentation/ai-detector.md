@@ -125,10 +125,10 @@ label at embed time and nothing reads it as current.
 
 ## Reading the card
 
-`/api/stats` returns a `latestAi` block next to the crowd's own `latest`,
-same verdict math, over `ai_club` instead of `club`. A paper the model
-hasn't classified yet is left out of that day's verdict rather than
-counted as a miss. `latestAi` can come back `null` or thin for a while
-after a fresh day's covers land, until the automatic reclassify run
-catches up. [Multimodal](#multimodal) has the card layout and the "where
+`/api/detector` returns the model's verdicts; `/api/stats` returns the
+crowd's. Same verdict math on each side, so the two readouts compare
+directly. A paper the model hasn't classified yet is left out of that
+day's verdict rather than counted as a miss, so `/api/detector`'s
+`latest` can come back `null` or thin for a while after a fresh day's
+covers land, until the automatic reclassify run catches up. [Multimodal](#multimodal) has the card layout and the "where
 they disagree" browser underneath it.

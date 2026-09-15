@@ -42,11 +42,11 @@ A prompt change only reaches covers that get classified again. `ai_club`/`ai_hea
 
 Not in the scrape. `scrapeNewspaper` stores the cover and stops; `ai_club` stays `NULL` until `.github/workflows/rag-classify.yml` runs, which the Worker fires itself right after the day's scrape finishes (see [AI Detector](#ai-detector)). `classifyAndStore` swallows its own errors either way: a model hiccup must never take down that workflow run. An unclassified cover (the model didn't answer, or the workflow hasn't run yet) is simply absent from the AI section until the next run retries it.
 
-`/api/stats` returns a second `latestAi` block alongside `latest`. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latestAi` is `null` and the section stays hidden. Expect this for a while after a fresh day's covers land, until the automatic reclassify run catches up.
+`/api/detector` returns the model's side: every classified cover and the latest day's verdict, separate from `/api/stats`, which carries the crowd's. Papers the backfill hasn't reached yet are excluded from the day's verdict rather than counted as misses. If none of the latest day's covers are classified yet, `latest` is `null` and the section stays hidden. Expect this for a while after a fresh day's covers land, until the automatic reclassify run catches up.
 
 ## Where they disagree
 
-Under the card, a button opens every cover the model and the crowd read differently. It navigates like the app's Histórico: a month picker, then that month's covers as portrait cards carrying both verdicts as colour blocks. No extra endpoint: `/api/stats` already returns `club` and `ai_club` per cover for the calendar, so it's a filter over rows already in memory.
+Under the card, a button opens every cover the model and the crowd read differently. It navigates like the app's Histórico: a month picker, then that month's covers as portrait cards carrying both verdicts as colour blocks. No extra request: `/api/detector` carries both labels per cover, so it's a filter over rows the card already loaded.
 
 ## Cost
 

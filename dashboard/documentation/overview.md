@@ -104,7 +104,7 @@ One row per cover with ≥1 vote, holding the winning club and vote counts, refr
 | `votes_total` | INTEGER | |
 | `updated_at` | TEXT | defaults to now |
 
-Never joined with `swipes` or `user_email`. That rule is what keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, and joins `covers` only for image URLs and `ai_club`, columns with no user attached to them.
+Never joined with `swipes` or `user_email`. That rule is what keeps the public API private: `/api/stats` reads `analytics_covers` for anything vote-shaped, and joins `covers` only for image URLs, columns with no user attached to them.
 
 ### `comments`
 
