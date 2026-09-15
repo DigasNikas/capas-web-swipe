@@ -9,6 +9,27 @@ The "E a máquina, que diz?" card. Every classified cover gets a label from one 
 | Served by | `GET /api/detector` |
 | Agreement shown | **93.7%** of 239 classified covers (2026-09-15) |
 
+## Results
+
+Covers from 2026-06-13 to 2026-09-15, against crowd labels, gate at 0.65.
+
+| Path | Covers | Stored label right | Shown label right |
+|---|---|---|---|
+| Consensus | 122 | 120 (98.4%) | 120 (98.4%) |
+| Model call | 117 | 94 (80.3%) | 104 (88.9%) |
+| **All** | **239** | **214 (89.5%)** | **224 (93.7%)** |
+
+Model calls by crowd label:
+
+| Crowd label | Covers | Stored label right | Shown label right |
+|---|---|---|---|
+| benfica | 32 | 29 (91%) | 28 (88%) |
+| sporting | 28 | 26 (93%) | 25 (89%) |
+| porto | 28 | 27 (96%) | 26 (93%) |
+| others | 29 | 12 (41%) | 25 (86%) |
+
+> Agreement is with the crowd, not with ground truth. Most covers carry one vote.
+
 ## Pipeline
 
 1. **Scrape.** The Worker cron runs hourly 05:00–08:00 UTC. `scrapeNewspaper` stores each cover; no label yet. After each run it fires a `scrape-completed` dispatch.
@@ -86,6 +107,10 @@ Classification runs after the 05:00–08:00 scrapes. Today's titles usually arri
 - no gate score, so the gate never applies to it.
 
 On 2026-09-15 all three covers were classified at 05:00 UTC; their headline vectors only appeared at 09:51.
+
+## Where they disagree
+
+A button under the card opens every cover whose shown label differs from the crowd's: 15 at threshold 0.65. A month picker, then that month's covers with both labels as colour blocks; a gated cover shows `RES` as its AI label. Built from the `/api/detector` response already loaded, no extra request.
 
 ## Dispatches
 

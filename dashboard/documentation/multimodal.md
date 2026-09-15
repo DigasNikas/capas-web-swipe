@@ -54,19 +54,15 @@ Covers are called by their Portuguese text, which is unreadable at thumbnail siz
 
 ## Results
 
-Live data, covers from 2026-06-13 to 2026-09-15, against crowd labels.
+Live data, model-classified covers from 2026-06-13 to 2026-09-15, against crowd labels.
 
-**Model calls (117 covers).** "Shown" is the label the card displays after the `others` gate at threshold 0.65 (see [AI Detector](#ai-detector)).
-
-| Crowd label | Covers | Model | Shown |
-|---|---|---|---|
-| benfica | 32 | 29 (91%) | 28 (88%) |
-| sporting | 28 | 26 (93%) | 25 (89%) |
-| porto | 28 | 27 (96%) | 26 (93%) |
-| others | 29 | 12 (41%) | 25 (86%) |
-| **Total** | **117** | **94 (80.3%)** | **104 (88.9%)** |
-
-**All classified covers (239).** 122 were labelled by the consensus path with no model call, 120 of them (98.4%) matching the crowd. Overall shown agreement: **93.7%**.
+| Crowd label | Covers | Model right |
+|---|---|---|
+| benfica | 32 | 29 (91%) |
+| sporting | 28 | 26 (93%) |
+| porto | 28 | 27 (96%) |
+| others | 29 | 12 (41%) |
+| **Total** | **117** | **94 (80.3%)** |
 
 **`OWNS`.** When the model named a club, `OWNS` was `yes` on 102 of 102 covers. When it answered `others`, `OWNS` was `yes` on 7 and `no` on 8.
 
@@ -89,13 +85,7 @@ A prompt change only reaches covers classified again. `/rag-candidates` selects 
 
 ## Where it runs
 
-In `.github/workflows/rag-classify.yml`, which the Worker dispatches after each day's scrape. Not in the scrape itself. `classifyAndStore` never throws: a failed call leaves `ai_club` `NULL` and the cover is retried on the next run.
-
-`/api/detector` serves the results: every classified cover, the label to show, the model's own answer, the crowd's label, and the latest day's verdict. Covers not yet classified are left out of the day's verdict. If none of the day's covers are classified, `latest` is `null` and the card stays hidden.
-
-## Where they disagree
-
-A button under the card opens every cover where the shown label and the crowd differ. A month picker, then that month's covers with both labels as colour blocks. Built from the `/api/detector` response already loaded, no extra request.
+`classifyAndStore`, called by `/reclassify-rag` (see [AI Detector](#ai-detector) for the pipeline). It never throws: a failed call or a reply with no `ANSWER:` leaves `ai_club` `NULL`, and the cover is retried on the next run.
 
 ## Cost
 
@@ -105,8 +95,7 @@ A button under the card opens every cover where the shown label and the crowd di
 | Free allowance | 10,000 neurons/day, ~150 model calls |
 | Beyond it | $0.011 per 1,000 neurons (Workers Paid) |
 | Daily run | 3 covers, ~195 neurons: inside the free allowance |
-| Consensus covers | 0 neurons |
-| Whole archive, 1,869 covers | ~121,000 neurons: ~12 days of free allowance, or ~$1.33 |
+| Every cover in the archive, 1,869 | ~121,000 neurons: ~12 days of free allowance, or ~$1.33 |
 
 ## For comparison
 
