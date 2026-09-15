@@ -127,14 +127,14 @@ def train_mlp(X_train, y_train, X_test, epochs=60):
     import torch
     import torch.nn as nn
 
-    club_to_idx = {c: i for i, c in enumerate(CLUBS)}
+    club_to_idx = {c: i for i, c in enumerate(sorted(set(y_train)))}
     Xt = torch.tensor(X_train, dtype=torch.float32)
     yt = torch.tensor([club_to_idx[c] for c in y_train], dtype=torch.long)
 
     model = nn.Sequential(
         nn.Linear(X_train.shape[1], 128),
         nn.ReLU(),
-        nn.Linear(128, len(CLUBS)),
+        nn.Linear(128, len(club_to_idx)),
     )
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)
     loss_fn = nn.CrossEntropyLoss()
@@ -153,14 +153,18 @@ def train_mlp(X_train, y_train, X_test, epochs=60):
 
 
 def evaluate(name, y_test, pred):
+    # Labels come from the data, not from CLUBS: --binary relabels everything
+    # to "others" vs "a club", and a report fixed to the four clubs prints
+    # four empty rows and hides the only number that matters.
+    labels = sorted(set(y_test) | set(pred))
     acc = accuracy_score(y_test, pred)
     print(f"\n=== {name} ===")
     print(f"accuracy  {acc:.1%}")
-    print(classification_report(y_test, pred, labels=CLUBS, zero_division=0))
+    print(classification_report(y_test, pred, labels=labels, zero_division=0))
     print("confusion matrix (rows: true, cols: predicted)")
-    cm = confusion_matrix(y_test, pred, labels=CLUBS)
-    print(f"{'':10}" + "".join(f"{c[:6]:>8}" for c in CLUBS))
-    for label, row in zip(CLUBS, cm):
+    cm = confusion_matrix(y_test, pred, labels=labels)
+    print(f"{'':10}" + "".join(f"{c[:6]:>8}" for c in labels))
+    for label, row in zip(labels, cm):
         print(f"{label:10}" + "".join(f"{n:8d}" for n in row))
     return acc
 
