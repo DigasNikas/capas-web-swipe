@@ -173,7 +173,12 @@ def main():
             for row, expected in zip(X[:25], ref):
                 got = score(check, row[:512], row[512:])
                 worst = max(worst, max(abs(got[c] - e) for c, e in zip(clf.classes_, expected)))
-            if worst > 1e-9:
+            # 1e-5, not 0: the stored vectors are float32, so sklearn does this
+            # arithmetic at float32 while lr_gate.score casts up to float64, and
+            # the two part company around 1e-7. A real disagreement -- a wrong
+            # softmax, a class order mismatch -- moves probabilities by whole
+            # percentage points, nowhere near this line.
+            if worst > 1e-5:
                 print(f"lr_gate.score disagrees with sklearn by {worst:.2e}", file=sys.stderr)
                 sys.exit(1)
             print(f"lr_gate.score matches sklearn to {worst:.2e} over 25 covers")
