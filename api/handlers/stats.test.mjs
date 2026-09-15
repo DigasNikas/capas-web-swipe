@@ -1,15 +1,15 @@
 /**
  * Self-check for the day verdict: node api/handlers/stats.test.mjs
  *
- * Covers what the AI detector added — a second verdict computed over the same
- * rows with a different column, the "papers the backfill hasn't reached yet are
- * left out" rule, and the agreement number. D1 is stubbed; no wrangler.
+ * The crowd's side only. The model's verdict moved to /detector — see
+ * detector.test.mjs — so what is left here is the day winner, the majority
+ * rule, and that ai_* no longer rides along on every row.
  */
 import assert from "node:assert";
 import { handleStats } from "./stats.js";
 
-const row = (date, newspaper, club, ai_club) => ({
-  cover_id: `${date}-${newspaper}`, newspaper, date, club, ai_club,
+const row = (date, newspaper, club) => ({
+  cover_id: `${date}-${newspaper}`, newspaper, date, club,
   votes_club: 5, votes_total: 10, url: "u", thumb_url: "t",
 });
 
@@ -19,42 +19,35 @@ const fakeEnv = rows => ({
 
 const stats = rows => handleStats(fakeEnv(rows)).then(r => r.json());
 
-// Two of three papers agree, and so does the model — but on a different club.
-let { latest, latestAi } = await stats([
-  row("2026-08-23", "record", "benfica", "benfica"),
-  row("2026-08-24", "record", "porto", "sporting"),
-  row("2026-08-24", "abola", "porto", "sporting"),
-  row("2026-08-24", "ojogo", "benfica", "benfica"),
+// Two of the day's three papers agree. Yesterday's row is not the day.
+let { rows, latest } = await stats([
+  row("2026-08-23", "record", "benfica"),
+  row("2026-08-24", "record", "porto"),
+  row("2026-08-24", "abola", "porto"),
+  row("2026-08-24", "ojogo", "benfica"),
 ]);
+assert.equal(latest.date, "2026-08-24");
 assert.equal(latest.winner, "porto");
 assert.equal(latest.hasMajority, true);
-assert.equal(latestAi.winner, "sporting");
-assert.equal(latestAi.confidence, 2 / 3);
-// 4 labelled covers, 2 of them matching the crowd.
-assert.equal(latestAi.labelled, 4);
-assert.equal(latestAi.agreement, 0.5);
+assert.equal(latest.confidence, 2 / 3);
+assert.equal(latest.covers.length, 3);
 
 // A 1-1-1 split is nobody's day.
-({ latestAi } = await stats([
-  row("2026-08-24", "record", "porto", "porto"),
-  row("2026-08-24", "abola", "porto", "benfica"),
-  row("2026-08-24", "ojogo", "porto", "sporting"),
+({ latest } = await stats([
+  row("2026-08-24", "record", "porto"),
+  row("2026-08-24", "abola", "benfica"),
+  row("2026-08-24", "ojogo", "sporting"),
 ]));
-assert.equal(latestAi.hasMajority, false);
+assert.equal(latest.hasMajority, false);
 
-// Mid-backfill: the unlabelled paper is absent, not counted as a miss, so one
-// classified cover is a 100%-confident verdict rather than a 33% one.
-({ latestAi } = await stats([
-  row("2026-08-24", "record", "porto", "porto"),
-  row("2026-08-24", "abola", "porto", null),
-  row("2026-08-24", "ojogo", "porto", null),
-]));
-assert.equal(latestAi.covers.length, 1);
-assert.equal(latestAi.confidence, 1);
+// The model's fields are gone from the payload: a dashboard still reading
+// them here would silently render blanks rather than fail, so pin it.
+({ rows } = await stats([row("2026-08-24", "record", "porto")]));
+assert.deepEqual(Object.keys(rows[0]).filter(k => k.startsWith("ai_")), []);
+assert.ok(!("latestAi" in (await stats([row("2026-08-24", "record", "porto")]))));
 
-// Nothing classified yet — the section stays hidden, the crowd one does not.
-({ latest, latestAi } = await stats([row("2026-08-24", "record", "porto", null)]));
-assert.equal(latestAi, null);
-assert.equal(latest.winner, "porto");
+// Empty archive: no verdict rather than a made-up one.
+({ latest } = await stats([]));
+assert.equal(latest, null);
 
 console.log("stats: ok");

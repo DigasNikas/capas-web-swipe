@@ -47,7 +47,7 @@ function renderDiffModal() {
   document.getElementById('cover-modal-next').classList.remove('hidden');
   document.getElementById('cover-modal-next').disabled = diffModalIndex === diffModalItems.length - 1;
 
-  // textContent throughout — ai_headline/ai_why are copied verbatim off a
+  // textContent throughout — headline/why are copied verbatim off a
   // newspaper page by the model, not text this codebase controls.
   const meta = document.getElementById('cover-modal-meta');
   meta.classList.remove('hidden');
@@ -70,21 +70,21 @@ function renderDiffModal() {
     el.append(i, document.createTextNode(CLUB_META[k].short));
     return el;
   };
-  result.append(side('AI', r.ai_club), side('VOTO', r.club));
+  result.append(side('AI', r.club), side('VOTO', r.human_club));
   meta.append(result);
 
-  if (r.ai_headline) {
+  if (r.headline) {
     const headline = document.createElement('div');
     headline.className = 'cm-headline';
-    headline.textContent = `"${r.ai_headline.replace(/^["']+|["']+$/g, '')}"`;
+    headline.textContent = `"${r.headline.replace(/^["']+|["']+$/g, '')}"`;
     meta.append(headline);
   }
 
   // Most of the archive was classified before the prompt asked for this.
-  if (r.ai_why) {
+  if (r.why) {
     const why = document.createElement('div');
     why.className = 'cm-why';
-    why.textContent = `→ ${r.ai_why}`;
+    why.textContent = `→ ${r.why}`;
     meta.append(why);
   }
 }

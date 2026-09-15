@@ -18,9 +18,13 @@ function epocaLabelForDate(dateStr) {
 }
 
 async function init() {
-  const [statsRes, matchesRes] = await Promise.all([
+  const [statsRes, matchesRes, detectorRes] = await Promise.all([
     fetch(`${API_URL}/stats`),
     fetch(`${API_URL}/matches`),
+    // Its own request, not a field on /stats: the model's verdicts change when
+    // classify runs and again whenever LR_GATE_THRESHOLD does, while /stats is
+    // a once-a-day archive dump. One handler meant one cache entry for both.
+    fetch(`${API_URL}/detector`),
   ]);
   if (!statsRes.ok) return;
   const stats = await statsRes.json();
@@ -49,7 +53,7 @@ async function init() {
 
   renderEpoca(rows, defaultEpoca, matchesByDate);
   renderVerdict('latest', stats.latest, 'dos votos');
-  renderAi(stats.latestAi, stats.latest, stats.rows);
+  renderAi(detectorRes.ok ? await detectorRes.json() : null, stats.latest);
   renderAvgCovers();
   if (stats.latest) initComments();
 }

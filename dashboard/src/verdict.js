@@ -35,24 +35,28 @@ export function renderVerdict(id, data, unit) {
 // The model's card ("E a máquina, que diz?") — the covers already showed
 // above in "Hoje é dia de quem?", so this one skips straight to what the
 // model called each paper, and the headline it read to get there.
-export function renderAi(latestAi, latest, rows) {
-  if (!latestAi) return;
-  renderVerdictHeader('ai', latestAi.date);
+// detector is /api/detector: every classified cover with the verdict already
+// resolved server-side. `club` is what to show, `human_club` the crowd's call,
+// `model_club` what the model answered before the `others` gate had its say —
+// so a card never has to know the gate exists.
+export function renderAi(detector, latest) {
+  if (!detector || !detector.latest) return;
+  renderVerdictHeader('ai', detector.latest.date);
 
-  const pct = Math.round(latestAi.agreement * 100);
+  const pct = Math.round(detector.agreement * 100);
   document.getElementById('ai-agreement').textContent =
-    `Concorda com a comunidade em ${pct}% das ${latestAi.labelled} capas já analisadas.`;
+    `Concorda com a comunidade em ${pct}% das ${detector.labelled} capas já analisadas.`;
 
   const papersEl = document.getElementById('ai-papers');
   papersEl.innerHTML = '';
-  latestAi.covers.forEach(c => papersEl.appendChild(aiPaperRow(c)));
+  detector.latest.covers.forEach(c => papersEl.appendChild(aiPaperRow(c)));
 
-  const same = latest && latest.winner === latestAi.winner;
+  const same = latest && latest.winner === detector.latest.winner;
   const verdictEl = document.getElementById('ai-vs-human');
   verdictEl.textContent = same ? 'HOJE · CONCORDA COM A COMUNIDADE' : 'HOJE · DISCORDA DA COMUNIDADE';
   verdictEl.classList.toggle('disagrees', !same);
 
-  renderAiDiffs(rows);
+  renderAiDiffs(detector.covers);
 }
 
 // textContent throughout — c.headline and c.why are copied verbatim off a
@@ -98,10 +102,10 @@ function aiPaperRow(c) {
 // The other 13%: every cover the model and the crowd read differently. Same
 // navigation as the app's Histórico — pick a month, then see its covers —
 // because the full list is a few hundred cards and nobody scrolls that.
-// No extra request: /api/stats already returns both labels per cover for the
-// calendar, so this is a filter over rows already in memory.
-function renderAiDiffs(rows) {
-  const diffs = rows.filter(r => r.ai_club && r.ai_club !== r.club).reverse();
+// A filter over /api/detector's own rows, which already carry both labels —
+// no extra request beyond the one the card is built from.
+function renderAiDiffs(covers) {
+  const diffs = covers.filter(c => c.club !== c.human_club).reverse();
   if (diffs.length === 0) return;
 
   const btn = document.getElementById('btn-ai-diffs');
@@ -186,7 +190,7 @@ function aiDiffCard(r, i) {
       <img src="${r.thumb_url}" alt="${paper}" loading="lazy" />
       <figcaption>
         <div class="ad-date">${paper} · ${d.getDate()} ${MONTHS[d.getMonth()]}</div>
-        <div class="ad-vs">${side('AI', r.ai_club)}${side('VOTO', r.club)}</div>
+        <div class="ad-vs">${side('AI', r.club)}${side('VOTO', r.human_club)}</div>
       </figcaption>
     </figure>`;
 }

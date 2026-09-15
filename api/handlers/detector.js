@@ -42,6 +42,10 @@ export async function handleDetector(request, env) {
              c.lr_benfica, c.lr_porto, c.lr_sporting, c.lr_others, c.lr_asof
       FROM analytics_covers ac
       JOIN covers c ON c.id = ac.cover_id
+      -- Unclassified covers are absent rather than counted as misses: a paper
+      -- the backfill has not reached yet must not drag the day's verdict down.
+      -- Enforced here in SQL, which is why detector.test.mjs cannot exercise
+      -- it through the D1 stub.
       WHERE c.ai_club IS NOT NULL
       ORDER BY ac.date ASC
     `)
