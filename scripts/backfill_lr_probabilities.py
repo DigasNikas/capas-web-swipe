@@ -47,7 +47,12 @@ def month_of(date):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out-dir", default=".", help="where to write the .sql files")
+    ap.add_argument("--out-dir", default=".", help="where to write the output files")
+    ap.add_argument("--features", choices=["image", "headline", "both"], default="both",
+                    help="which stored embeddings to fit on")
+    ap.add_argument("--no-sql", action="store_true",
+                    help="emit only probabilities.json -- for comparing feature sets without "
+                         "touching the ai_lr_* columns, which hold the 'both' run")
     ap.add_argument("--min-train", type=int, default=MIN_TRAIN)
     args = ap.parse_args()
 
@@ -61,23 +66,25 @@ def main():
     ids = [r["cover_id"] for r in rows]
     print(f"{len(rows)} labelled covers")
 
-    stores = {k: load_vectors(ids, k) for k in ("image", "headline")}
+    wanted = ["image", "headline"] if args.features == "both" else [args.features]
+    stores = {k: load_vectors(ids, k) for k in wanted}
     for k, s in stores.items():
         print(f"  {len(s)} found in the {k} index")
 
     kept = []
     for r in rows:
-        img, head = stores["image"].get(r["cover_id"]), stores["headline"].get(r["cover_id"])
-        if img is None or head is None:
+        parts = [stores[k].get(r["cover_id"]) for k in wanted]
+        if any(p is None for p in parts):
             continue
-        kept.append((r["cover_id"], r["date"], r["club"], np.concatenate([img, head])))
-    print(f"{len(kept)} covers have both vectors ({len(rows) - len(kept)} stay NULL)\n")
+        kept.append((r["cover_id"], r["date"], r["club"], np.concatenate(parts)))
+    print(f"{len(kept)} covers usable with features={args.features} "
+          f"({len(rows) - len(kept)} stay NULL)\n")
 
     by_month = defaultdict(list)
     for item in kept:
         by_month[month_of(item[1])].append(item)
 
-    updates, per_month = [], []
+    updates, per_month, emitted = [], [], []
     for month in sorted(by_month):
         cutoff = f"{month}-01"
         train = [k for k in kept if k[1] < cutoff]
@@ -99,6 +106,7 @@ def main():
         for (cover_id, _, club, _), p in zip(test, probs):
             col = {c: float(p[classes.index(c)]) if c in classes else 0.0 for c in CLUBS}
             right += (max(col, key=col.get) == club)
+            emitted.append({"id": cover_id, "asof": cutoff, **{k: round(v, 6) for k, v in col.items()}})
             updates.append(
                 "UPDATE covers SET "
                 f"ai_lr_benfica={col['benfica']:.6f}, ai_lr_porto={col['porto']:.6f}, "
@@ -113,7 +121,12 @@ def main():
         sys.exit(1)
 
     os.makedirs(args.out_dir, exist_ok=True)
+    probs_path = os.path.join(args.out_dir, f"probabilities_{args.features}.json")
+    with open(probs_path, "w") as f:
+        json.dump(emitted, f)
     files = []
+    if args.no_sql:
+        updates = []
     for i in range(0, len(updates), STATEMENTS_PER_FILE):
         path = os.path.join(args.out_dir, f"lr_backfill_{i // STATEMENTS_PER_FILE:02d}.sql")
         with open(path, "w") as f:
@@ -125,7 +138,9 @@ def main():
     print(f"\nout-of-fold accuracy over {total} covers: {weighted:.1%}")
     print(f"months scored: {len(per_month)}  spread: "
           f"{min(a for *_, a in per_month):.1%} to {max(a for *_, a in per_month):.1%}")
-    print(f"{len(updates)} UPDATE statements in {len(files)} file(s): {', '.join(files)}")
+    print(f"{len(emitted)} rows in {probs_path}")
+    if files:
+        print(f"{len(updates)} UPDATE statements in {len(files)} file(s): {', '.join(files)}")
 
 
 if __name__ == "__main__":

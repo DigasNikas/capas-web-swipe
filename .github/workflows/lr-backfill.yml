@@ -10,6 +10,15 @@ on:
       min_train:
         description: "Smallest training fold that still gets scored"
         default: "250"
+      features:
+        description: "Which stored embeddings to fit on"
+        type: choice
+        options: [both, image, headline]
+        default: both
+      no_sql:
+        description: "Only emit probabilities.json, leave the ai_lr_* columns alone"
+        type: boolean
+        default: false
 
 jobs:
   backfill:
@@ -29,8 +38,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           python3 scripts/backfill_lr_probabilities.py \
-            --out-dir sql --min-train "${{ inputs.min_train }}"
+            --out-dir sql --min-train "${{ inputs.min_train }}" \
+            --features "${{ inputs.features }}" ${{ inputs.no_sql && '--no-sql' || '' }}
       - uses: actions/upload-artifact@v4
         with:
-          name: lr-backfill-sql
-          path: sql/*.sql
+          name: lr-backfill-${{ inputs.features }}
+          path: |
+            sql/*.sql
+            sql/*.json
