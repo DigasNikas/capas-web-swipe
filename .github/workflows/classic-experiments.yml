@@ -3,6 +3,7 @@
 # in the space retrieval already uses. Needs Vectorize · Read, no Workers AI.
 # Delete once the question is answered.
 name: Classic Experiments
+run-name: "classic ${{ inputs.features }} ${{ inputs.split }} scale=${{ inputs.scale }} binary=${{ inputs.binary }} per_newspaper=${{ inputs.per_newspaper }}"
 
 on:
   workflow_dispatch:
@@ -18,6 +19,10 @@ on:
         default: true
       scale:
         description: "Standardise features before fitting"
+        type: boolean
+        default: false
+      per_newspaper:
+        description: "Train and test each newspaper on its own covers"
         type: boolean
         default: false
       split:
@@ -49,4 +54,10 @@ jobs:
             --features "${{ inputs.features }}" \
             --split "${{ inputs.split }}" \
             ${{ inputs.binary && '--binary' || '' }} \
-            ${{ inputs.scale && '--scale' || '' }}
+            ${{ inputs.scale && '--scale' || '' }} \
+            ${{ inputs.per_newspaper && '--per-newspaper' || '' }} \
+            --report-json report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: report.json

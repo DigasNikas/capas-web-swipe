@@ -137,6 +137,10 @@ def train_mlp(X_train, y_train, X_test, epochs=60):
     import torch
     import torch.nn as nn
 
+    # Seeded: unseeded, two runs on identical data differed by several points,
+    # which is larger than most of the gaps the documentation compares.
+    torch.manual_seed(0)
+
     club_to_idx = {c: i for i, c in enumerate(sorted(set(y_train)))}
     Xt = torch.tensor(X_train, dtype=torch.float32)
     yt = torch.tensor([club_to_idx[c] for c in y_train], dtype=torch.long)
@@ -162,6 +166,12 @@ def train_mlp(X_train, y_train, X_test, epochs=60):
     return np.array([idx_to_club[i] for i in pred_idx])
 
 
+# Filled by run_experiment when --report-json is set: everything the
+# documentation tables need, so they are written from a file rather than
+# copied off a log.
+REPORT = {}
+
+
 def evaluate(name, y_test, pred):
     # Labels come from the data, not from CLUBS: --binary relabels everything
     # to "others" vs "a club", and a report fixed to the four clubs prints
@@ -176,7 +186,12 @@ def evaluate(name, y_test, pred):
     print(f"{'':10}" + "".join(f"{c[:6]:>8}" for c in labels))
     for label, row in zip(labels, cm):
         print(f"{label:10}" + "".join(f"{n:8d}" for n in row))
-    return acc
+    rep = classification_report(y_test, pred, labels=labels, zero_division=0, output_dict=True)
+    return acc, {
+        "accuracy": acc,
+        "macro_f1": rep["macro avg"]["f1-score"],
+        "recall": {c: rep[c]["recall"] for c in sorted(set(y_test))},
+    }
 
 
 def split_data(X, y, papers, mode):
@@ -237,16 +252,26 @@ def run_experiment(title, X, y, papers, split_mode, residual, scale=False):
     tag = f"split={split_mode}" + (" residual" if residual else "") + (" scaled" if scale else "")
     print(f"\n### {title} — {tag}  train={len(X_train)}  test={len(X_test)}")
 
+    counts = {c: int((y_test == c).sum()) for c in sorted(set(y_test))}
+    majority = max(counts, key=counts.get)
+    entry = REPORT[title] = {
+        "train": len(X_train), "test": len(X_test), "test_counts": counts,
+        "baseline": {"class": majority, "accuracy": counts[majority] / len(y_test)},
+        "models": {},
+    }
+
     results = []
     for name, clf in MODELS.items():
         clf = clf.__class__(**clf.get_params())  # fresh instance — don't reuse fitted state across newspapers
         clf.fit(X_train, y_train)
-        acc = evaluate(name, y_test, clf.predict(X_test))
+        acc, stats = evaluate(name, y_test, clf.predict(X_test))
+        entry["models"][name] = stats
         results.append((name, acc))
 
     try:
         pred = train_mlp(X_train, y_train, X_test)
-        acc = evaluate("Small MLP (PyTorch, from scratch)", y_test, pred)
+        acc, stats = evaluate("Small MLP (PyTorch, from scratch)", y_test, pred)
+        entry["models"]["Small MLP (PyTorch, from scratch)"] = stats
         results.append(("Small MLP (PyTorch, from scratch)", acc))
     except ImportError:
         print("\n(skipping the PyTorch MLP — `pip install torch` to include it)")
@@ -281,6 +306,9 @@ def main():
                           "newspapers together. Controls for each paper's own masthead/layout: pooled "
                           "training can let a model shortcut on 'which paper is this' (which correlates "
                           "with club) rather than actually reading the cover")
+    ap.add_argument("--report-json", metavar="PATH",
+                    help="also write every run's accuracy, macro F1, per-class recall, split sizes "
+                         "and majority baseline to PATH as JSON")
     ap.add_argument("--scale", action="store_true",
                     help="standardise features before fitting")
     ap.add_argument("--residual", action="store_true",
@@ -328,6 +356,7 @@ def main():
         y = np.array([c for _, c, _ in kept])
         papers = np.array([p for _, _, p in kept])
         run_experiment("Pooled (all newspapers)", X, y, papers, args.split, args.residual, args.scale)
+        write_report(args, len(kept))
         return
 
     newspapers = sorted({p for _, _, p in kept})
@@ -344,6 +373,19 @@ def main():
     print(f"{'':34}" + "".join(f"{p:>10}" for p in newspapers))
     for name in model_names:
         print(f"{name:34}" + "".join(f"{per_paper_results[p][name]:9.1%} " for p in newspapers))
+    write_report(args, len(kept))
+
+
+def write_report(args, examples):
+    if not args.report_json:
+        return
+    with open(args.report_json, "w") as f:
+        json.dump({
+            "features": args.features, "split": args.split, "binary": args.binary,
+            "scale": args.scale, "per_newspaper": args.per_newspaper,
+            "examples": examples, "runs": REPORT,
+        }, f, indent=1)
+    print(f"report written to {args.report_json}")
 
 
 if __name__ == "__main__":
