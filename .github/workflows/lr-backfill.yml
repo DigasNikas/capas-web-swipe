@@ -1,0 +1,36 @@
+# TEMPORARY: computes out-of-fold LR probabilities for covers.ai_lr_* and
+# uploads them as SQL. Applied by hand with `wrangler d1 execute` -- the run
+# that computes the numbers stays separate from the run that writes them.
+# Delete once the gate question is settled.
+name: LR Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_train:
+        description: "Smallest training fold that still gets scored"
+        default: "250"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - name: Install Python dependencies
+        run: pip install -c scripts/requirements.txt numpy pillow scikit-learn
+      - name: Walk forward
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          python3 scripts/backfill_lr_probabilities.py \
+            --out-dir sql --min-train "${{ inputs.min_train }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lr-backfill-sql
+          path: sql/*.sql
