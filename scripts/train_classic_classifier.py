@@ -18,6 +18,7 @@ or its 77% archive-wide agreement; the point here is the exercise itself.
 import argparse
 import io
 import json
+import os
 import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -34,6 +35,14 @@ from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 
 STATS = "https://capas.digasnikas.com/api/stats"
+ACCOUNT = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+# The same two indexes the AI Detector retrieves from. --features reads the
+# vectors straight back out of them, so a cover's features here are exactly
+# what production compares it against — and 512 CLIP dimensions off the
+# full-res original beat a 32x32 thumbnail, which is the resolution at which
+# the vision model itself fell from 67% to 53% (see api/lib/ai.js).
+INDEXES = {"image": ("capas-cover-embeddings", 512), "headline": ("capas-headline-embeddings", 768)}
 # Cloudflare 403s the default urllib User-Agent — same fix as avg_cover.py.
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) capas-classic-classifier/1.0"
 SIZE = 32  # each cover shrinks to SIZE x SIZE before flattening
@@ -74,6 +83,31 @@ def vectorize(url):
         return None
     img = Image.open(io.BytesIO(raw)).convert("RGB").resize((SIZE, SIZE), Image.LANCZOS)
     return (np.asarray(img, np.float32) / 255.0).flatten()
+
+
+def load_vectors(ids, index):
+    """cover id -> its stored vector, pulled back out of Vectorize.
+
+    No re-embedding: get_by_ids returns the values that production retrieval
+    already uses. Covers missing from the index (no scraped text, for the
+    headline one) simply do not come back, and the caller drops them.
+    """
+    name, dims = INDEXES[index]
+    out = {}
+    for i in range(0, len(ids), 100):
+        batch = [str(x) for x in ids[i:i + 100]]
+        req = urllib.request.Request(
+            f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}/vectorize/v2/indexes/{name}/get_by_ids",
+            data=json.dumps({"ids": batch, "returnValues": True}).encode("utf-8"),
+            headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "User-Agent": UA},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            found = json.loads(r.read())["result"]
+        for v in (found if isinstance(found, list) else found.get("vectors", [])):
+            if v.get("values") and len(v["values"]) == dims:
+                out[int(v["id"])] = np.asarray(v["values"], dtype=np.float32)
+    return out
 
 
 def train_mlp(X_train, y_train, X_test, epochs=60):
@@ -199,6 +233,16 @@ def run_experiment(title, X, y, papers, split_mode, residual):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, help="use only the N most recent labelled covers (faster iteration)")
+    ap.add_argument("--features", choices=["pixels", "image", "headline", "both"], default="pixels",
+                     help="pixels (default): a 32x32 thumbnail flattened, the classic-ML exercise. image: the "
+                          "cover's CLIP vector from capas-cover-embeddings. headline: its lead-headline vector "
+                          "from capas-headline-embeddings. both: the two concatenated — a split page is a "
+                          "layout fact and a text fact at once. The vector modes need Cloudflare credentials "
+                          "and skip covers missing from the index")
+    ap.add_argument("--binary", action="store_true",
+                     help="collapse the four clubs to others vs a club — the class the AI Detector misses, "
+                          "which a four-class accuracy number hides. Base rate is ~21%% others, so anything "
+                          "under ~79%% accuracy loses to always answering 'a club'")
     ap.add_argument("--split", choices=["chronological", "stratified"], default="chronological",
                      help="chronological (default): train on the older 80%%, test on the most recent 20%% — "
                           "honest about the real question ('can this predict a cover it hasn't seen') and "
@@ -223,11 +267,32 @@ def main():
         rows = rows[-args.limit:]
     print(f"{len(rows)} labelled covers")
 
-    with ThreadPoolExecutor(12) as pool:
-        vectors = list(pool.map(lambda r: vectorize(r["url"]), rows))
+    if args.features == "pixels":
+        with ThreadPoolExecutor(12) as pool:
+            vectors = list(pool.map(lambda r: vectorize(r["url"]), rows))
+        kept = [(v, r["club"], r["newspaper"]) for v, r in zip(vectors, rows) if v is not None]
+        print(f"{len(kept)} vectorized ({len(rows) - len(kept)} failed to download)")
+    else:
+        if not ACCOUNT or not TOKEN:
+            print("Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN (Vectorize · Read).", file=sys.stderr)
+            sys.exit(1)
+        ids = [r["cover_id"] for r in rows]
+        wanted = ["image", "headline"] if args.features == "both" else [args.features]
+        stores = {k: load_vectors(ids, k) for k in wanted}
+        for k in wanted:
+            print(f"{len(stores[k])} of {len(ids)} covers found in the {k} index")
+        kept = []
+        for r in rows:
+            parts = [stores[k].get(r["cover_id"]) for k in wanted]
+            if any(p is None for p in parts):
+                continue
+            kept.append((np.concatenate(parts), r["club"], r["newspaper"]))
+        print(f"{len(kept)} covers usable with features={args.features}")
 
-    kept = [(v, r["club"], r["newspaper"]) for v, r in zip(vectors, rows) if v is not None]
-    print(f"{len(kept)} vectorized ({len(rows) - len(kept)} failed to download)")
+    if args.binary:
+        kept = [(v, "others" if c == "others" else "a club", p) for v, c, p in kept]
+        share = sum(1 for _, c, _ in kept if c == "others") / len(kept)
+        print(f"binary mode: {share:.1%} others — always answering 'a club' scores {1 - share:.1%}")
 
     if not args.per_newspaper:
         X = np.stack([v for v, _, _ in kept])

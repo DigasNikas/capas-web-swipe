@@ -1,0 +1,47 @@
+# TEMPORARY: scripts/train_classic_classifier.py over the Vectorize embeddings
+# instead of 32x32 pixels, to find out whether the `others` class is separable
+# in the space retrieval already uses. Needs Vectorize · Read, no Workers AI.
+# Delete once the question is answered.
+name: Classic Experiments
+
+on:
+  workflow_dispatch:
+    inputs:
+      features:
+        description: "Feature set"
+        type: choice
+        options: [image, headline, both, pixels]
+        default: image
+      binary:
+        description: "others vs a club, instead of four classes"
+        type: boolean
+        default: true
+      split:
+        description: "Split"
+        type: choice
+        options: [chronological, stratified]
+        default: chronological
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - name: Install Python dependencies
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0
+          pip install -c scripts/requirements.txt numpy pillow scikit-learn
+      - name: Run the experiment
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          python3 scripts/train_classic_classifier.py \
+            --features "${{ inputs.features }}" \
+            --split "${{ inputs.split }}" \
+            ${{ inputs.binary && '--binary' || '' }}
