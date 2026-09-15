@@ -20,6 +20,23 @@ assert.strictEqual(map.get("2026-08-01"), "https://capasjornais.pt/Capa-Jornal-R
 assert.strictEqual(map.get("2026-08-02"), "https://capasjornais.pt/Capa-Jornal-Record-dia-02-Agosto-2026-103401.html");
 assert.strictEqual(map.size, 2, "duplicate hrefs for the same day collapse to one entry");
 
+// março is the only month name carrying a diacritic, and the site spells it
+// "Marco" in permalinks while writing "Março" in prose. Both must resolve.
+const MARCH_FIXTURE = `
+  <a href="/Capa-Jornal-Record-dia-05-Marco-2025-98001.html" title="x">
+  <a href="/Capa-Jornal-Record-dia-06-Mar\u00e7o-2025-98002.html" title="x">
+`;
+const march = parseArchivePage(MARCH_FIXTURE);
+assert.strictEqual(march.get("2025-03-05"), "https://capasjornais.pt/Capa-Jornal-Record-dia-05-Marco-2025-98001.html");
+assert.strictEqual(march.get("2025-03-06"), "https://capasjornais.pt/Capa-Jornal-Record-dia-06-Mar\u00e7o-2025-98002.html");
+
+// The archive URL must use the ASCII spelling: "mar\u00e7o" answers 200 with
+// January's page, so a diacritic here silently backfills the wrong month.
+assert.strictEqual(
+  archiveMonthUrl(NEWSPAPERS.find(n => n.slug === "record"), 2025, 3),
+  "https://capasjornais.pt/capas/Arquivo-Jornal-Record-Mes-marco-2025.html",
+);
+
 assert.strictEqual(parseArchivePage("<html>no covers this month</html>").size, 0);
 
 assert.strictEqual(

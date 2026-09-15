@@ -50,9 +50,16 @@ const MONTH_PT = {
 };
 const MONTH_NAME_BY_NUM = Object.fromEntries(Object.entries(MONTH_PT).map(([name, n]) => [n, name]));
 
+// março is the only month with a diacritic, and the site is inconsistent about
+// it: permalinks and archive URLs use "Marco"/"marco", prose uses "Março".
+// Worse, the archive URL spelt "março" answers 200 with *January's* page, so a
+// diacritic here backfills the wrong month's headlines silently.
+const fold = name => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const MONTH_BY_FOLDED = Object.fromEntries(Object.entries(MONTH_PT).map(([name, n]) => [fold(name), n]));
+
 export function archiveMonthUrl(newspaper, year, month) {
   const page = newspaper.capasjornaisPage.replace(/^Capa-/, "");
-  return `https://capasjornais.pt/capas/Arquivo-${page}-Mes-${MONTH_NAME_BY_NUM[month]}-${year}.html`;
+  return `https://capasjornais.pt/capas/Arquivo-${page}-Mes-${fold(MONTH_NAME_BY_NUM[month])}-${year}.html`;
 }
 
 // A month archive page lists every day twice (thumbnail link + text link
@@ -64,7 +71,7 @@ export function parseArchivePage(html) {
   let m;
   while ((m = re.exec(html))) {
     const [, path, day, monthName, year] = m;
-    const month = MONTH_PT[monthName.toLowerCase()];
+    const month = MONTH_BY_FOLDED[fold(monthName)];
     if (!month) continue;
     map.set(`${year}-${String(month).padStart(2, "0")}-${day}`, `https://capasjornais.pt${path}`);
   }
