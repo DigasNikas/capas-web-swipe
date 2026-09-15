@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fill covers.ai_lr_* with out-of-fold logistic-regression probabilities.
+"""Fill covers.lr_* with out-of-fold logistic-regression probabilities.
 
 The LR is fitted on the crowd's own labels, so scoring a cover with a model
 that saw it in training is meaningless -- it reads ~95% right and measures
@@ -55,7 +55,7 @@ def main():
                          "for scripts/rag_classify.py to score new covers with at classify time")
     ap.add_argument("--no-sql", action="store_true",
                     help="emit only probabilities.json -- for comparing feature sets without "
-                         "touching the ai_lr_* columns, which hold the 'both' run")
+                         "touching the lr_* columns, which hold the 'both' run")
     ap.add_argument("--min-train", type=int, default=MIN_TRAIN)
     args = ap.parse_args()
 
@@ -112,9 +112,9 @@ def main():
             emitted.append({"id": cover_id, "asof": cutoff, **{k: round(v, 6) for k, v in col.items()}})
             updates.append(
                 "UPDATE covers SET "
-                f"ai_lr_benfica={col['benfica']:.6f}, ai_lr_porto={col['porto']:.6f}, "
-                f"ai_lr_sporting={col['sporting']:.6f}, ai_lr_others={col['others']:.6f}, "
-                f"ai_lr_asof='{cutoff}' WHERE id={cover_id};"
+                f"lr_benfica={col['benfica']:.6f}, lr_porto={col['porto']:.6f}, "
+                f"lr_sporting={col['sporting']:.6f}, lr_others={col['others']:.6f}, "
+                f"lr_asof='{cutoff}' WHERE id={cover_id};"
             )
         per_month.append((month, len(train), len(test), right / len(test)))
         print(f"{month}: train={len(train):>4}  test={len(test):>3}  accuracy {right / len(test):6.1%}")

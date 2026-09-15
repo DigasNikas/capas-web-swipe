@@ -30,6 +30,7 @@ import { handleLeaderboard } from "./handlers/leaderboard.js";
 import { handleUserStats } from "./handlers/user-stats.js";
 import { handleScrape } from "./handlers/scrape.js";
 import { handleNotify } from "./handlers/notify.js";
+import { handleDetector } from "./handlers/detector.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
 import { handleBackfillHeadlines, refreshTodayHeadlines } from "./handlers/backfill-headlines.js";
@@ -78,6 +79,9 @@ export default {
     if (method === "GET"  && pathname === "/covers")      return handleCovers(request, env);
     if (method === "GET"  && pathname === "/matches")     return handleGetMatches(env);
     if (method === "GET"  && pathname === "/stats")       return edgeCached(request, ctx, 60, () => handleStats(env));
+    // Not edgeCached: the response depends on ?threshold= and on a secret that
+    // can change between requests, and the payload is a fraction of /stats.
+    if (method === "GET"  && pathname === "/detector")    return handleDetector(request, env);
     if (method === "GET"  && pathname === "/leaderboard") return handleLeaderboard(request, env);
     if (method === "GET"  && pathname === "/user-stats")  return handleUserStats(request, env, url);
     if (method === "GET"  && pathname === "/swipes")      return handleGetSwipes(request, env);

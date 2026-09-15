@@ -1,22 +1,7 @@
 import { json } from "../lib/http.js";
+import { verdict } from "../lib/verdict.js";
 
-const CLUBS = ["sporting", "benfica", "porto", "others"];
 const PAPER_NAMES = { abola: "A Bola", ojogo: "O Jogo", record: "Record" };
-
-// Confidence is "how many of the day's papers agreed", for both the crowd
-// verdict (key 'club') and the model's (key 'ai_club') — same three papers,
-// same arithmetic, so the two readouts are directly comparable.
-function verdict(rows, key) {
-  const tally = Object.fromEntries(CLUBS.map(c => [c, 0]));
-  rows.forEach(r => tally[r[key]]++);
-  const winner = CLUBS.reduce((a, b) => (tally[b] > tally[a] ? b : a), CLUBS[0]);
-  const winnerVotes = tally[winner];
-  return {
-    winner,
-    hasMajority: winnerVotes > rows.length - winnerVotes,
-    confidence: winnerVotes / rows.length,
-  };
-}
 
 // Public — reads only analytics_covers (+ covers for image URLs and the model's
 // own guess), never swipes. Returns raw per-cover rows; the dashboard
