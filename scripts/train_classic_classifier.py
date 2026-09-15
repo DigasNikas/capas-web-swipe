@@ -20,6 +20,7 @@ import io
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -94,16 +95,21 @@ def load_vectors(ids, index):
     """
     name, dims = INDEXES[index]
     out = {}
-    for i in range(0, len(ids), 100):
-        batch = [str(x) for x in ids[i:i + 100]]
+    # 20 is the API's cap: more comes back as 40007 "too many ids in payload".
+    for i in range(0, len(ids), 20):
+        batch = [str(x) for x in ids[i:i + 20]]
         req = urllib.request.Request(
             f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}/vectorize/v2/indexes/{name}/get_by_ids",
             data=json.dumps({"ids": batch, "returnValues": True}).encode("utf-8"),
             headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "User-Agent": UA},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=60) as r:
-            found = json.loads(r.read())["result"]
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                found = json.loads(r.read())["result"]
+        except urllib.error.HTTPError as e:
+            print(f"Vectorize refused a batch: {e.code} {e.read().decode('utf-8', 'replace')[:200]}", file=sys.stderr)
+            sys.exit(1)
         for v in (found if isinstance(found, list) else found.get("vectors", [])):
             if v.get("values") and len(v["values"]) == dims:
                 out[int(v["id"])] = np.asarray(v["values"], dtype=np.float32)
