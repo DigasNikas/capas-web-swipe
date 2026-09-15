@@ -15,10 +15,6 @@ on:
         type: choice
         options: [both, image, headline]
         default: both
-      export_model:
-        description: "Also fit on every labelled cover and upload models/others_lr.json"
-        type: boolean
-        default: false
       no_sql:
         description: "Only emit probabilities.json, leave the ai_lr_* columns alone"
         type: boolean
@@ -43,12 +39,10 @@ jobs:
         run: |
           python3 scripts/backfill_lr_probabilities.py \
             --out-dir sql --min-train "${{ inputs.min_train }}" \
-            --features "${{ inputs.features }}" ${{ inputs.no_sql && '--no-sql' || '' }} \
-            ${{ inputs.export_model && '--export models/others_lr.json' || '' }}
+            --features "${{ inputs.features }}" ${{ inputs.no_sql && '--no-sql' || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: lr-backfill-${{ inputs.features }}
           path: |
             sql/*.sql
             sql/*.json
-            models/*.json

@@ -1,0 +1,57 @@
+# Refits the `others` gate's weights and commits them. The gate scores each
+# cover at classify time from models/others_lr.json (see scripts/lr_gate.py),
+# so those weights are the one part of it that goes stale: every day adds
+# crowd-labelled covers the model has never seen.
+#
+# Monthly is deliberate. The walk-forward showed accuracy climbing with
+# training size and then flattening past ~1,300 covers, so refitting more
+# often buys nothing and each refit silently changes live labels.
+#
+# Touches only models/, so this never triggers deploy-worker.yml.
+name: Refit LR Gate
+
+on:
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - name: Install Python dependencies
+        run: pip install -c scripts/requirements.txt numpy pillow scikit-learn
+
+      # --no-sql because the ai_lr_* columns hold out-of-fold values and a
+      # refit must not overwrite them with in-sample ones. The walk-forward
+      # still runs: its per-month accuracies are the record of whether the
+      # model being shipped is still worth shipping.
+      - name: Fit and export
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          python3 scripts/backfill_lr_probabilities.py \
+            --out-dir "$RUNNER_TEMP/lr" --features both --no-sql \
+            --export models/others_lr.json
+
+      - name: Commit the weights
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models/others_lr.json
+          if git diff --staged --quiet; then
+            echo "weights unchanged"
+          else
+            git commit -m "Refit the others-gate weights"
+            git push
+          fi
