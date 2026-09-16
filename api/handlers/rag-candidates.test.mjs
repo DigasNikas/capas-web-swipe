@@ -6,7 +6,7 @@
  * incident in rag.md's Quota section. Worth pinning.
  */
 import assert from "node:assert";
-import { handleRagCandidates } from "./rag-candidates.js";
+import { handleRagCandidates, hasClassifiableCovers } from "./rag-candidates.js";
 
 function fakeEnv(rows) {
   const DB = {
@@ -145,3 +145,17 @@ assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
 }
 
 console.log("ok");
+
+// The cron asks the same question this endpoint answers, through the same
+// predicate: is there anything worth dispatching a classify run for?
+{
+  const env = fakeEnv([{ id: 1 }]);
+  assert.equal(await hasClassifiableCovers(env), true);
+  assert.match(env.DB.sql, /ai_club IS NULL/);
+  assert.match(env.DB.sql, /headlines IS NOT NULL OR date < date\('now'\)/);
+}
+{
+  assert.equal(await hasClassifiableCovers(fakeEnv([])), false, "no work, no dispatch");
+}
+
+console.log("rag-candidates: ok");

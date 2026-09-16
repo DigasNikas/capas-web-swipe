@@ -15,13 +15,16 @@
  *
  * Optional env vars:
  *   GH_DISPATCH_TOKEN — GitHub PAT (repo scope) used to fire the
- *                        cover-first-vote repository_dispatch, which runs
+ *                        cover-first-vote and classify-backlog
+ *                        repository_dispatch events, which run
  *                        rag-classify.yml and both vectorize workflows. Unset,
- *                        it is silently skipped — see lib/github.js.
+ *                        they are silently skipped — see lib/github.js.
  */
 
 import { CORS, edgeCached, json } from "./lib/http.js";
 import { scrapeDay } from "./lib/scraper.js";
+import { dispatchGithubEvent } from "./lib/github.js";
+import { hasClassifiableCovers } from "./handlers/rag-candidates.js";
 import { handleCovers } from "./handlers/covers.js";
 import { handleGetMatches } from "./handlers/matches.js";
 import { handleGetSwipes, handleSwipe, handleToggleFavorite } from "./handlers/swipes.js";
@@ -50,11 +53,18 @@ export default {
   // scraper.js), so running it six times a day costs three D1 reads on a
   // settled day and fills whatever is still missing on an unsettled one.
   //
-  // No dispatch here: classification is triggered by a cover's first crowd
-  // vote, which is also when the cover enters the Vectorize indexes — see
-  // api/handlers/swipes.js and dashboard/documentation/ai-detector.md.
+  // The dispatch afterwards is the safety net behind cover-first-vote (see
+  // api/handlers/swipes.js): a cover voted on before its titles arrived is
+  // not classifiable at that moment, and nothing would come back for it. This
+  // asks the same question /rag-candidates answers — is anything classifiable
+  // and still unlabelled — and only dispatches when the answer is yes, so a
+  // settled day costs one extra D1 read and no workflow run.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(scrapeDay(env, new Date()));
+    ctx.waitUntil(
+      scrapeDay(env, new Date())
+        .then(() => hasClassifiableCovers(env))
+        .then(pending => pending && dispatchGithubEvent(env, "classify-backlog")),
+    );
     // Comments are already unreachable once a newer day exists — this just
     // stops the table growing.
     ctx.waitUntil(env.DB.prepare("DELETE FROM comments WHERE date < date('now','-2 days')").run());

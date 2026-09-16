@@ -17,6 +17,25 @@ import { json, parseLimit, requireAdmin } from "../lib/http.js";
 // candidate set, so running this repeatedly (rag_classify.py's own loop, or
 // by hand) works through the whole backlog instead of reprocessing the same
 // top N forever.
+// A cover is not classifiable until its titles are stored. Without them the
+// prompt loses its titles block, retrieval runs on the image channel alone,
+// and no `others` gate score can be computed (see ai-detector.md) — and
+// nothing revisits a cover once ai_club is set. Past dates are exempt:
+// capasjornais.pt serves titles for today only, so waiting would mean never
+// classifying them at all.
+export const CLASSIFIABLE = "ai_club IS NULL AND (headlines IS NOT NULL OR date < date('now'))";
+
+// Is a classify run worth dispatching? Asked by the cron (index.js) so a
+// cover whose titles arrived after its first vote — or whose dispatch was
+// lost — is picked up without anyone noticing it. Same predicate as the
+// endpoint below, so the two can never disagree about what is classifiable.
+export async function hasClassifiableCovers(env) {
+  const row = await env.DB
+    .prepare(`SELECT 1 FROM covers WHERE ${CLASSIFIABLE} LIMIT 1`)
+    .all();
+  return row.results.length > 0;
+}
+
 export async function handleRagCandidates(request, env) {
   const denied = requireAdmin(request, env);
   if (denied) return denied;
@@ -32,15 +51,7 @@ export async function handleRagCandidates(request, env) {
   // as it works.
   const needs = url.searchParams.get("needs") ?? "label";
   if (needs !== "label" && needs !== "matches") return json({ error: "needs must be label or matches" }, 400);
-  // A cover is not classifiable until its titles are stored. Without them the
-  // prompt loses its titles block, retrieval runs on the image channel alone,
-  // and no `others` gate score can be computed (see ai-detector.md) — and
-  // nothing revisits a cover once ai_club is set. Past dates are exempt:
-  // capasjornais.pt serves titles for today only, so waiting would mean never
-  // classifying them. Retrieval-only runs write no label and need no titles.
-  const pending = needs === "matches"
-    ? "ai_rag_covers IS NULL"
-    : "ai_club IS NULL AND (headlines IS NOT NULL OR date < date('now'))";
+  const pending = needs === "matches" ? "ai_rag_covers IS NULL" : CLASSIFIABLE;
 
   // date= narrows to one cover day. Without it the backlog is newest-first,
   // so reaching a day a week back means classifying everything above it —

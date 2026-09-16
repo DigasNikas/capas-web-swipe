@@ -3,18 +3,20 @@
         # brings. Keep it small: the free allowance is worth 30-40 calls a day,
         # and a backlog is cleared by running this repeatedly, not by raising
         # the limit.
-# Classifies covers that have no label yet. Triggered by a cover's first crowd
-# vote (cover-first-vote), the same dispatch that embeds it into the two
-# Vectorize indexes: a cover is only ever shown on the AI Detector card once it
-# has a vote, and by then its titles are normally stored. /rag-candidates
-# refuses covers whose titles are still missing, so nothing is classified
-# without the text it is mostly read by.
+# Classifies covers that have no label yet. Two triggers, same job:
+# cover-first-vote, the dispatch that also embeds a cover into the two
+# Vectorize indexes, and classify-backlog, fired by the Worker cron whenever
+# something classifiable is still unlabelled — a cover voted on before its
+# titles arrived, or a dispatch that never landed.
+#
+# /rag-candidates refuses covers whose titles are still missing, so nothing is
+# classified without the text it is mostly read by.
 #
 # concurrency serialises runs: votes arrive in bursts, and two runs racing the
 # same `ai_club IS NULL` backlog would each pay for the same Llama call.
 on:
   repository_dispatch:
-    types: [cover-first-vote]
+    types: [cover-first-vote, classify-backlog]
   workflow_dispatch:
     inputs:
       matches_only:
