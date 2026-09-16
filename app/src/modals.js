@@ -10,11 +10,29 @@ export function animateModalClose(modal, onDone) {
   }, 280);
 }
 
+// The scrollable element the touch started in, if any. A bottom sheet whose
+// body scrolls has to decide, on every touch, whether the gesture belongs to
+// the sheet or to the list inside it — otherwise dragging the leaderboard back
+// to the top is the same movement that dismisses the modal, and the modal wins.
+function scrollerAt(node, root) {
+  for (let el = node; el && el !== root.parentElement; el = el.parentElement) {
+    const scrollable = el.scrollHeight > el.clientHeight + 1;
+    if (scrollable && /auto|scroll/.test(getComputedStyle(el).overflowY)) return el;
+  }
+  return null;
+}
+
 export function addSwipeDownToClose(modal, closeFn) {
   const content = modal.querySelector('.modal-content');
   let startY = 0, dragging = false;
 
   content.addEventListener('touchstart', e => {
+    // Only drag the sheet when the list under the finger is already at its
+    // top, the same rule iOS uses: scrolling up runs to the end of the list
+    // first, and only a fresh gesture from there dismisses.
+    const scroller = scrollerAt(e.target, content);
+    if (scroller && scroller.scrollTop > 0) { dragging = false; return; }
+
     startY   = e.touches[0].clientY;
     dragging = true;
     content.style.transition = 'none';
