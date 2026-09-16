@@ -34,6 +34,25 @@ const req = (auth, qs = "") =>
 
 assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
 
+// A cover is not a candidate until its titles are stored: classified without
+// them it gets no titles block, no headline retrieval and no gate score. Past
+// dates are exempt — capasjornais.pt has no source for them, so waiting would
+// mean never classifying them at all.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret"), env);
+  assert.match(env.DB.sql, /ai_club IS NULL/);
+  assert.match(env.DB.sql, /headlines IS NOT NULL OR date < date\('now'\)/);
+}
+
+// needs=matches records neighbours without classifying, so it has no such
+// precondition.
+{
+  const env = fakeEnv([]);
+  await handleRagCandidates(req("s3cret", "?needs=matches"), env);
+  assert.doesNotMatch(env.DB.sql, /headlines IS NOT NULL/);
+}
+
 {
   const rows = [{ id: 1, newspaper: "record", date: "2025-01-01", r2_key: "k", url: "u", headlines: "Águias voam" }];
   const env = fakeEnv(rows);

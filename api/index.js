@@ -22,7 +22,6 @@
 
 import { CORS, edgeCached, json } from "./lib/http.js";
 import { scrapeDay } from "./lib/scraper.js";
-import { dispatchGithubEvent } from "./lib/github.js";
 import { handleCovers } from "./handlers/covers.js";
 import { handleGetMatches } from "./handlers/matches.js";
 import { handleGetSwipes, handleSwipe, handleToggleFavorite } from "./handlers/swipes.js";
@@ -46,29 +45,16 @@ import { handleSearch } from "./handlers/search.js";
 import { handleHeadlines } from "./handlers/headlines.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
-// The last cron of the day. After this hour the day's covers get classified
-// whether or not their titles ever showed up.
-const LAST_SCRAPE_HOUR = 13;
-
 export default {
-  // Every cron does the same thing: scrape today, then dispatch
-  // classification once the day is settled. scrapeNewspaper is idempotent
-  // (see scraper.js), so running it six times a day costs three D1 reads on
-  // a finished day and fills whatever is still missing on an unfinished one.
+  // Every cron does the same thing. scrapeNewspaper is idempotent (see
+  // scraper.js), so running it six times a day costs three D1 reads on a
+  // settled day and fills whatever is still missing on an unsettled one.
   //
-  // The dispatch waits for the titles because a cover classified without them
-  // is read without them: no titles block in the prompt, no headline
-  // retrieval, no `others` gate score. LAST_SCRAPE_HOUR is the backstop, for
-  // the days capasjornais.pt never publishes titles at all — the cover still
-  // has to get classified.
+  // No dispatch here: classification is triggered by a cover's first crowd
+  // vote, which is also when the cover enters the Vectorize indexes — see
+  // api/handlers/swipes.js and dashboard/documentation/ai-detector.md.
   async scheduled(event, env, ctx) {
-    const hour = new Date(event.scheduledTime).getUTCHours();
-    ctx.waitUntil(
-      scrapeDay(env, new Date()).then(settled => {
-        if (settled || hour >= LAST_SCRAPE_HOUR) return dispatchGithubEvent(env, "scrape-completed");
-        console.log(`Titles still missing at ${hour}:00 UTC, leaving classification to a later run`);
-      }),
-    );
+    ctx.waitUntil(scrapeDay(env, new Date()));
     // Comments are already unreachable once a newer day exists — this just
     // stops the table growing.
     ctx.waitUntil(env.DB.prepare("DELETE FROM comments WHERE date < date('now','-2 days')").run());

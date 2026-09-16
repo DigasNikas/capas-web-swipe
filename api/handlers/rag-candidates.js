@@ -32,7 +32,15 @@ export async function handleRagCandidates(request, env) {
   // as it works.
   const needs = url.searchParams.get("needs") ?? "label";
   if (needs !== "label" && needs !== "matches") return json({ error: "needs must be label or matches" }, 400);
-  const pending = needs === "matches" ? "ai_rag_covers IS NULL" : "ai_club IS NULL";
+  // A cover is not classifiable until its titles are stored. Without them the
+  // prompt loses its titles block, retrieval runs on the image channel alone,
+  // and no `others` gate score can be computed (see ai-detector.md) — and
+  // nothing revisits a cover once ai_club is set. Past dates are exempt:
+  // capasjornais.pt serves titles for today only, so waiting would mean never
+  // classifying them. Retrieval-only runs write no label and need no titles.
+  const pending = needs === "matches"
+    ? "ai_rag_covers IS NULL"
+    : "ai_club IS NULL AND (headlines IS NOT NULL OR date < date('now'))";
 
   // date= narrows to one cover day. Without it the backlog is newest-first,
   // so reaching a day a week back means classifying everything above it —

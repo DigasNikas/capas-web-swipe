@@ -66,10 +66,11 @@ export async function handleSwipe(request, env, ctx) {
     refreshAnalytics(env, cover_id),
   ]);
 
+  // One dispatch, three workflows: both Vectorize indexes and classification.
   // A cover only becomes embeddable once it has a crowd label (see
-  // build_vectorize_index.py's CLUBS filter) — this is the moment that
-  // becomes true, so it's the right trigger for a single-vector Vectorize
-  // upsert instead of waiting for the weekly full re-embed.
+  // build_vectorize_index.py's CLUBS filter), and it is only ever shown on the
+  // AI Detector card once it has a vote, so this is the moment both become
+  // worth doing — see dashboard/documentation/ai-detector.md.
   if (existing.results.length === 0) {
     ctx.waitUntil(dispatchGithubEvent(env, "cover-first-vote", { cover_id }));
   }

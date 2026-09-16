@@ -1,20 +1,15 @@
-name: Classify Covers
-
-# Triggered automatically by repository_dispatch (event type
-# scrape-completed), fired from the Worker's scheduled() handler right
-# after each day's scrape finishes — see api/lib/github.js and
-# api/index.js. Scraping no longer classifies anything itself, so this is
-# the only place a freshly-scraped cover gets its ai_club: /rag-candidates
-# returns covers still missing it, newest first, and a normal day only adds
-# 3 (one per newspaper) against the default limit of 10, so this stays
-# small and bounded rather than the unbounded backfill that once starved
-# the Workers AI neuron quota for a week (the zero-shot-only backfill-ai
-# endpoint that caused that has since been removed). Also runnable by hand
-# via workflow_dispatch, for a larger backlog.
-
+# Classifies covers that have no label yet. Triggered by a cover's first crowd
+# vote (cover-first-vote), the same dispatch that embeds it into the two
+# Vectorize indexes: a cover is only ever shown on the AI Detector card once it
+# has a vote, and by then its titles are normally stored. /rag-candidates
+# refuses covers whose titles are still missing, so nothing is classified
+# without the text it is mostly read by.
+#
+# concurrency serialises runs: votes arrive in bursts, and two runs racing the
+# same `ai_club IS NULL` backlog would each pay for the same Llama call.
 on:
   repository_dispatch:
-    types: [scrape-completed]
+    types: [cover-first-vote]
   workflow_dispatch:
     inputs:
       matches_only:
@@ -29,6 +24,10 @@ on:
         description: "How many recent covers to reclassify (each is a Llama4 call; the free allowance is worth 30-40 a day)"
         required: false
         default: "3"
+
+concurrency:
+  group: rag-classify
+  cancel-in-progress: false
 
 jobs:
   reclassify:
