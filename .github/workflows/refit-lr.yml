@@ -3,9 +3,14 @@
 # so those weights are the one part of it that goes stale: every day adds
 # crowd-labelled covers the model has never seen.
 #
-# Monthly is deliberate. The walk-forward showed accuracy climbing with
+# Prospective, not retroactive: /api/detector gates on each cover's stored
+# lr_others, so new weights only reach covers classified after this runs.
+# Re-scoring the archive is scripts/backfill_lr_probabilities.py, reviewed and
+# applied by hand.
+#
+# Monthly is deliberate: the walk-forward showed accuracy climbing with
 # training size and then flattening past ~1,300 covers, so refitting more
-# often buys nothing and each refit silently changes live labels.
+# often buys nothing.
 #
 # Touches only models/, so this never triggers deploy-worker.yml.
 name: Refit LR Gate

@@ -43,6 +43,8 @@ assert.equal((await handleRagCandidates(req(), fakeEnv([]))).status, 401);
   await handleRagCandidates(req("s3cret"), env);
   assert.match(env.DB.sql, /ai_club IS NULL/);
   assert.match(env.DB.sql, /headlines IS NOT NULL OR date < date\('now'\)/);
+  assert.match(env.DB.sql, /EXISTS \(SELECT 1 FROM analytics_covers/,
+    "an unvoted cover is never shown on the card, so classifying it spends a model call for nothing");
 }
 
 // needs=matches records neighbours without classifying, so it has no such

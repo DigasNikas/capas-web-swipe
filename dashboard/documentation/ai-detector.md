@@ -34,7 +34,7 @@ Model calls by crowd label:
 
 1. **Scrape.** The Worker cron runs at 05:00–08:00, 10:00 and 13:00 UTC. Every run does the same thing: store the cover if it is missing, fill today's titles once capasjornais.pt has turned over, do nothing when the row is settled. It then fires `classify-backlog` if any cover is classifiable and still unlabelled.
 2. **First vote.** `handleSwipe` fires one `cover-first-vote` dispatch, which runs three workflows: both Vectorize indexes and `rag-classify.yml`. Classify runs are serialised, so a burst of votes cannot pay for the same model call twice.
-3. **Candidates.** `rag_classify.py --limit 3` reads `/rag-candidates`: covers with `ai_club IS NULL` whose titles are stored, or which are dated before today.
+3. **Candidates.** `rag_classify.py --limit 3` reads `/rag-candidates`: unlabelled covers that have a crowd vote and stored titles (or are dated before today).
 4. **Retrieval.** The script embeds the image and the lead headline and pulls the 7 nearest labelled covers from both indexes ([RAG](#rag)).
 5. **Consensus.** If 6 or more neighbours share a label, it is written through `/label-consensus`. Done, no model call.
 6. **Gate score.** Otherwise the script scores the two vectors with `models/others_lr.json` (`scripts/lr_gate.py`).
@@ -94,10 +94,12 @@ Otherwise the shown label is `ai_club`. The gate never turns `others` into a clu
 | Change it | `printf '0.8' \| npx wrangler secret put LR_GATE_THRESHOLD` |
 | Try one without changing it | `/api/detector?threshold=0.8` |
 | Weights | `models/others_lr.json`, fitted on every labelled cover with both vectors |
-| Refit | `.github/workflows/refit-lr.yml`, monthly and on demand. Commits the weights; fails if the Python scorer disagrees with sklearn |
-| Scores on past covers | `lr_*` backfilled out-of-fold by `scripts/backfill_lr_probabilities.py`; `lr_asof` is the fold's training cutoff |
+| Refit | `.github/workflows/refit-lr.yml`, monthly and on demand. Commits the weights; fails if the Python scorer disagrees with sklearn. Prospective: new weights reach covers classified after the refit, never past ones |
+| Re-score past covers | `scripts/backfill_lr_probabilities.py`, which emits SQL to review and apply by hand. The only way a refit reaches covers already classified |
 
 **No gate score.** Consensus covers (no model answer to override) and covers without a headline vector.
+
+**Stored, not recomputed.** `/api/detector` reads each cover's `lr_others`; it never loads the weights. Only `LR_GATE_THRESHOLD` is retroactive.
 
 ## Titles first
 
@@ -125,6 +127,8 @@ Two events, one workflow set.
 | `rag-classify.yml` | both | Classifies the newest 3 candidates |
 
 `cover-first-vote` alone leaves a hole: a cover voted on before its titles arrive is not classifiable at that moment, and nothing comes back for it. The cron closes it. `hasClassifiableCovers` asks through the same `CLASSIFIABLE` predicate `/rag-candidates` filters on, so the two cannot disagree, and no dispatch is fired when there is nothing to do.
+
+Classification is vote-driven throughout: an unvoted cover is never a candidate, because `/api/detector` joins `analytics_covers` and would not show it anyway.
 
 While the archive backlog lasts, that condition is true on every cron: six runs a day, 3 covers each, ~1,200 neurons.
 

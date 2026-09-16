@@ -17,13 +17,22 @@ import { json, parseLimit, requireAdmin } from "../lib/http.js";
 // candidate set, so running this repeatedly (rag_classify.py's own loop, or
 // by hand) works through the whole backlog instead of reprocessing the same
 // top N forever.
-// A cover is not classifiable until its titles are stored. Without them the
-// prompt loses its titles block, retrieval runs on the image channel alone,
-// and no `others` gate score can be computed (see ai-detector.md) — and
-// nothing revisits a cover once ai_club is set. Past dates are exempt:
-// capasjornais.pt serves titles for today only, so waiting would mean never
-// classifying them at all.
-export const CLASSIFIABLE = "ai_club IS NULL AND (headlines IS NOT NULL OR date < date('now'))";
+// Classification is vote-driven, and this predicate is the whole rule.
+//
+// A crowd vote is required because /api/detector joins analytics_covers: an
+// unvoted cover never reaches the card whatever its label, so classifying one
+// spends a model call on something nobody can see. The vote is also what puts
+// a cover into the two Vectorize indexes, so this keeps one rule for both.
+//
+// Titles are required because a cover classified without them gets no titles
+// block in the prompt, retrieval on the image channel alone, and no `others`
+// gate score (see ai-detector.md) — and nothing revisits a cover once ai_club
+// is set. Past dates are exempt: capasjornais.pt serves titles for today only,
+// so waiting would mean never classifying them at all.
+export const CLASSIFIABLE =
+  "ai_club IS NULL"
+  + " AND (headlines IS NOT NULL OR date < date('now'))"
+  + " AND EXISTS (SELECT 1 FROM analytics_covers WHERE cover_id = covers.id)";
 
 // Is a classify run worth dispatching? Asked by the cron (index.js) so a
 // cover whose titles arrived after its first vote — or whose dispatch was

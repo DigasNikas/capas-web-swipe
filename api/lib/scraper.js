@@ -215,5 +215,3 @@ export async function scrapeDay(env, date) {
   ));
   return results.every(status => status === "complete");
 }
-
-

@@ -80,7 +80,7 @@ Lowering the threshold to 5 would replace the model on those 45 covers: 86.7% in
 | `rag_classify.py --matches-only --limit N` | Records neighbours (`ai_rag_covers`, `ai_rag_source`) without classifying | No |
 | `rag_classify.py --eval --n 40` / `--all` | Scores the production prompt, both context blocks included, against crowd labels. Writes nothing | Yes, direct REST calls |
 
-`--limit` defaults to 3 in the workflow. `/rag-candidates` selects newest first and caps a request at 50 covers (500 with `--matches-only`), so repeated runs work through a backlog. It returns a cover only once its titles are stored, or if it is dated before today (see [AI Detector](#ai-detector)).
+`--limit` defaults to 3 in the workflow. `/rag-candidates` selects newest first and caps a request at 50 covers (500 with `--matches-only`), so repeated runs work through a backlog. It returns a cover only once it has a crowd vote and its titles are stored, or if it is dated before today (see [AI Detector](#ai-detector)).
 
 | Credential | Needed for |
 |---|---|

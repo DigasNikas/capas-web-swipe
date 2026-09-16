@@ -1,0 +1,38 @@
+# Every self-check in the repo, plus a whitespace gate, on each push and pull
+# request. These are plain `node file.mjs` scripts with no framework and no
+# network: the whole job is seconds.
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Trailing blank lines and stray whitespace, against the merge base so
+      # only what this push changed is judged.
+      - name: Whitespace
+        run: git diff --check "$(git merge-base origin/main HEAD)" HEAD
+
+      - name: Worker self-checks
+        run: |
+          for t in api/lib/*.test.mjs api/handlers/*.test.mjs; do
+            echo "--- $t"
+            node "$t"
+          done
+
+      - name: Dashboard self-checks
+        run: |
+          for t in dashboard/*.test.mjs scripts/*.test.mjs; do
+            echo "--- $t"
+            node "$t"
+          done
