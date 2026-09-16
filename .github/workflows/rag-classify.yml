@@ -1,3 +1,8 @@
+        # inputs.limit is only set on workflow_dispatch; repository_dispatch has
+        # no `inputs` context and falls back to 3, the number of covers a day
+        # brings. Keep it small: the free allowance is worth 30-40 calls a day,
+        # and a backlog is cleared by running this repeatedly, not by raising
+        # the limit.
 # Classifies covers that have no label yet. Triggered by a cover's first crowd
 # vote (cover-first-vote), the same dispatch that embeds it into the two
 # Vectorize indexes: a cover is only ever shown on the AI Detector card once it

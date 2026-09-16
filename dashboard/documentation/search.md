@@ -64,7 +64,7 @@ index, keyed on `covers.id` as its rowid (`content='covers',
 content_rowid='id'`). Kept in sync by three triggers on `covers`
 (`AFTER INSERT`/`UPDATE`/`DELETE`) rather than duplicated by hand
 anywhere — `scrapeNewspaper`'s insert, `/update-headline`'s and
-`/backfill-headlines`'s updates, and `scripts/backfill_headlines_archive.mjs`
+the scrape's own updates, and `scripts/backfill_headlines_archive.mjs`
 all go through the same `covers` table, so all of them stay searchable
 automatically. A cover with `headlines IS NULL` still gets an FTS row,
 just one indexing nothing — harmless, matches nothing.

@@ -32,15 +32,16 @@ Model calls by crowd label:
 
 ## Pipeline
 
-1. **Scrape.** The Worker cron runs hourly 05:00–08:00 UTC. `scrapeNewspaper` stores each cover; no label yet. After each run it fires a `scrape-completed` dispatch.
-2. **Candidates.** `rag-classify.yml` runs `rag_classify.py --limit 3`, which reads covers with `ai_club IS NULL`, newest first, from `/rag-candidates`.
-3. **Retrieval.** The script embeds the image and the lead headline and pulls the 7 nearest labelled covers from both indexes ([RAG](#rag)).
-4. **Consensus.** If 6 or more neighbours share a label, it is written through `/label-consensus`. Done, no model call.
-5. **Gate score.** Otherwise the script scores the two vectors with `models/others_lr.json` (`scripts/lr_gate.py`).
-6. **Model call.** `POST /reclassify-rag` sends the few-shot block, neighbour ids and gate scores. `classifyAndStore` reads the cover's titles from D1, builds the prompt, calls the model, and writes `ai_*` and `lr_*`.
-7. **Read.** `/api/detector` applies the gate to model labels and returns what the card shows.
+1. **Scrape.** The Worker cron runs at 05:00–08:00, 10:00 and 13:00 UTC. Every run does the same thing: store the cover if it is missing, fill today's titles once capasjornais.pt has turned over, do nothing when the row is settled. No label yet, no dispatch.
+2. **First vote.** `handleSwipe` fires one `cover-first-vote` dispatch, which runs three workflows: both Vectorize indexes and `rag-classify.yml`. Runs are serialised, so a burst of votes cannot pay for the same model call twice.
+3. **Candidates.** `rag_classify.py --limit 3` reads `/rag-candidates`: covers with `ai_club IS NULL` whose titles are stored, or which are dated before today.
+4. **Retrieval.** The script embeds the image and the lead headline and pulls the 7 nearest labelled covers from both indexes ([RAG](#rag)).
+5. **Consensus.** If 6 or more neighbours share a label, it is written through `/label-consensus`. Done, no model call.
+6. **Gate score.** Otherwise the script scores the two vectors with `models/others_lr.json` (`scripts/lr_gate.py`).
+7. **Model call.** `POST /reclassify-rag` sends the few-shot block, neighbour ids and gate scores. `classifyAndStore` reads the cover's titles from D1, builds the prompt, calls the model, and writes `ai_*` and `lr_*`.
+8. **Read.** `/api/detector` applies the gate to model labels and returns what the card shows.
 
-**Headline refresh.** The 10:00 and 13:00 UTC crons only refresh today's `headlines`, once capasjornais.pt shows the new edition. They fire no dispatch.
+Classification runs on the vote, not the scrape, because a cover reaches the card only once it has one: `/api/detector` reads `analytics_covers`.
 
 ## Prompt context
 
@@ -96,30 +97,29 @@ Otherwise the shown label is `ai_club`. The gate never turns `others` into a clu
 | Refit | `.github/workflows/refit-lr.yml`, monthly and on demand. Commits the weights; fails if the Python scorer disagrees with sklearn |
 | Scores on past covers | `lr_*` backfilled out-of-fold by `scripts/backfill_lr_probabilities.py`; `lr_asof` is the fold's training cutoff |
 
-**No gate score.** Consensus covers (no model answer to override), covers without a headline vector, and covers classified before their titles exist.
+**No gate score.** Consensus covers (no model answer to override) and covers without a headline vector.
 
-## Timing
+## Titles first
 
-Classification runs after the 05:00–08:00 scrapes. Today's titles usually arrive with the 10:00 refresh, when capasjornais.pt turns over. A cover classified before then gets:
+A cover is not a candidate until `covers.headlines` is stored. Classified without it, a cover gets no titles block in the prompt, retrieval on the image channel alone, and no gate score — and nothing revisits a cover once `ai_club` is set.
 
-- no titles block in the prompt;
-- image-only retrieval;
-- no gate score, so the gate never applies to it.
-
-On 2026-09-15 all three covers were classified at 05:00 UTC; their headline vectors only appeared at 09:51.
+Covers dated before today are exempt: capasjornais.pt serves titles for today only, so waiting would mean never classifying them.
 
 ## Where they disagree
 
 A button under the card opens every cover whose shown label differs from the crowd's: 15 at threshold 0.65. A month picker, then that month's covers with both labels as colour blocks; a gated cover shows `RES` as its AI label. Built from the `/api/detector` response already loaded, no extra request.
 
-## Dispatches
+## Dispatch
 
-| Event | Fired by | Runs | Needs |
-|---|---|---|---|
-| `scrape-completed` | Worker cron, after each 05:00–08:00 scrape | `rag-classify.yml` | `GH_DISPATCH_TOKEN` |
-| `cover-first-vote` | `handleSwipe`, on a cover's first crowd vote | `vectorize-covers.yml`, `vectorize-headlines.yml` | `GH_DISPATCH_TOKEN` |
+One event, fired by `handleSwipe` on a cover's first crowd vote.
 
-`GH_DISPATCH_TOKEN` is a Worker secret: a classic PAT with `repo` scope. Without it dispatches are skipped and nothing is classified or embedded until a workflow is run by hand. `dispatchGithubEvent` never throws. Every workflow reads its whole backlog, so a missed dispatch is picked up by the next run.
+| Workflow | Does |
+|---|---|
+| `vectorize-covers.yml` | Embeds the backlog into `capas-cover-embeddings` |
+| `vectorize-headlines.yml` | Embeds the backlog into `capas-headline-embeddings` |
+| `rag-classify.yml` | Classifies the newest 3 candidates |
+
+Each workflow reads its whole backlog, not the `cover_id` in the payload, so a missed dispatch is picked up by the next one. `GH_DISPATCH_TOKEN` (a Worker secret: classic PAT, `repo` scope) is required; without it dispatches are skipped silently and nothing is embedded or classified until a workflow is run by hand. `dispatchGithubEvent` never throws.
 
 ## Columns
 

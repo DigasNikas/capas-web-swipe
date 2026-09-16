@@ -5,7 +5,7 @@ Nearest-neighbour retrieval from the two Vectorize indexes, folded into the clas
 | | |
 |---|---|
 | Script | `scripts/rag_classify.py` |
-| Workflow | `.github/workflows/rag-classify.yml` |
+| Workflow | `.github/workflows/rag-classify.yml`, on the `cover-first-vote` dispatch, serialised |
 | Runs | GitHub Actions, never in the Worker |
 | Neighbours | `RAG_TOP_K = 7`, merged from both indexes |
 | Consensus | `CONSENSUS_MIN = 6` of 7 agreeing neighbours skips the model |
@@ -80,7 +80,7 @@ Lowering the threshold to 5 would replace the model on those 45 covers: 86.7% in
 | `rag_classify.py --matches-only --limit N` | Records neighbours (`ai_rag_covers`, `ai_rag_source`) without classifying | No |
 | `rag_classify.py --eval --n 40` / `--all` | Scores the production prompt, both context blocks included, against crowd labels. Writes nothing | Yes, direct REST calls |
 
-`--limit` defaults to 3 in the workflow. `/rag-candidates` caps a request at 50 covers (500 with `--matches-only`) and selects newest first, so repeated runs work through a backlog.
+`--limit` defaults to 3 in the workflow. `/rag-candidates` selects newest first and caps a request at 50 covers (500 with `--matches-only`), so repeated runs work through a backlog. It returns a cover only once its titles are stored, or if it is dated before today (see [AI Detector](#ai-detector)).
 
 | Credential | Needed for |
 |---|---|
@@ -100,4 +100,4 @@ Workers AI has no CLIP-compatible image-embedding model. Three live alternatives
 
 ## Failures
 
-`rag-classify.yml` is the only path to a label. If it fails, or its `scrape-completed` dispatch never arrives (`GH_DISPATCH_TOKEN` unset, GitHub API error), covers stay `ai_club IS NULL` until the next run. The next run picks them up from the backlog; nothing needs replaying day by day. A failed model call leaves the cover unlabelled for the next run.
+`rag-classify.yml` is the only path to a label. If it fails, or its `cover-first-vote` dispatch never arrives (`GH_DISPATCH_TOKEN` unset, GitHub API error), covers stay `ai_club IS NULL` until the next run. The next run picks them up from the backlog; nothing needs replaying day by day. A failed model call leaves the cover unlabelled for the next run.

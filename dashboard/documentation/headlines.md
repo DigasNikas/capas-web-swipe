@@ -39,29 +39,20 @@ primeiros • Zaidu com suspeita de lesão grave • ...
 
 ## Live scrape: today only
 
-capasjornais.pt's per-newspaper page (`/Capa-Jornal-Record.html`, etc.)
-has no date parameter — it always shows *today's* edition, whatever day
-it happens to be fetched. `scrapeNewspaper` only calls `fetchHeadlines`
-when the date being scraped is the actual current date; a backfill run
-for a past date (`?start=`/`?end=`, `scrape_month.sh`) would otherwise
-fetch today's headlines and write them onto the wrong cover. Past-date
-scrapes, and the sapo.pt fallback path, both leave `headlines` `NULL`.
+capasjornais.pt's per-newspaper page (`/Capa-Jornal-Record.html`, etc.) has no date parameter: it always shows the current edition, and early in the morning that is still yesterday's. `headlinesIfFresh` checks the page's own heading against the date being scraped and returns `null` on a mismatch, so a cover never receives another edition's text.
 
-## Filling gaps from the same day
+`scrapeNewspaper` is idempotent, and every cron runs it:
 
-A cover already scraped earlier today, before this column existed (or
-before a code path that sets it), is never touched again by
-`scrapeNewspaper` — inserting only happens once, on first scrape.
-`POST /api/backfill-headlines` (admin, bearer-protected) closes that gap:
-it finds covers with `date = today` and `headlines IS NULL`, calls the
-same `fetchHeadlines` the live scraper uses, and `UPDATE`s them in place.
-Today-only for the same reason as the live scrape — there's no other
-page to fetch a past date's headlines from here.
+| Row state | What happens |
+|---|---|
+| Missing | Cover fetched and stored; titles filled if the page has turned over |
+| Present, no titles, dated today | Titles fetched and written. No image re-download |
+| Present with titles | Nothing, no request |
+| Present, no titles, past date | Nothing: no source exists |
 
-```bash
-curl -X POST -H "Authorization: Bearer <ADMIN_SECRET>" \
-  https://capas.digasnikas.com/api/backfill-headlines
-```
+So today's titles land on the first cron that runs after the page turns over, without a separate endpoint or workflow. A past-date scrape (`?start=`/`?end=`, `scrape_month.sh`) and the sapo.pt fallback both leave `headlines` `NULL`.
+
+`/rag-candidates` will not return a cover dated today until its titles are stored, so nothing is classified without them (see [AI Detector](#ai-detector)).
 
 ## Historical backfill
 
@@ -100,8 +91,4 @@ on a schedule.
 
 ## Status
 
-`headlines` sits on `covers` next to the other nullable, added-after-the-fact
-columns (`ai_club`, `vectorized_at`, etc. — see [Overview](#overview)'s D1
-schema). As of the first historical backfill run: 1438 of 1821 covers have
-it (1433 from the archive backfill, the rest from the live scrape and the
-same-day backfill).
+1,672 of 1,872 covers have `headlines` (2026-09-16). The 197 voted covers still missing it are 165 from September and October 2025, editions for which capasjornais.pt publishes no headline block at all, plus scattered days with the same gap.

@@ -14,10 +14,10 @@
  *   RESEND_API_KEY — Resend API key for sending notification emails
  *
  * Optional env vars:
- *   GH_DISPATCH_TOKEN — GitHub PAT (repo scope) used to fire repository_dispatch
- *                        events (scrape-completed, cover-first-vote) that trigger
- *                        rag-classify.yml / vectorize-covers.yml. Unset, those
- *                        dispatches are silently skipped — see lib/github.js.
+ *   GH_DISPATCH_TOKEN — GitHub PAT (repo scope) used to fire the
+ *                        cover-first-vote repository_dispatch, which runs
+ *                        rag-classify.yml and both vectorize workflows. Unset,
+ *                        it is silently skipped — see lib/github.js.
  */
 
 import { CORS, edgeCached, json } from "./lib/http.js";
