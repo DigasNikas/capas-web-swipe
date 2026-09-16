@@ -23,7 +23,7 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 | `email.js` | Outbound mail for `/notify` |
 | `access.js` | `accessEmail()`: the app user's email from the Access JWT (`Cf-Access-Jwt-Assertion`), verified against the team's certs. Used by every app-side handler |
 | `access.test.mjs` | Self-check: forged header, wrong aud/iss, expired, bad signature. Run `node api/lib/access.test.mjs` |
-| `github.js` | Fires `repository_dispatch` events (scrape done, cover's first vote) so GitHub Actions can react |
+| `github.js` | Fires the `cover-first-vote` and `classify-backlog` `repository_dispatch` events, which run `rag-classify.yml` and both vectorize workflows — see the AI Detector chapter |
 
 ## `test-utils/`
 

@@ -8,7 +8,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 
 1. A **Worker cron** scrapes three newspapers' front pages into **R2** (images) and **D1** (metadata), idempotently, six times a day ([Scraping](#scraping)).
 2. **capas.digasnikas.com** is the public dashboard: which club each newspaper favours, a calendar of daily winners, the latest day's verdict. No login.
-3. **app.capas.digasnikas.com** is the swipe app, behind **Cloudflare Access**. The Worker identifies users by the `Cf-Access-Authenticated-User-Email` header and records their swipes. Account, leaderboard and instructions are modals over the app, not pages. Access is a multi-domain application, so one sign-in covers both hosts.
+3. **app.capas.digasnikas.com** is the swipe app, behind **Cloudflare Access**. The Worker identifies users from the Access JWT it verifies itself (`accessEmail`, `api/lib/access.js`), not from a header it trusts. Account, leaderboard and instructions are modals over the app, not pages. Access is a multi-domain application, so one sign-in covers both hosts.
 4. A cover's **first vote** puts it into the two Vectorize indexes and makes it classifiable. A **vision model** then reads it and the dashboard shows that verdict beside the crowd's ([AI Detector](#ai-detector)).
 
 ## Infrastructure
@@ -70,7 +70,7 @@ One row per user per cover, upserted on re-swipe.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | INTEGER, PK | |
-| `user_email` | TEXT | from the `Cf-Access-Authenticated-User-Email` header |
+| `user_email` | TEXT | The `email` claim of the verified Access JWT ([Deployment](#deployment)) |
 | `cover_id` | INTEGER, FK → `covers.id` | |
 | `decision` | TEXT | `sporting` / `benfica` / `porto` / `others`, enforced by a CHECK |
 | `is_favorite` | INTEGER (0/1) | personal bookmark, unrelated to `decision` |

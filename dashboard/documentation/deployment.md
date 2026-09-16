@@ -52,7 +52,9 @@ Bootstraps the local D1 by executing `api/schema.sql` directly, not `wrangler d1
 
 Playwright isn't a `package.json` dependency — same reasoning as `_headers` below applies to keeping the deploy small: it's only needed to run this suite. `e2e/helpers.cjs` resolves it from `PLAYWRIGHT_PATH`, `node_modules`, or a couple of common local paths; install it once with `npm i --no-save playwright && npx playwright install chromium`.
 
-`app.capas.digasnikas.com` sits behind Cloudflare Access in production, which has no local equivalent under `wrangler dev` — every app-side handler just trusts `Cf-Access-Authenticated-User-Email` on the request (see `api/handlers/covers.js`, `swipes.js`). Locally, suites that need an app session set that header themselves via Playwright's `context.setExtraHTTPHeaders`, reproducing the same trust boundary Access provides in production without faking Access itself.
+`app.capas.digasnikas.com` sits behind Cloudflare Access, but Access is not the authorization boundary — the Worker is. `accessEmail` (`api/lib/access.js`) reads `Cf-Access-Jwt-Assertion`, checks the issuer, audience, `exp` and `nbf`, verifies the RS256 signature against the team's published certificates, and takes the email from the verified claims. The plain `Cf-Access-Authenticated-User-Email` header is never trusted in production: it is only trustworthy while Access sits in front of every route, and the Worker also answers on `workers.dev`, which it does not.
+
+`wrangler dev` has no Access in front of it, so the e2e runner sets `TRUST_ACCESS_EMAIL_HEADER=1`, and only then does `accessEmail` fall back to reading that header — which suites set through Playwright's `context.setExtraHTTPHeaders`. That variable exists for local runs alone; setting it in production would restore exactly the header-trust this replaced. `node api/lib/access.test.mjs` covers the forged header, wrong `aud`/`iss`, expired token and bad signature.
 
 ## Cache-Control (`_headers`)
 
