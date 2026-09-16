@@ -48,7 +48,7 @@ Node-only helpers for the self-checks. Nothing here is imported by `index.js`.
 | `scrape.js` | `POST /scrape` (admin, bearer-protected) |
 | `notify.js` | `POST /notify` (admin, bearer-protected) |
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
-| `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — recent covers for `scripts/rag_classify.py` to embed |
+| `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — classifiable covers for `scripts/rag_classify.py`, and the `CLASSIFIABLE` predicate the cron asks through |
 | `reclassify-rag.js` | `POST /reclassify-rag` (admin) — classify one cover with an externally-computed few-shot block |
 | `rag-matches.js` | `POST /rag-matches` (admin) — records which covers retrieval matched, without classifying. Retrieval is CLIP + Vectorize, so it runs when the Workers AI allowance is spent |
 | `label-consensus.js` | `POST /label-consensus` (admin) — record a label the RAG neighbours agreed on, no model call |

@@ -5,8 +5,8 @@ Nearest-neighbour retrieval from the two Vectorize indexes, folded into the clas
 | | |
 |---|---|
 | Script | `scripts/rag_classify.py` |
-| Workflow | `.github/workflows/rag-classify.yml`, on the `cover-first-vote` and `classify-backlog` dispatches, serialised |
-| Runs | GitHub Actions, never in the Worker |
+| Workflow | `.github/workflows/rag-classify.yml`, serialised so two runs never share a candidate |
+| Runs | GitHub Actions, never in the Worker. Triggered by a cover's first crowd vote, and by a cron dispatch for the backlog |
 | Neighbours | `RAG_TOP_K = 7`, merged from both indexes |
 | Consensus | `CONSENSUS_MIN = 6` of 7 agreeing neighbours skips the model |
 | Writes via | `/reclassify-rag` (model call), `/label-consensus` (no model call), `/rag-matches` (retrieval only) |
