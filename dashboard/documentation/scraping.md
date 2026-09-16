@@ -1,12 +1,32 @@
 # Scraping
 
-## Automatic (cron)
+One cover per newspaper per day, stored in R2 with a row in D1.
 
-The Worker runs hourly from **05:00–08:00 UTC** (06:00–09:00/07:00–10:00 Lisbon), scraping today's cover for each newspaper. Four passes catch the cover even if a source publishes late.
+| | |
+|---|---|
+| Sources | capasjornais.pt (primary), sapo.pt (fallback) |
+| Schedule | Worker cron, 05:00–08:00, 10:00 and 13:00 UTC |
+| Code | `scrapeNewspaper`, `scrapeDay` (`api/lib/scraper.js`) |
+| Writes | R2 cover + 220px WebP thumbnail, `covers` row, `headlines` when available |
+| Endpoint | `POST /api/scrape?days=` / `?start=&end=` (admin) |
+| Classifies | Nothing. See [AI Detector](#ai-detector) |
 
-## Sources, primary and fallback
+## Idempotent by design
 
-The scraper looks at **capasjornais.pt** first: its images carry no watermark (sapo.pt's do), and the URL is computable from the date alone, so there's no page to fetch and no HTMLRewriter:
+Every cron runs the same function against today, and it converges:
+
+| Row state | What happens |
+|---|---|
+| Missing | Cover fetched and stored; titles filled if the source has turned over |
+| Present, no titles, dated today | Titles fetched and written. No image re-download |
+| Present with titles | Nothing, no request |
+| Present, no titles, past date | Nothing: no source exists |
+
+`scrapeNewspaper` returns `complete`, `pending` or `failed`; `scrapeDay` runs all three papers, catching each separately, and reports whether the day is settled. Running it six times a day costs three D1 reads once a day is done. `node api/lib/scrape-day.test.mjs` pins that.
+
+## Sources
+
+**capasjornais.pt** first: no watermark, and the URL is computable from the date, so there's no page to parse.
 
 ```
 https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg
@@ -15,47 +35,48 @@ https://capasjornais.pt/img/FrontPages/{YYYYMM}/{paper}_{DDMMYYYY}.jpg
                                                  jornal_o_jogo
 ```
 
-Missing dates 404 cleanly, so a miss here writes a log line and nothing else. `node api/lib/scraper.test.mjs` guards the date munging (capasjornais.pt writes `DDMMYYYY` under a `YYYYMM` folder, unlike sapo's `YYYYMMDD`). Back issues go years deep, so it covers backfills as well as day-to-day scraping.
+Missing dates 404 cleanly: a miss logs a line and writes nothing. Back issues go years deep, so the same URL serves backfills. `node api/lib/scraper.test.mjs` guards the date munging — capasjornais.pt writes `DDMMYYYY` under a `YYYYMM` folder, sapo.pt writes `YYYYMMDD`.
 
-**sapo.pt** is the fallback, used only when capasjornais.pt 404s or is down. It is the archive's original source and still the one whose page gets parsed (HTMLRewriter, `.article-newspaper img`). It does go down: on 2026-08-24 it stopped answering on both :80 and :443 for hours, confirmed dead from three separate networks rather than blocked, and every scrape logged `Failed to fetch page ...: 522`, Cloudflare's "no answer from origin".
+**sapo.pt** is used only when capasjornais.pt 404s or is down, and it does go down: on 2026-08-24 it stopped answering on both ports for hours and every scrape logged `522`. Its page is parsed with HTMLRewriter (`.article-newspaper img`), and it carries no headline text ([Headlines](#headlines)).
 
-Full-res framing differs slightly between the two (~960×1230 on capasjornais.pt vs sapo's crop), so a stretch scraped from the fallback is a third "era" for `scripts/avg_cover.py` to align. It already cross-correlates (see [Archive views](#archive-views)), so this costs nothing, but rerun it after a long sapo.pt-fallback stretch.
+Full-res framing differs between the two (~960×1230 versus sapo's crop), so a stretch scraped from the fallback is a third "era" for `scripts/avg_cover.py` to align. Rerun it after a long fallback stretch ([Archive views](#archive-views)).
 
-## Manual (GitHub Actions)
-
-> **Known failure:** the runner gets **403** with ~5 KB of HTML. The cause is Cloudflare **Bot Fight Mode** issuing a managed challenge, because GitHub's runners come from Microsoft/Azure IPs. Confirmed in `firewallEventsAdaptive`: `ruleId: bot_fight_mode`, `source: botFight`, `clientASNDescription: Microsoft Corporation`. A bad `ADMIN_SECRET` looks different: a wrong token returns a 12-byte `401`. The Free plan has no per-path exemption. Fixed by publishing the Worker on `workers.dev` (`workers_dev = true` in `wrangler.toml`) and pointing the workflow at `https://capas-scraper.digasnikas-digital.workers.dev/scrape`. That hostname is not part of the zone, so Bot Fight Mode never sees it; the Worker's own `ADMIN_SECRET` check, the Access JWT check on app routes and everything else are unchanged. A laptop is not challenged either, so the same calls still work against `capas.digasnikas.com/api` by hand.
-
-Every script in `scripts/` has a matching one-click workflow under **Actions**. Scrape Newspaper Covers picks a mode via the `mode` input: `days` for the last N days, `range` for a `start`/`end` pair in `YYYYMMDD`, or `month` for a `year`/`month` pair that wraps `scrape_month.sh`. It used to be three separate workflows, merged since they all just call `/api/scrape` with different query params. Regenerate A Capa Média takes no inputs; it runs `avg_cover.py` and commits `dashboard/avg/` straight to the branch if the pixels changed (see [Archive views](#archive-views)). Classify Covers fires automatically after each day's scrape (`repository_dispatch`), or by hand with a `limit` for how many recent covers to process; it wraps `rag_classify.py`, embedding plus Vectorize retrieval plus Llama4, outside the Worker (see [RAG](#rag)). Vectorize Covers fires automatically the moment a cover gets its first crowd vote (`repository_dispatch`), or by hand with a `limit`; either way it wraps `build_vectorize_index.py --candidates`, embedding the whole backlog of voted-but-unembedded covers in one run rather than just the cover named in the dispatch (see [Image Embeddings](#image-embeddings)). Import Match Dates takes a season year, or "list leagues" to print api-sports.io's league IDs instead of importing anything; it wraps `import_matches.py` (see [Match dates](#match-dates)).
-
-`scrape` and `import_matches` need `ADMIN_SECRET` / `FOOTBALL_API_KEY` (plus optional `APISPORTS_KEY`) in repository secrets. `rag-classify`, `vectorize-covers`, and `import_matches` also reuse the `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` pair `deploy-worker.yml` already has: `rag-classify`'s and `vectorize-covers`'s tokens additionally need **Workers AI · Read** and **Vectorize · Read/Write**, which the deploy token may not carry. The two automatic triggers additionally need `GH_DISPATCH_TOKEN` set on the Worker (`wrangler secret put GH_DISPATCH_TOKEN`, a GitHub PAT with `repo` scope); see [AI Detector](#ai-detector).
-
-`scripts/eval-ai.mjs` (prompt scoring, see [Multimodal](#multimodal)) is deliberately not on this list. It used to run as a GitHub Action, removed because it never solved anything Bot Fight Mode didn't already fight against on a runner. Run it locally instead.
-
-## Manual (curl)
+## Running it by hand
 
 ```bash
 # Last 2 days
 curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?days=2"
 
-# Specific date range (max 7 days per call)
+# A date range, max 7 days per call (the Worker's subrequest limit)
 curl -X POST -H "Authorization: Bearer <secret>" "https://capas.digasnikas.com/api/scrape?start=20260408&end=20260414"
 
-# One-off: backfill thumb_url for covers that predate thumbnails.
-# Processes 25 per call; loop until "remaining" hits 0.
-until curl -s -X POST -H "Authorization: Bearer <secret>" \
-  "https://capas.digasnikas.com/api/backfill-thumbs" | tee /dev/stderr | grep -q '"remaining":0'; do sleep 1; done
-```
-
-Scraping doesn't classify anything by itself. A cover scraped by any of these routes still needs `rag-classify.yml` to run before it gets an `ai_club`: automatic after the daily cron scrape, manual (`workflow_dispatch`, or `python3 scripts/rag_classify.py` directly) after a backfill like this one. See [AI Detector](#ai-detector).
-
-The daily cron scrape also fetches real headline text alongside the cover image, but only for the day it runs on — a backfill through any of the routes above leaves `headlines` `NULL`. See [Headlines](#headlines) for why, and for the separate historical-backfill path.
-
-## Bulk backfill (full month)
-
-For scraping large amounts of covers at once, use `scrape_month.sh`. It calls the `/scrape` API for every day in a given month:
-
-```bash
+# A whole month, one /scrape call per day
 ADMIN_SECRET=<secret> ./scripts/scrape_month.sh 2025 11
 ```
 
-Or trigger **Scrape Newspaper Covers** with `mode: month` instead of running it locally: same script, same `workers.dev` hostname. `CAPAS_API` overrides that host if you want the calls to go through the zone.
+The **Scrape Newspaper Covers** workflow does the same three things through its `mode` input: `days`, `range`, or `month` (which wraps `scrape_month.sh`).
+
+Past-date scrapes leave `headlines` `NULL` — the source only serves today's titles. [Headlines](#headlines) covers the separate archive backfill.
+
+## Why the workflow uses workers.dev
+
+A runner calling `capas.digasnikas.com` gets **403** with ~5 KB of HTML: Cloudflare **Bot Fight Mode** issues a managed challenge because GitHub's runners come from Azure IPs (`firewallEventsAdaptive`: `ruleId: bot_fight_mode`, `clientASNDescription: Microsoft Corporation`). The Free plan has no per-path exemption.
+
+The workflows call `https://capas-scraper.digasnikas-digital.workers.dev` instead (`workers_dev = true`). That hostname is off the zone, so Bot Fight Mode never sees it; the Worker's own `ADMIN_SECRET` check and the Access JWT checks are unchanged. A laptop is not challenged, so `capas.digasnikas.com/api` still works by hand.
+
+A wrong token looks different: a 12-byte `401`.
+
+## Workflows and their secrets
+
+| Workflow | Trigger | Needs |
+|---|---|---|
+| `scrape.yml` | Manual | `ADMIN_SECRET` |
+| `rag-classify.yml` | `cover-first-vote`, `classify-backlog`, manual | `ADMIN_SECRET`, Cloudflare token with **Workers AI · Read** + **Vectorize · Read** |
+| `vectorize-covers.yml`, `vectorize-headlines.yml` | `cover-first-vote`, manual | `ADMIN_SECRET`, Cloudflare token with **Vectorize · Write** |
+| `avg-cover.yml` | Manual | None; commits `dashboard/avg/` if the pixels changed |
+| `import-matches.yml` | Manual | `FOOTBALL_API_KEY`, optional `APISPORTS_KEY` |
+| `checks.yml` | Every push and pull request | None; runs every self-check plus `git diff --check` |
+
+The two dispatch events need `GH_DISPATCH_TOKEN` on the Worker (`wrangler secret put GH_DISPATCH_TOKEN`, a classic PAT with `repo` scope). See [AI Detector](#ai-detector).
+
+`scripts/eval-ai.mjs` is deliberately not a workflow: run it locally ([Multimodal](#multimodal)).
