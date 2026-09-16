@@ -21,7 +21,7 @@
  */
 
 import { CORS, edgeCached, json } from "./lib/http.js";
-import { NEWSPAPERS, scrapeNewspaper } from "./lib/scraper.js";
+import { scrapeDay } from "./lib/scraper.js";
 import { dispatchGithubEvent } from "./lib/github.js";
 import { handleCovers } from "./handlers/covers.js";
 import { handleGetMatches } from "./handlers/matches.js";
@@ -33,7 +33,6 @@ import { handleNotify } from "./handlers/notify.js";
 import { handleDetector } from "./handlers/detector.js";
 import { handleStats } from "./handlers/stats.js";
 import { handleBackfillThumbs } from "./handlers/backfill-thumbs.js";
-import { handleBackfillHeadlines, refreshTodayHeadlines } from "./handlers/backfill-headlines.js";
 import { handleRagCandidates } from "./handlers/rag-candidates.js";
 import { handleReclassifyRag } from "./handlers/reclassify-rag.js";
 import { handleRagMatches } from "./handlers/rag-matches.js";
@@ -47,23 +46,29 @@ import { handleSearch } from "./handlers/search.js";
 import { handleHeadlines } from "./handlers/headlines.js";
 import { handleGetComments, handlePostComment, handleDeleteComment } from "./handlers/comments.js";
 
-export default {
-  async scheduled(event, env, ctx) {
-    // The later crons exist only to pick up the day's headlines once
-    // capasjornais.pt turns over; the covers are already saved by then.
-    if (new Date(event.scheduledTime).getUTCHours() >= 9) {
-      ctx.waitUntil(refreshTodayHeadlines(env));
-      return;
-    }
+// The last cron of the day. After this hour the day's covers get classified
+// whether or not their titles ever showed up.
+const LAST_SCRAPE_HOUR = 13;
 
-    const today = new Date();
-    // Independent catches, same as the old per-newspaper waitUntil: one
-    // newspaper's failure must not stop the others, or the dispatch below.
-    const scrapes = NEWSPAPERS.map(newspaper =>
-      scrapeNewspaper(newspaper, today, env)
-        .catch(err => console.error(`Scrape failed for ${newspaper.slug}: ${err}`))
+export default {
+  // Every cron does the same thing: scrape today, then dispatch
+  // classification once the day is settled. scrapeNewspaper is idempotent
+  // (see scraper.js), so running it six times a day costs three D1 reads on
+  // a finished day and fills whatever is still missing on an unfinished one.
+  //
+  // The dispatch waits for the titles because a cover classified without them
+  // is read without them: no titles block in the prompt, no headline
+  // retrieval, no `others` gate score. LAST_SCRAPE_HOUR is the backstop, for
+  // the days capasjornais.pt never publishes titles at all — the cover still
+  // has to get classified.
+  async scheduled(event, env, ctx) {
+    const hour = new Date(event.scheduledTime).getUTCHours();
+    ctx.waitUntil(
+      scrapeDay(env, new Date()).then(settled => {
+        if (settled || hour >= LAST_SCRAPE_HOUR) return dispatchGithubEvent(env, "scrape-completed");
+        console.log(`Titles still missing at ${hour}:00 UTC, leaving classification to a later run`);
+      }),
     );
-    ctx.waitUntil(Promise.all(scrapes).then(() => dispatchGithubEvent(env, "scrape-completed")));
     // Comments are already unreachable once a newer day exists — this just
     // stops the table growing.
     ctx.waitUntil(env.DB.prepare("DELETE FROM comments WHERE date < date('now','-2 days')").run());
@@ -90,7 +95,6 @@ export default {
     if (method === "POST" && pathname === "/scrape")      return handleScrape(request, env, ctx, url);
     if (method === "POST" && pathname === "/notify")      return handleNotify(request, env);
     if (method === "POST" && pathname === "/backfill-thumbs") return handleBackfillThumbs(request, env);
-    if (method === "POST" && pathname === "/backfill-headlines") return handleBackfillHeadlines(request, env);
     if (method === "GET"  && pathname === "/rag-candidates")  return handleRagCandidates(request, env);
     if (method === "POST" && pathname === "/reclassify-rag")  return handleReclassifyRag(request, env);
     if (method === "POST" && pathname === "/rag-matches")      return handleRagMatches(request, env);

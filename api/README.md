@@ -15,8 +15,9 @@ The Cloudflare Worker: a single bundle, split by responsibility, deployed by `de
 |---|---|
 | `http.js` | CORS headers, `json()`, and the shared `requireAdmin()` / `parseLimit()` used by every admin route |
 | `vectorize.js` | The two Vectorize indexes and the D1 column/fields each needs, behind the `index=` parameter both vectorize routes take |
-| `scraper.js` | Scraping logic (fetch → HTMLRewriter → R2 + D1). Doesn't classify — see `ai.js` and `handlers/reclassify-rag.js` |
+| `scraper.js` | Scraping logic (fetch → HTMLRewriter → R2 + D1), idempotent per cover. Doesn't classify — see `ai.js` and `handlers/reclassify-rag.js` |
 | `scraper.test.mjs` | Self-check: the capasjornais.pt cover-image URL and the `headlines` extraction both parse right. Run `node api/lib/scraper.test.mjs` |
+| `scrape-day.test.mjs` | Self-check: re-scraping a day converges instead of repeating work. Run `node api/lib/scrape-day.test.mjs` |
 | `ai.js` | Cover classification: Llama4 zero-shot, optionally handed a RAG few-shot block computed elsewhere |
 | `ai.test.mjs` | Self-check for the `ANSWER:` parser. Run `node api/lib/ai.test.mjs` |
 | `email.js` | Outbound mail for `/notify` |
@@ -47,7 +48,6 @@ Node-only helpers for the self-checks. Nothing here is imported by `index.js`.
 | `scrape.js` | `POST /scrape` (admin, bearer-protected) |
 | `notify.js` | `POST /notify` (admin, bearer-protected) |
 | `backfill-thumbs.js` | `POST /backfill-thumbs` (admin) |
-| `backfill-headlines.js` | `POST /backfill-headlines` (admin) — today-only: fills `headlines` for covers already scraped earlier today, before this column existed |
 | `rag-candidates.js` | `GET /rag-candidates?limit=` (admin) — recent covers for `scripts/rag_classify.py` to embed |
 | `reclassify-rag.js` | `POST /reclassify-rag` (admin) — classify one cover with an externally-computed few-shot block |
 | `rag-matches.js` | `POST /rag-matches` (admin) — records which covers retrieval matched, without classifying. Retrieval is CLIP + Vectorize, so it runs when the Workers AI allowance is spent |

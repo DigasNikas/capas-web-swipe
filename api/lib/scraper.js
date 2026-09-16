@@ -129,6 +129,22 @@ async function fetchCover(newspaper, dateStr) {
   return imgUrl && tryFetch(imgUrl);
 }
 
+// One newspaper, one day, run as often as you like. Every cron runs this same
+// function and it converges on one finished row instead of doing something
+// different depending on the hour:
+//
+//   no row            -> fetch the cover, store it, fill the titles if the
+//                        source has today's edition yet
+//   row, no titles    -> fetch the titles only, and only for today (a past
+//                        date has no source: capasjornais.pt's page has no
+//                        date parameter, see fetchHeadlines)
+//   row with titles   -> nothing, no request at all
+//
+// Returns "complete" when nothing is left to do for this cover, "pending"
+// when a later run still has titles to pick up, "failed" when the cover
+// itself could not be fetched. scrapeDay turns that into one answer for the
+// day, which is what decides whether classification is worth dispatching yet
+// — a cover classified before its titles exist is read without them.
 export async function scrapeNewspaper(newspaper, date, env) {
   const dateStr   = date.toISOString().slice(0, 10).replace(/-/g, "");  // 20260425
   const dateLabel = date.toISOString().slice(0, 10);                    // 2026-04-25
@@ -138,21 +154,31 @@ export async function scrapeNewspaper(newspaper, date, env) {
 
   const r2Key     = `${year}/${month}/${day}/${newspaper.slug}_${dateLabel}.jpg`;
   const publicUrl = `${env.R2_PUBLIC_URL}/${r2Key}`;
+  const isToday   = dateLabel === new Date().toISOString().slice(0, 10);
 
   const existing = await env.DB
-    .prepare("SELECT id FROM covers WHERE newspaper = ? AND date = ?")
+    .prepare("SELECT id, headlines FROM covers WHERE newspaper = ? AND date = ?")
     .bind(newspaper.slug, dateLabel)
     .first();
 
   if (existing) {
-    console.log(`${newspaper.slug} ${dateLabel} already stored, skipping.`);
-    return;
+    if (existing.headlines || !isToday) return "complete";
+
+    const headlines = await fetchHeadlines(newspaper, dateLabel);
+    if (!headlines) return "pending";
+
+    await env.DB
+      .prepare("UPDATE covers SET headlines = ? WHERE id = ?")
+      .bind(headlines, existing.id)
+      .run();
+    console.log(`Titles filled for ${newspaper.slug} ${dateLabel}`);
+    return "complete";
   }
 
   const imgResponse = await fetchCover(newspaper, dateStr);
   if (!imgResponse) {
     console.error(`No cover for ${newspaper.slug} ${dateLabel}: capasjornais.pt and sapo.pt both came up empty`);
-    return;
+    return "failed";
   }
 
   const contentType = imgResponse.headers.get("content-type") || "image/jpeg";
@@ -161,7 +187,6 @@ export async function scrapeNewspaper(newspaper, date, env) {
   const thumbKey = `thumb/${r2Key}`;
   const thumbUrl = `${env.R2_PUBLIC_URL}/${thumbKey}`;
 
-  const isToday = dateLabel === new Date().toISOString().slice(0, 10);
   const [, , headlines] = await Promise.all([
     env.COVERS_BUCKET.put(r2Key, fullBody, { httpMetadata: { contentType } }),
     generateThumbnail(env, thumbSource, thumbKey),
@@ -173,10 +198,22 @@ export async function scrapeNewspaper(newspaper, date, env) {
     .bind(newspaper.slug, dateLabel, r2Key, publicUrl, thumbUrl, headlines)
     .run();
 
-  console.log(`Saved ${newspaper.slug} ${dateLabel} → ${r2Key}`);
-
-  // No classification here: ai_club stays NULL until rag-classify.yml picks
-  // this cover up (fired by scrape-completed right after this scrape settles
-  // — see api/lib/github.js and dashboard/documentation/ai-detector.md).
-  // Classification always runs with RAG context now, never bare zero-shot.
+  console.log(`Saved ${newspaper.slug} ${dateLabel} -> ${r2Key}`);
+  return headlines || !isToday ? "complete" : "pending";
 }
+
+// Every newspaper for one day. True when each one is "complete", which is the
+// signal the cron uses to decide it is worth classifying yet. One paper
+// failing never stops the others.
+export async function scrapeDay(env, date) {
+  const results = await Promise.all(NEWSPAPERS.map(newspaper =>
+    scrapeNewspaper(newspaper, date, env)
+      .catch(err => {
+        console.error(`Scrape failed for ${newspaper.slug}: ${err}`);
+        return "failed";
+      })
+  ));
+  return results.every(status => status === "complete");
+}
+
+

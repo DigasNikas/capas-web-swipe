@@ -18,7 +18,7 @@ preview_urls = false
 # date parameter and is still showing yesterday's edition during the scrape
 # window, which is how every cover in the archive ended up filed with the
 # previous day's text (see api/lib/scraper.js).
-crons = ["0 5-8 * * *", "0 10,13 * * *"]
+crons = ["0 5-8,10,13 * * *"]
 
 [[routes]]
 pattern   = "capas.digasnikas.com/api/*"

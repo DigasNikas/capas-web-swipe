@@ -1,5 +1,5 @@
 import { json, requireAdmin } from "../lib/http.js";
-import { NEWSPAPERS, scrapeNewspaper } from "../lib/scraper.js";
+import { NEWSPAPERS, scrapeDay } from "../lib/scraper.js";
 
 export async function handleScrape(request, env, ctx, url) {
   const denied = requireAdmin(request, env);
@@ -34,7 +34,7 @@ export async function handleScrape(request, env, ctx, url) {
 
   ctx.waitUntil((async () => {
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-      await Promise.all(NEWSPAPERS.map(n => scrapeNewspaper(n, new Date(d), env)));
+      await scrapeDay(env, new Date(d));
     }
   })());
 

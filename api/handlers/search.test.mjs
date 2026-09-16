@@ -19,7 +19,7 @@ assert.strictEqual(
 );
 
 // handleSearch: fake D1, routed on SQL text — same convention as
-// comments.test.mjs/backfill-headlines.test.mjs.
+// comments.test.mjs.
 function fakeEnv({ total = 1821, searchable = 1438, rows = [] } = {}) {
   const DB = {
     prepare(sql) {
