@@ -40,10 +40,31 @@ function makeRowClickable(el, email) {
   });
 }
 
+// Shows the pinned row only while the real one is off-screen. Recreated per
+// open: the rows it watches are replaced on every load, and an observer left
+// pointing at detached nodes never fires again.
+let meObserver = null;
+
+function watchMeRow(meRow) {
+  meObserver?.disconnect();
+  meObserver = null;
+  if (!meRow) return;
+
+  // IntersectionObserver rather than a scroll handler: no work per frame, and
+  // it fires once on setup, which is what decides the initial state.
+  meObserver = new IntersectionObserver(
+    ([entry]) => { leaderboardMe.hidden = entry.isIntersecting; },
+    { root: leaderboardList, threshold: 1 },
+  );
+  meObserver.observe(meRow);
+}
+
 export async function openLeaderboard() {
   closeUserDetail();
   leaderboardList.innerHTML = '<li class="lb-loading">A carregar…</li>';
   leaderboardMe.innerHTML = '';
+  leaderboardMe.hidden = true;
+  meObserver?.disconnect();
   leaderboardModal.classList.remove('hidden');
   modalOverlay.classList.remove('hidden');
 
@@ -52,17 +73,21 @@ export async function openLeaderboard() {
     const data = res.ok ? await res.json() : [];
     leaderboardList.innerHTML = '';
 
-    // "Me" stays in natural rank position in the scrollable list (so
-    // neighbors give context), but the list can be long enough that
-    // finding yourself needs scrolling — so it's *also* pinned above
-    // the list, always visible regardless of scroll position or rank.
+    // "Me" stays in natural rank position in the scrollable list, so the
+    // neighbouring ranks give it context. The pinned copy above the list is
+    // only for when that row has scrolled out of view: showing both at once
+    // put the same name on screen twice, one of them sliding under the other
+    // mid-row, which reads as a rendering fault rather than a feature.
     const meEntry = data.find(e => e.is_me);
+    let meRow = null;
+
     if (meEntry) {
       const pinned = document.createElement('div');
       pinned.className = 'lb-row lb-me lb-pinned-row';
       pinned.innerHTML = rowHtml(meEntry, true);
       makeRowClickable(pinned, meEntry.user_email);
       leaderboardMe.appendChild(pinned);
+      leaderboardMe.hidden = true;
     }
 
     data.forEach(entry => {
@@ -71,7 +96,10 @@ export async function openLeaderboard() {
       li.innerHTML = rowHtml(entry, entry.is_me);
       makeRowClickable(li, entry.user_email);
       leaderboardList.appendChild(li);
+      if (entry.is_me) meRow = li;
     });
+
+    watchMeRow(meRow);
 
     if (data.length === 0) leaderboardList.innerHTML = '<li class="lb-loading">Sem votos ainda.</li>';
   } catch {

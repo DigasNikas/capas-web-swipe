@@ -1472,11 +1472,16 @@ header h1 {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Fades the row being clipped at the top edge, so a half-row sliding under
+     the header reads as scrolling rather than as a broken layout. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
 }
 
-/* Pinned above the scrollable list — always visible regardless of scroll
-   position or rank, so finding yourself never needs scrolling. */
+/* Pinned above the scrollable list, shown only while your real row is
+   scrolled out of view (see watchMeRow in leaderboard.js). */
 #leaderboard-me:empty { display: none; }
+#leaderboard-me[hidden] { display: none; }
 #leaderboard-me { flex-shrink: 0; margin-bottom: 4px; }
 .lb-pinned-row { border-bottom: 2px solid var(--accent); }
 
