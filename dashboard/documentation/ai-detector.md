@@ -32,8 +32,8 @@ Model calls by crowd label:
 
 ## Pipeline
 
-1. **Scrape.** The Worker cron runs at 05:00–08:00, 10:00 and 13:00 UTC. Every run does the same thing: store the cover if it is missing, fill today's titles once capasjornais.pt has turned over, do nothing when the row is settled. No label yet, no dispatch.
-2. **First vote.** `handleSwipe` fires one `cover-first-vote` dispatch, which runs three workflows: both Vectorize indexes and `rag-classify.yml`. Runs are serialised, so a burst of votes cannot pay for the same model call twice.
+1. **Scrape.** The Worker cron runs at 05:00–08:00, 10:00 and 13:00 UTC. Every run does the same thing: store the cover if it is missing, fill today's titles once capasjornais.pt has turned over, do nothing when the row is settled. It then fires `classify-backlog` if any cover is classifiable and still unlabelled.
+2. **First vote.** `handleSwipe` fires one `cover-first-vote` dispatch, which runs three workflows: both Vectorize indexes and `rag-classify.yml`. Classify runs are serialised, so a burst of votes cannot pay for the same model call twice.
 3. **Candidates.** `rag_classify.py --limit 3` reads `/rag-candidates`: covers with `ai_club IS NULL` whose titles are stored, or which are dated before today.
 4. **Retrieval.** The script embeds the image and the lead headline and pulls the 7 nearest labelled covers from both indexes ([RAG](#rag)).
 5. **Consensus.** If 6 or more neighbours share a label, it is written through `/label-consensus`. Done, no model call.
@@ -41,7 +41,7 @@ Model calls by crowd label:
 7. **Model call.** `POST /reclassify-rag` sends the few-shot block, neighbour ids and gate scores. `classifyAndStore` reads the cover's titles from D1, builds the prompt, calls the model, and writes `ai_*` and `lr_*`.
 8. **Read.** `/api/detector` applies the gate to model labels and returns what the card shows.
 
-Classification runs on the vote, not the scrape, because a cover reaches the card only once it has one: `/api/detector` reads `analytics_covers`.
+Classification runs on the vote because a cover reaches the card only once it has one: `/api/detector` reads `analytics_covers`. The cron dispatch is the safety net behind that — see [Dispatch](#ai-detector).
 
 ## Prompt context
 
@@ -111,13 +111,22 @@ A button under the card opens every cover whose shown label differs from the cro
 
 ## Dispatch
 
-One event, fired by `handleSwipe` on a cover's first crowd vote.
+Two events, one workflow set.
 
-| Workflow | Does |
-|---|---|
-| `vectorize-covers.yml` | Embeds the backlog into `capas-cover-embeddings` |
-| `vectorize-headlines.yml` | Embeds the backlog into `capas-headline-embeddings` |
-| `rag-classify.yml` | Classifies the newest 3 candidates |
+| Event | Fired by | When |
+|---|---|---|
+| `cover-first-vote` | `handleSwipe` | A cover's first crowd vote |
+| `classify-backlog` | Worker cron, after each scrape | Any cover is classifiable and unlabelled |
+
+| Workflow | Event | Does |
+|---|---|---|
+| `vectorize-covers.yml` | `cover-first-vote` | Embeds the backlog into `capas-cover-embeddings` |
+| `vectorize-headlines.yml` | `cover-first-vote` | Embeds the backlog into `capas-headline-embeddings` |
+| `rag-classify.yml` | both | Classifies the newest 3 candidates |
+
+`cover-first-vote` alone leaves a hole: a cover voted on before its titles arrive is not classifiable at that moment, and nothing comes back for it. The cron closes it. `hasClassifiableCovers` asks through the same `CLASSIFIABLE` predicate `/rag-candidates` filters on, so the two cannot disagree, and no dispatch is fired when there is nothing to do.
+
+While the archive backlog lasts, that condition is true on every cron: six runs a day, 3 covers each, ~1,200 neurons.
 
 Each workflow reads its whole backlog, not the `cover_id` in the payload, so a missed dispatch is picked up by the next one. `GH_DISPATCH_TOKEN` (a Worker secret: classic PAT, `repo` scope) is required; without it dispatches are skipped silently and nothing is embedded or classified until a workflow is run by hand. `dispatchGithubEvent` never throws.
 

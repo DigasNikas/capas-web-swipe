@@ -5,7 +5,7 @@ Nearest-neighbour retrieval from the two Vectorize indexes, folded into the clas
 | | |
 |---|---|
 | Script | `scripts/rag_classify.py` |
-| Workflow | `.github/workflows/rag-classify.yml`, on the `cover-first-vote` dispatch, serialised |
+| Workflow | `.github/workflows/rag-classify.yml`, on the `cover-first-vote` and `classify-backlog` dispatches, serialised |
 | Runs | GitHub Actions, never in the Worker |
 | Neighbours | `RAG_TOP_K = 7`, merged from both indexes |
 | Consensus | `CONSENSUS_MIN = 6` of 7 agreeing neighbours skips the model |
@@ -100,4 +100,4 @@ Workers AI has no CLIP-compatible image-embedding model. Three live alternatives
 
 ## Failures
 
-`rag-classify.yml` is the only path to a label. If it fails, or its `cover-first-vote` dispatch never arrives (`GH_DISPATCH_TOKEN` unset, GitHub API error), covers stay `ai_club IS NULL` until the next run. The next run picks them up from the backlog; nothing needs replaying day by day. A failed model call leaves the cover unlabelled for the next run.
+`rag-classify.yml` is the only path to a label. If it fails, or a dispatch never arrives (`GH_DISPATCH_TOKEN` unset, GitHub API error), covers stay `ai_club IS NULL` until the next run — the cron dispatches one whenever anything classifiable is unlabelled, so recovery needs no one to notice. The next run picks them up from the backlog; nothing needs replaying day by day. A failed model call leaves the cover unlabelled for the next run.
