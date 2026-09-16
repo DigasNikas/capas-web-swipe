@@ -1,27 +1,22 @@
 # Headlines
 
-`covers.headlines` is the real headline text from that day's front page,
-scraped straight off capasjornais.pt — not `ai_headline`, which is what
-the vision model quotes back while guessing a club (see
-[AI Detector](#ai-detector)). The two can disagree; `headlines` is ground
-truth from the source, `ai_headline` is the model's own reading of the
-image. This page covers how the column gets filled in. Three things read it:
-[Search](#search) indexes it, the classifier folds it into its prompt
-(see [AI Detector](#ai-detector)'s "What the prompt carries"), and
-`GET /api/headlines` serves it to `rag_classify.py --eval`.
+`covers.headlines` is the front page's own title text, scraped from capasjornais.pt. Distinct from `ai_headline`, which is the headline the vision model quotes back while guessing a club ([Multimodal](#multimodal)): this one is the source's text, that one is the model's reading of the image.
+
+| | |
+|---|---|
+| Source | capasjornais.pt's "Títulos da Capa" block |
+| Format | Every title on the page, joined with `•` |
+| Written by | `scrapeNewspaper` (today), `scripts/backfill_headlines_archive.mjs` (past dates) |
+| Parser | `extractHeadlinesFromHtml`, `headlinesIfFresh` (`api/lib/scraper.js`) |
+| Coverage | **1,675 of 1,872** covers (2026-09-16) |
+
+Read by four things: [Search](#search) indexes it, the classifier folds it into the prompt ([AI Detector](#ai-detector)), [Headline Embeddings](#headline-embeddings) embeds its lead story, and `GET /api/headlines` serves it to `rag_classify.py --eval`.
 
 ## Where the text comes from
 
-Of the two scrape sources (see [Scraping](#scraping)), only one carries
-headline text:
+Of the two scrape sources ([Scraping](#scraping)), only capasjornais.pt carries text. Its per-newspaper page has one `<li><span>` under `<h2 class="BottomNews">` holding the whole day's titles. sapo.pt, the fallback, has none: a paper name, a date and an archive link.
 
-- **sapo.pt** (fallback): nothing. The page has a paper name, a date, and
-  an archive link — no article text of any kind.
-- **capasjornais.pt** (primary): each newspaper's page has a "Títulos da
-  Capa" block, one `<li><span>` under `<h2 class="BottomNews">`, every
-  headline on the page already joined into a single string with `•`.
-
-Record's edition for 2026-08-30, for example, came back as:
+Record for 2026-08-30:
 
 ```
 Palhinha já é da casa • Empréstimo pode ser solução para Ríos e Trubin •
@@ -30,18 +25,13 @@ eficácia – Portistas fizeram cinco remates e marcaram nos três
 primeiros • Zaidu com suspeita de lesão grave • ...
 ```
 
-`extractHeadlinesFromHtml` (`api/lib/scraper.js`) pulls that block out
-  with plain string parsing, not `HTMLRewriter` (used for the cover image
-  itself, `extractCoverImage` in the same file) — this one needs to run
-  outside the Worker too (see Historical backfill below), so it stays
-  plain-string on purpose, testable with plain `node`, no Workers runtime
-  needed. See `scraper.test.mjs`.
+`extractHeadlinesFromHtml` parses that with plain string operations, not `HTMLRewriter`: the archive backfill runs it outside the Worker, and it stays testable with plain `node` (`scraper.test.mjs`).
 
-## Live scrape: today only
+## Today: the scrape fills it
 
-capasjornais.pt's per-newspaper page (`/Capa-Jornal-Record.html`, etc.) has no date parameter: it always shows the current edition, and early in the morning that is still yesterday's. `headlinesIfFresh` checks the page's own heading against the date being scraped and returns `null` on a mismatch, so a cover never receives another edition's text.
+capasjornais.pt's per-newspaper page takes no date parameter — it shows the current edition, which early in the morning is still yesterday's. `headlinesIfFresh` compares the page's own heading against the date being scraped and returns `null` on a mismatch, so a cover never receives another edition's text.
 
-`scrapeNewspaper` is idempotent, and every cron runs it:
+`scrapeNewspaper` is idempotent and every cron runs it (05:00–08:00, 10:00, 13:00 UTC):
 
 | Row state | What happens |
 |---|---|
@@ -50,33 +40,20 @@ capasjornais.pt's per-newspaper page (`/Capa-Jornal-Record.html`, etc.) has no d
 | Present with titles | Nothing, no request |
 | Present, no titles, past date | Nothing: no source exists |
 
-So today's titles land on the first cron that runs after the page turns over, without a separate endpoint or workflow. A past-date scrape (`?start=`/`?end=`, `scrape_month.sh`) and the sapo.pt fallback both leave `headlines` `NULL`.
+Today's titles land on the first cron after the page turns over. A past-date scrape (`?start=`/`?end=`, `scrape_month.sh`) and the sapo.pt fallback both leave the column `NULL`.
 
-`/rag-candidates` will not return a cover dated today until its titles are stored, so nothing is classified without them (see [AI Detector](#ai-detector)).
+A cover dated today is not classifiable until its titles are stored ([AI Detector](#ai-detector)), so a label is never produced without them.
 
-## Historical backfill
+## Past dates: the archive backfill
 
-Covers scraped before this feature existed have no headline source at
-the URLs above — those only ever show today. capasjornais.pt has a
-second page per newspaper per month instead:
-`capas/Arquivo-Jornal-Record-Mes-agosto-2026.html`, listing that whole
-month's covers as dated permalinks —
-`Capa-Jornal-Record-dia-01-Agosto-2026-103375.html` — and each of those
-dated pages carries the exact same "Títulos da Capa" block the live
-scraper reads, just for that specific day instead of today.
+The per-newspaper page only ever shows today, so a past cover has no source there. capasjornais.pt has a second page per newspaper per month — `capas/Arquivo-Jornal-Record-Mes-agosto-2026.html` — listing that month's covers as dated permalinks (`Capa-Jornal-Record-dia-01-Agosto-2026-103375.html`), each carrying the same "Títulos da Capa" block.
 
-`scripts/backfill_headlines_archive.mjs` walks that path:
+`scripts/backfill_headlines_archive.mjs`:
 
-1. `GET /headline-candidates?limit=` (admin) — covers still missing
-   `headlines`, oldest first.
-2. For each candidate, fetch its newspaper's archive page for that
-   month (once per newspaper/month, cached — a month archive page covers
-   every candidate in it, not just one).
-3. Parse the archive page for that candidate's dated permalink, fetch
-   it, run it through the same `extractHeadlinesFromHtml`.
-4. `POST /update-headline` (admin) `{id, headlines}` — one cover at a
-   time, so a crash partway through the crawl loses no already-fetched
-   progress.
+1. `GET /headline-candidates?limit=` — covers missing `headlines`, oldest first.
+2. Fetch that newspaper's archive page for the month, once per newspaper/month, cached.
+3. Parse the candidate's dated permalink from it, fetch it, run `headlinesIfFresh` against the cover's own date.
+4. `POST /update-headline {id, headlines}`, one cover at a time, so a crash keeps earlier progress.
 
 ```bash
 ADMIN_SECRET=… node scripts/backfill_headlines_archive.mjs
@@ -84,11 +61,18 @@ ADMIN_SECRET=… node scripts/backfill_headlines_archive.mjs
 ... node scripts/backfill_headlines_archive.mjs --delay 500   # more polite
 ```
 
-Local-only for now, not a GitHub Action — capasjornais.pt's tolerance for
-runner IPs at this volume (~1800 requests for the initial run) is
-untested, and a historical backfill only needs to run once per gap, not
-on a schedule.
+Local-only, not a workflow: capasjornais.pt's tolerance for runner IPs at this volume (~1,800 requests for the first run) is untested, and a backfill runs once per gap rather than on a schedule.
 
-## Status
+Month names fold to ASCII on both sides. The archive URL spelt `março` returns January's page with HTTP 200, and permalinks spell it `Marco`.
 
-1,672 of 1,872 covers have `headlines` (2026-09-16). The 197 voted covers still missing it are 165 from September and October 2025, editions for which capasjornais.pt publishes no headline block at all, plus scattered days with the same gap.
+## What stays empty
+
+197 covers, all of them voted:
+
+| Month | Covers | Reason |
+|---|---|---|
+| 2025-10 | 90 | capasjornais.pt publishes no headline block for those editions |
+| 2025-09 | 75 | Same |
+| Scattered | 32 | Single days with the same gap |
+
+Not a backlog: the source has nothing to fetch. Those covers classify on the image alone, are absent from [Headline Embeddings](#headline-embeddings), and get no `others` gate score.
