@@ -79,6 +79,10 @@ CREATE TABLE IF NOT EXISTS analytics_covers (
   club        TEXT NOT NULL,           -- winning decision for this cover
   votes_club  INTEGER NOT NULL,
   votes_total INTEGER NOT NULL,
+  votes_benfica  INTEGER NOT NULL DEFAULT 0,   -- the whole split, not just the winner's count: see migrations/0016
+  votes_sporting INTEGER NOT NULL DEFAULT 0,
+  votes_porto    INTEGER NOT NULL DEFAULT 0,
+  votes_others   INTEGER NOT NULL DEFAULT 0,
   updated_at  TEXT DEFAULT (datetime('now'))
 );
 

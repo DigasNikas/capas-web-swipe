@@ -86,9 +86,15 @@ export async function handleSwipe(request, env, ctx) {
 function refreshAnalytics(env, coverId) {
   return env.DB
     .prepare(`
-      INSERT INTO analytics_covers (cover_id, newspaper, date, club, votes_club, votes_total, updated_at)
+      INSERT INTO analytics_covers (cover_id, newspaper, date, club, votes_club, votes_total,
+                                    votes_benfica, votes_sporting, votes_porto, votes_others, updated_at)
       SELECT c.id, c.newspaper, c.date, s.decision, COUNT(*),
-             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id), datetime('now')
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id),
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id AND decision = 'benfica'),
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id AND decision = 'sporting'),
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id AND decision = 'porto'),
+             (SELECT COUNT(*) FROM swipes WHERE cover_id = c.id AND decision = 'others'),
+             datetime('now')
       FROM swipes s JOIN covers c ON c.id = s.cover_id
       WHERE s.cover_id = ?
       GROUP BY s.decision
@@ -96,7 +102,9 @@ function refreshAnalytics(env, coverId) {
       LIMIT 1
       ON CONFLICT (cover_id)
       DO UPDATE SET club = excluded.club, votes_club = excluded.votes_club,
-        votes_total = excluded.votes_total, updated_at = excluded.updated_at
+        votes_total = excluded.votes_total, votes_benfica = excluded.votes_benfica,
+        votes_sporting = excluded.votes_sporting, votes_porto = excluded.votes_porto,
+        votes_others = excluded.votes_others, updated_at = excluded.updated_at
     `)
     .bind(coverId);
 }

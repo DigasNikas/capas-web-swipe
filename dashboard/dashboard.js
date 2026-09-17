@@ -1,8 +1,10 @@
 // Composition root: fetch the data, then hand it to each section.
-import { CLUB_IDS, PAPER_NAMES } from '/src/domain.js';
+import { CLUB_IDS, CLUB_NAMES, PAPER_NAMES } from '/src/domain.js';
 import { API_URL, CLUB_META } from '/src/common.js';
 import { computeSuspeito, renderBarcode, renderCalendar, renderSuspeito } from '/src/calendar.js';
 import { renderAi, renderVerdict } from '/src/verdict.js';
+import { renderDivided } from '/src/divided.js';
+import { openCoverModal } from '/src/cover-modal.js';
 import { renderAvgCovers } from '/src/averages.js';
 import { initComments } from '/src/comments.js';
 
@@ -52,6 +54,7 @@ async function init() {
   setupEpocaDropdown(epocas, defaultEpoca, e => renderEpoca(rows, e, matchesByDate));
 
   renderEpoca(rows, defaultEpoca, matchesByDate);
+  renderDivided(stats.divided, { clubNames: CLUB_NAMES, onOpenCover: openCoverModal });
   renderVerdict('latest', stats.latest, 'dos votos');
   renderAi(detectorRes.ok ? await detectorRes.json() : null, stats.latest);
   renderAvgCovers();

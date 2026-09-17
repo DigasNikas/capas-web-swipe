@@ -38,6 +38,10 @@ async function swipe(DB, user, decision, cover_id = 1) {
 const analytics = db =>
   db.prepare("SELECT club, votes_club, votes_total FROM analytics_covers WHERE cover_id = 1").get();
 
+const split = db =>
+  db.prepare(`SELECT votes_benfica, votes_sporting, votes_porto, votes_others, votes_total
+              FROM analytics_covers WHERE cover_id = 1`).get();
+
 // Without the dev flag, the email header alone is not a login.
 {
   const db = seed();
@@ -80,6 +84,24 @@ const analytics = db =>
   assert.deepEqual({ ...analytics(db) }, { club: "porto", votes_club: 2, votes_total: 3 });
   await swipe(DB, "a@x", "benfica");
   assert.deepEqual({ ...analytics(db) }, { club: "benfica", votes_club: 2, votes_total: 3 });
+}
+
+// The whole split, not just the winner's count: "posse de bola dividida"
+// draws a bar from it, and a re-swipe has to move the vote between columns
+// rather than leave it counted twice.
+{
+  const db = seed();
+  const DB = sqliteD1(db);
+  await swipe(DB, "a@x", "porto");
+  await swipe(DB, "b@x", "porto");
+  await swipe(DB, "c@x", "benfica");
+  await swipe(DB, "d@x", "others");
+  assert.deepEqual({ ...split(db) },
+    { votes_benfica: 1, votes_sporting: 0, votes_porto: 2, votes_others: 1, votes_total: 4 });
+
+  await swipe(DB, "a@x", "sporting");
+  assert.deepEqual({ ...split(db) },
+    { votes_benfica: 1, votes_sporting: 1, votes_porto: 1, votes_others: 1, votes_total: 4 });
 }
 
 // Two users vote on the same cover at once. Run B's whole request at every

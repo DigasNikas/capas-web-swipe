@@ -855,3 +855,80 @@ body {
   #cal-eyebrow { min-height: 28px; }
   .d-legend { min-height: 35px; }
 }
+
+/* ─── Posse de bola dividida ─────────────────────────────────────────────── */
+/* Club colour by class rather than inline style, so src/divided.js needs no
+   import and its arithmetic stays testable in plain node. */
+.d-club-benfica  { color: var(--d-benfica); }
+.d-club-sporting { color: var(--d-sporting); }
+.d-club-porto    { color: var(--d-porto); }
+.d-club-others   { color: var(--d-others); }
+.d-bg-benfica    { background: var(--d-benfica); }
+.d-bg-sporting   { background: var(--d-sporting); }
+.d-bg-porto      { background: var(--d-porto); }
+.d-bg-others     { background: var(--d-others); }
+
+.d-dividida-rows { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; }
+.d-dividida-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--d-panel2);
+}
+.d-dividida-row[hidden] { display: none; }
+
+.d-dividida-thumb {
+  padding: 0;
+  border: 1px solid var(--d-panel2);
+  background: none;
+  cursor: pointer;
+  display: block;
+  width: 72px;
+  line-height: 0;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.d-dividida-thumb:hover { border-color: var(--d-yellow); transform: scale(1.03); }
+.d-dividida-thumb img { width: 100%; height: auto; display: block; }
+
+.d-dividida-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.d-dividida-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.d-dividida-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--d-muted);
+}
+.d-dividida-share {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.d-dividida-bar { display: flex; height: 10px; background: #000; overflow: hidden; }
+.d-dividida-seg { display: block; }
+
+.d-dividida-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+  color: var(--d-muted);
+}
+.d-dividida-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; }
+.d-dividida-legend b { color: var(--d-text); font-weight: 700; }
+
+#btn-dividida { margin-top: 16px; }
+#btn-dividida[hidden] { display: none; }
+
+@media (max-width: 520px) {
+  .d-dividida-row { gap: 12px; }
+  .d-dividida-thumb { width: 58px; }
+}
