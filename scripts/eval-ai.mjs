@@ -36,7 +36,12 @@
  * are imported, which is the part that has to stay identical.
  */
 import { readFileSync } from "node:fs";
-import { MODEL, PROMPT, CLUBS, parseAnswer, replyText, toBase64 } from "../api/lib/ai.js";
+import { MODEL as PROD_MODEL, PROMPT, CLUBS, parseAnswer, replyText, toBase64 } from "../api/lib/ai.js";
+
+// EVAL_MODEL scores a candidate model against the same prompt and sample
+// without touching api/lib/ai.js — how a fallback gets measured before it is
+// trusted, e.g. when llama-4-scout's image path hung for days in 2026-10.
+const MODEL = process.env.EVAL_MODEL ?? PROD_MODEL;
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;

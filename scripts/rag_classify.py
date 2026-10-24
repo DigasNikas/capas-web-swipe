@@ -81,7 +81,7 @@ HEADLINE_INDEX = "capas-headline-embeddings"
 # no extra fetch. Absent means every cover is sent with lr: null and the
 # Worker keeps the model's own answer -- see api/lib/gate.js.
 GATE_MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "others_lr.json")
-MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
+MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"  # see api/lib/ai.js: Scout fallback since 2026-10-24
 CLUBS = ("benfica", "sporting", "porto", "others")
 RAG_TOP_K = 7
 CONSENSUS_MIN = 6

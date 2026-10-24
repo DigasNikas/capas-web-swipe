@@ -21,7 +21,15 @@
 //
 // Score with scripts/eval-ai.mjs before and after touching PROMPT. Changing it
 // by eye and hoping is how the numbers above happened.
-export const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+// Mistral Small 3.1 since 2026-10-24, standing in for llama-4-scout, whose
+// image path started hanging on Workers AI (499 after ~70s, or a 503) while
+// text still answered and other vision models answered the same cover in
+// seconds. Status page silent, no deprecation flagged. On the bare prompt over
+// the usual 40-cover eval sample Mistral scored 87.5% (others 4/6) against
+// Scout's 86.2% in September, so it's level within what 40 covers resolve.
+// Switch back once a direct Scout image call succeeds:
+//   EVAL_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct node scripts/eval-ai.mjs
+export const MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 
 export const CLUBS = ["benfica", "sporting", "porto", "others"];
 
