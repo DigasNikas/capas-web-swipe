@@ -17,6 +17,7 @@ from rag_classify import (
     crowd_labels,
     merge_channels,
     parse_answer,
+    reply_text,
     rag_cover_ids_from_matches,
     rag_sources_from_matches,
     usable_matches,
@@ -242,5 +243,12 @@ snake = lambda name: re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 for case in shared["cases"]:
     got = getattr(rag_classify, snake(case["fn"]))(case["input"])
     assert got == case["expected"], f"{case['fn']}({json.dumps(case['input'])[:60]}): {got!r} != {case['expected']!r}"
+
+# --- reply_text ---
+assert reply_text({"response": "ANSWER: porto"}) == "ANSWER: porto"
+assert reply_text({"choices": [{"message": {"content": "ANSWER: benfica"}}]}) == "ANSWER: benfica"
+assert reply_text({}) is None
+assert reply_text(None) is None
+assert reply_text({"choices": []}) is None
 
 print("rag_classify.py self-check ok")

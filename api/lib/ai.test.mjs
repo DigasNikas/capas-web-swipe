@@ -9,7 +9,7 @@ import assert from "node:assert";
 import {
   parseAnswer, buildFewShotBlock, ragCoverIdsFromMatches,
   buildHeadlinesBlock, classifyCover, classifyAndStore, consensusClub,
-  ragSourcesFromMatches, PROMPT,
+  ragSourcesFromMatches, replyText, PROMPT,
 } from "./ai.js";
 
 // Happy path, old two-line shape (no WHY: line) — why comes back null.
@@ -331,6 +331,25 @@ assert.deepEqual(ragSourcesFromMatches([{ id: "1", metadata: { club: "porto" } }
   for (const { fn, input, expected } of shared.cases) {
     assert.deepEqual(ai[fn](input ?? undefined), expected, `${fn}(${JSON.stringify(input)?.slice(0, 60)})`);
   }
+}
+
+// --- replyText ---
+//
+// Workers AI changed llama-4-scout's reply shape some time after 2026-10-04:
+// the text used to arrive as `response`, it now arrives OpenAI-style under
+// `choices[0].message.content`. Reading only the old field turned every
+// model answer into "no answer" with no error anywhere, so both shapes are
+// accepted.
+assert.equal(replyText({ response: "ANSWER: porto" }), "ANSWER: porto");
+assert.equal(replyText({ choices: [{ message: { content: "ANSWER: benfica" } }] }), "ANSWER: benfica");
+assert.equal(replyText({}), null);
+assert.equal(replyText(null), null);
+assert.equal(replyText({ choices: [] }), null);
+
+{
+  // End to end through classifyCover with the new shape.
+  const env = { AI: { run: async () => ({ choices: [{ message: { content: "HEADLINE: X\nANSWER: sporting" } }] }) } };
+  assert.equal((await classifyCover(env, new Uint8Array([1]).buffer)).club, "sporting");
 }
 
 console.log("ai.js self-check ok");

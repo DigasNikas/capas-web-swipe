@@ -297,6 +297,16 @@ export function ragSourcesFromMatches(matches) {
     .map(m => m.via ?? "layout");
 }
 
+// The model's text out of a Workers AI reply, whichever shape it came in.
+// llama-4-scout used to answer with `response`; some time after 2026-10-04 it
+// switched to the OpenAI shape, `choices[0].message.content`. Reading only
+// the old field made every reply parse as "no answer" — no error, no label,
+// just a backlog that never drained — so both are accepted. eval-ai.mjs and
+// rag_classify.py read the REST API's identical payload the same way.
+export function replyText(res) {
+  return res?.response ?? res?.choices?.[0]?.message?.content ?? null;
+}
+
 // fewShot is a pre-built block (see buildFewShotBlock above), computed
 // upstream in scripts/rag_classify.py and threaded through /reclassify-rag —
 // this function itself never touches Vectorize or does any embedding. It
@@ -321,7 +331,7 @@ export async function classifyCover(env, buffer, contentType = "image/jpeg", few
     temperature: 0.2,
   });
 
-  return parseAnswer(res?.response);
+  return parseAnswer(replyText(res));
 }
 
 // Never throws: called from /reclassify-rag, an admin request that must not

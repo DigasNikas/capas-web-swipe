@@ -36,7 +36,7 @@
  * are imported, which is the part that has to stay identical.
  */
 import { readFileSync } from "node:fs";
-import { MODEL, PROMPT, CLUBS, parseAnswer, toBase64 } from "../api/lib/ai.js";
+import { MODEL, PROMPT, CLUBS, parseAnswer, replyText, toBase64 } from "../api/lib/ai.js";
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -122,7 +122,7 @@ async function classify(url) {
   }).then(r => r.json());
 
   if (!res.success) throw new Error(JSON.stringify(res.errors ?? res));
-  return parseAnswer(res.result?.response);
+  return parseAnswer(replyText(res.result));
 }
 
 const matrix = {};       // crowd -> model -> count

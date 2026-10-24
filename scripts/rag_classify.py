@@ -337,6 +337,17 @@ def rag_sources_from_matches(matches):
     ]
 
 
+def reply_text(res):
+    """Mirrors api/lib/ai.js's replyText: the old `response` field, or the
+    OpenAI-shaped `choices[0].message.content` Workers AI switched to after
+    2026-10-04. Reading only the first made every reply "no answer"."""
+    res = res or {}
+    if res.get("response") is not None:
+        return res["response"]
+    choices = res.get("choices") or []
+    return ((choices[0] or {}).get("message") or {}).get("content") if choices else None
+
+
 def parse_answer(text):
     """Mirrors api/lib/ai.js's parseAnswer exactly: last ANSWER: marker
     wins, club matched by position in the text after it (not CLUBS order),
@@ -391,7 +402,7 @@ def classify_via_llama(image_bytes, few_shot_text, headlines=None):
         result = json.loads(r.read())
     if not result.get("success"):
         raise RuntimeError(f"Llama4 call failed: {result.get('errors')}")
-    return parse_answer(result.get("result", {}).get("response"))
+    return parse_answer(reply_text(result.get("result")))
 
 
 def load_clip():
