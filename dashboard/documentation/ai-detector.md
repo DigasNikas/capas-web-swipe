@@ -5,7 +5,7 @@ The "E a máquina, que diz?" card. Every classified cover gets a label from one 
 | | |
 |---|---|
 | Runs on | A cover's first crowd vote, and a cron dispatch for whatever that missed |
-| Paths | Consensus (no model call) or Llama 4 Scout |
+| Paths | Consensus (no model call) or Mistral Small 3.1 |
 | Gate | Logistic regression over both embeddings, applied on read, `LR_GATE_THRESHOLD = 0.65` |
 | Served by | `GET /api/detector` |
 | Agreement shown | **93.7%** of 239 classified covers (2026-09-15) |

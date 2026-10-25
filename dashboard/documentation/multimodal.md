@@ -4,7 +4,7 @@ The vision model behind the **AI Detector** card ("E a máquina, que diz?"). It 
 
 | | |
 |---|---|
-| Model | `@cf/meta/llama-4-scout-17b-16e-instruct` (Workers AI) |
+| Model | `@cf/mistralai/mistral-small-3.1-24b-instruct` (Workers AI) |
 | Input | Full-resolution cover from R2, after the few-shot block and the page's scraped titles (see [AI Detector](#ai-detector)) |
 | Settings | `temperature: 0.2`, `max_tokens: 300` |
 | Reply | Four lines: `OWNS`, `HEADLINE`, `WHY`, `ANSWER` |
@@ -22,6 +22,8 @@ The vision model behind the **AI Detector** card ("E a máquina, que diz?"). It 
 | Llama 3.2 11B Vision | 220px thumbnail | 53% |
 
 Covers are called by their Portuguese text, which is unreadable at thumbnail size. The classifier always fetches the original from R2.
+
+Scout stopped answering image calls on Workers AI in October 2026 (a 499 after about 70 seconds, or a 503) while text calls and other vision models still worked, so the classifier now runs on Mistral Small 3.1. On the bare prompt over the 40-cover evaluation sample it agrees with the crowd 87.5% of the time, level with Scout's 86.2% on the same prompt. `scripts/eval-ai.mjs` takes `EVAL_MODEL` to score any other model against that sample before switching.
 
 ## Prompt
 

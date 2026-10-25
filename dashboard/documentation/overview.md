@@ -21,7 +21,7 @@ Live at **[capas.digasnikas.com](https://capas.digasnikas.com)**. The logged-in 
 | Database | Cloudflare D1 (SQLite) | Covers metadata, swipes, match dates, public analytics, comments |
 | Image storage | Cloudflare R2 | Full-res covers + generated thumbnails |
 | Image processing | Cloudflare Images (Workers binding) | Generates a 220px WebP thumbnail per cover at scrape time (free tier: 5,000 transformations/month) |
-| Cover classification | Workers AI (`AI` binding) | Llama 4 Scout reads each cover and names the club. Zero-shot, ~65 neurons per call |
+| Cover classification | Workers AI (`AI` binding) | Mistral Small 3.1 reads each cover and names the club, with similar past covers and the page's titles as context |
 | Retrieval | Cloudflare Vectorize | Two indexes, cover images and lead headlines, for the classifier's few-shot context and the `others` gate |
 | Auth | Cloudflare Access | Gates the entire `app.capas.digasnikas.com`: pages plus `/api/covers`, `/api/swipes`, `/api/leaderboard`. `capas.digasnikas.com` (dashboard, `/api/stats`, `/api/matches`) is fully public. |
 
