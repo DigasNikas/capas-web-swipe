@@ -119,9 +119,24 @@ export async function fetchHeadlines(newspaper, dateLabel) {
 }
 
 // The cover image itself, from whichever source still has it.
-async function fetchCover(newspaper, dateStr) {
+// The hour (UTC) of the cron's last slot, see wrangler.toml.
+const LAST_SLOT_UTC = 13;
+
+// Whether a cover may come from sapo.pt yet. sapo.pt's page for today can
+// still carry yesterday's cover early in the morning: Record 2026-10-29 was
+// stored at 05:00 as the 28th's front page, then classified and voted on as
+// if it were the 29th. capasjornais.pt publishes every day, sometimes just
+// later than the first slot, so for today the fallback waits for the last
+// slot and every earlier miss is retried. Past dates — backfills — keep it.
+export function sapoFallbackAllowed(dateLabel, now = new Date()) {
+  const today = now.toISOString().slice(0, 10);
+  return dateLabel !== today || now.getUTCHours() >= LAST_SLOT_UTC;
+}
+
+async function fetchCover(newspaper, dateStr, { allowFallback = true } = {}) {
   const primary = await tryFetch(capasjornaisUrl(newspaper, dateStr));
   if (primary) return primary;
+  if (!allowFallback) return null;
 
   const page = await tryFetch(newspaper.sapoUrl.replace("{date}", dateStr));
   if (!page) return null;
@@ -175,9 +190,12 @@ export async function scrapeNewspaper(newspaper, date, env) {
     return "complete";
   }
 
-  const imgResponse = await fetchCover(newspaper, dateStr);
+  const allowFallback = sapoFallbackAllowed(dateLabel);
+  const imgResponse = await fetchCover(newspaper, dateStr, { allowFallback });
   if (!imgResponse) {
-    console.error(`No cover for ${newspaper.slug} ${dateLabel}: capasjornais.pt and sapo.pt both came up empty`);
+    console.error(allowFallback
+      ? `No cover for ${newspaper.slug} ${dateLabel}: capasjornais.pt and sapo.pt both came up empty`
+      : `No cover for ${newspaper.slug} ${dateLabel} on capasjornais.pt yet; sapo.pt held back until ${LAST_SLOT_UTC}:00 UTC`);
     return "failed";
   }
 

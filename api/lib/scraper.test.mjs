@@ -4,7 +4,7 @@
 //
 //   node api/lib/scraper.test.mjs
 import assert from 'node:assert';
-import { NEWSPAPERS, capasjornaisUrl, extractHeadlinesFromHtml, headlinesIfFresh } from './scraper.js';
+import { NEWSPAPERS, capasjornaisUrl, extractHeadlinesFromHtml, headlinesIfFresh, sapoFallbackAllowed } from './scraper.js';
 
 // sapo.pt writes the date YYYYMMDD, capasjornais.pt writes it DDMMYYYY under a
 // YYYYMM folder. Verified live on 2026-08-24 (200, 257 KB, 962x1232).
@@ -73,5 +73,16 @@ assert.strictEqual(extractHeadlinesFromHtml(heading(1, 'janeiro', 2027)).date, '
 assert.strictEqual(extractHeadlinesFromHtml(heading(9, 'março', 2027)).date, '2027-03-09');
 assert.strictEqual(extractHeadlinesFromHtml(heading(31, 'dezembro', 2026)).date, '2026-12-31');
 assert.strictEqual(extractHeadlinesFromHtml(heading(5, 'brumário', 2026)).date, null, 'an unreadable date is not a date');
+
+// sapo.pt can serve the previous day's cover under today's date early in the
+// morning: Record 2026-10-29 was stored at 05:00 as the 28th's "LIMA LIMÃO"
+// page, labelled sporting and voted on before anyone noticed. capasjornais.pt
+// had the right one a few hours later. So for today's cover the fallback waits
+// for the day's last cron slot; until then a miss is retried at the next slot.
+const at = iso => new Date(iso);
+assert.strictEqual(sapoFallbackAllowed('2026-10-29', at('2026-10-29T05:00:00Z')), false, 'first slot: wait for capasjornais');
+assert.strictEqual(sapoFallbackAllowed('2026-10-29', at('2026-10-29T10:00:00Z')), false, 'mid-morning: still wait');
+assert.strictEqual(sapoFallbackAllowed('2026-10-29', at('2026-10-29T13:00:00Z')), true, 'last slot: a sapo cover beats none');
+assert.strictEqual(sapoFallbackAllowed('2026-10-28', at('2026-10-29T05:00:00Z')), true, 'past dates (backfills) keep the fallback');
 
 console.log('ok — headline extraction reads the BottomNews block and its edition date');

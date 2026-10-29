@@ -39,6 +39,8 @@ Missing dates 404 cleanly: a miss logs a line and writes nothing. Back issues go
 
 **sapo.pt** is used only when capasjornais.pt 404s or is down, and it does go down: on 2026-08-24 it stopped answering on both ports for hours and every scrape logged `522`. Its page is parsed with HTMLRewriter (`.article-newspaper img`), and it carries no headline text ([Headlines](#headlines)).
 
+For today's cover the fallback waits for the last cron slot (13:00 UTC); before that, a capasjornais.pt miss stores nothing and the next slot tries again. sapo.pt's page can still show yesterday's cover early in the morning: Record's 2026-10-29 was stored at 05:00 as the 28th's front page, then classified and voted on. capasjornais.pt had the right one by mid-morning. Past dates, i.e. backfills, use the fallback straight away (`sapoFallbackAllowed` in `api/lib/scraper.js`).
+
 Full-res framing differs between the two (~960×1230 versus sapo's crop), so a stretch scraped from the fallback is a third "era" for `scripts/avg_cover.py` to align. Rerun it after a long fallback stretch ([Archive views](#archive-views)).
 
 ## Running it by hand
